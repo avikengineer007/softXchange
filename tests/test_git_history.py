@@ -76,7 +76,7 @@ class TestGitHistoryScanning(unittest.TestCase):
             
             # Commit 1: introduce hardcoded secret
             with open(secret_file, "w", encoding="utf-8") as f:
-                f.write('SLACK_TOKEN = "' + 'xoxb-' + '123456789012-1234567890123-abcdefghijklmnopqrstuvwx"\\n')
+                f.write('SLACK_TOKEN = "' + 'xoxb-' + '123456789012-1234567890123-abcdefghijklmnopqrstuvwx"\n')
             subprocess.run(["git", "add", "."], cwd=repo_dir, check=True, capture_output=True)
             p1 = subprocess.run(["git", "commit", "-m", "Add slack integration"], cwd=repo_dir, check=True, capture_output=True)
             
@@ -148,7 +148,7 @@ class TestGitHistoryScanning(unittest.TestCase):
             subprocess.run(["git", "mv", "legacy_config.py", "new_config.py"], cwd=repo_dir, check=True, capture_output=True)
             new_file = os.path.join(repo_dir, "new_config.py")
             with open(new_file, "a", encoding="utf-8") as f:
-                f.write('TWILIO_KEY = "' + 'SK' + '0123456789abcdef0123456789abcdef"\\n')
+                f.write('TWILIO_KEY = "' + 'SK' + '0123456789abcdef0123456789abcdef"\n')
             subprocess.run(["git", "commit", "-am", "Rename and add Twilio secret"], cwd=repo_dir, check=True, capture_output=True)
 
             # Remove secret in next commit
