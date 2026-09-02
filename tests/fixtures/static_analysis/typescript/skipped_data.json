@@ -1,0 +1,5 @@
+{
+    "name": "sample-package",
+    "version": "1.0.0",
+    "description": "JSON metadata file to be skipped as unsupported language"
+}

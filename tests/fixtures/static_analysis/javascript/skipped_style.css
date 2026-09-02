@@ -1,0 +1,6 @@
+/* CSS styles - should be skipped as unsupported language */
+.container {
+    display: flex;
+    justify-content: center;
+    background-color: #ffffff;
+}

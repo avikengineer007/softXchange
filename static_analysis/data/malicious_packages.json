@@ -1,0 +1,29 @@
+{
+  "description": "Curated offline seed denylist of known malicious packages and typosquats for static analysis supply-chain checking. Requires periodic operational curation.",
+  "version": "1.0.0",
+  "npm": [
+    "crossenv",
+    "fallguys",
+    "noblox.js-proxied",
+    "babelcli",
+    "dotenv-extended-v2",
+    "discord-selfbot-v13",
+    "electron-native-notify"
+  ],
+  "pypi": [
+    "colourama",
+    "reqeusts",
+    "discord-selfbot-v13",
+    "py-coord",
+    "cryptography-v2",
+    "urllib",
+    "python-dateutil-v2",
+    "setup-tools"
+  ],
+  "crates": [
+    "rust-crypto-fork"
+  ],
+  "golang": [
+    "github.com/malware/evilpkg"
+  ]
+}

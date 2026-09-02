@@ -1,0 +1,2 @@
+config_cafי_version = 2
+# Comment with non-ascii יטא
