@@ -1,0 +1,6 @@
+[project]
+name = "seller-assist"
+version = "0.1.0"
+dependencies = [
+    "ml-shared",
+]

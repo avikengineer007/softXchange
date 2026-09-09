@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ml-shared"
+version = "0.1.0"
+description = "Shared ML Foundation for softXchange AI Models (buyer-assist, seller-assist, broker)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "httpx>=0.25.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "fastapi>=0.110.0",
+    "sqlalchemy>=2.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

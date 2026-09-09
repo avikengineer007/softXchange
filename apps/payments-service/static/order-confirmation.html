@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmation — softXchange</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header class="site-nav">
+    <a href="http://localhost:8003/static/browse-listings.html" class="brand-link">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#164e3f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+      <h1>softXchange</h1>
+    </a>
+    <nav class="nav-links">
+      <a href="http://localhost:8003/static/browse-listings.html">Back to Catalog</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="card" style="text-align: center; padding: 48px 32px;">
+      <div style="width: 56px; height: 56px; background: #d1fae5; color: #065f46; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+
+      <h2 style="font-family: var(--font-serif); font-size: 32px; color: var(--color-seal-dark); margin-bottom: 8px;">Payment Confirmed</h2>
+      <p style="color: var(--color-ink-muted); font-size: 15px; margin-bottom: 24px;">Your digital software entitlement has been issued and verified.</p>
+
+      <div style="background: #faf9f6; border: 1px solid var(--color-border); border-radius: 6px; padding: 20px; max-width: 500px; margin: 0 auto 28px; text-align: left; font-size: 13px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: var(--color-ink-muted);">Order ID</span>
+          <span id="conf-order-id" style="font-family: monospace;">—</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+          <span style="color: var(--color-ink-muted);">Payment Status</span>
+          <span class="status-pill status-paid">PAID</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--color-ink-muted);">Download Authorization</span>
+          <span style="color: #065f46; font-weight: 600;">Cryptographically Active</span>
+        </div>
+      </div>
+
+      <div id="download-box">
+        <button id="btn-download" class="btn-primary" onclick="triggerDownload()">
+          Download Software Package
+        </button>
+        <div id="download-hint" style="font-size: 12px; color: var(--color-ink-subtle); margin-top: 10px;">
+          Links are valid for 15 minutes. Cryptographically signed against tamper.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('order_id');
+    if (orderId) {
+      document.getElementById('conf-order-id').textContent = orderId;
+    }
+
+    async function triggerDownload() {
+      let token = localStorage.getItem('buyer_access_token') || '';
+      if (!token) {
+        token = prompt('Please paste your buyer JWT access token to authorize package download:');
+        if (token) {
+          token = token.trim();
+          localStorage.setItem('buyer_access_token', token);
+        } else {
+          alert('Buyer access token is required to download.');
+          return;
+        }
+      }
+
+      const btn = document.getElementById('btn-download');
+      btn.disabled = true;
+      btn.textContent = "Verifying Entitlement...";
+
+      try {
+        const res = await fetch(`/orders/${orderId}/download`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert('Download error: ' + (err.detail || res.statusText));
+          btn.disabled = false;
+          btn.textContent = "Download Software Package";
+          return;
+        }
+
+        const data = await res.json();
+        
+        // Fetch verified delivery payload using the ephemeral token
+        const pkgRes = await fetch(data.download_url);
+        if (!pkgRes.ok) {
+          throw new Error('Ephemeral token validation failed');
+        }
+        const pkgData = await pkgRes.json();
+
+        // Render verified delivery terminal card
+        const dlBox = document.getElementById('download-box');
+        dlBox.innerHTML = `
+          <div style="background: #0d1f18; border: 1px solid #164e3f; border-radius: 6px; padding: 20px; text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a7f3d0; margin-bottom: 20px;">
+            <div style="color: #34d399; font-weight: 600; margin-bottom: 8px;">[✓] ENTITLEMENT VERIFIED &amp; GRANTED</div>
+            <div>Order ID: ${pkgData.order_id}</div>
+            <div>Listing Version (Pinned): ${pkgData.listing_version_id}</div>
+            <div>Storage Location: ${pkgData.storage_location}</div>
+            <div>Authorization Status: ${pkgData.status.toUpperCase()}</div>
+            <div style="margin-top: 8px; color: #6ee7b7; font-size: 11px;">Message: ${pkgData.message}</div>
+          </div>
+          <a id="file-dl" class="btn-primary" style="display: inline-block; text-decoration: none; padding: 12px 24px;" download="package-${pkgData.listing_version_id}.json">
+            Save Package Manifest &amp; License
+          </a>
+        `;
+        const blob = new Blob([JSON.stringify(pkgData, null, 2)], { type: 'application/json' });
+        const blobUrl = URL.createObjectURL(blob);
+        const fileLink = document.getElementById('file-dl');
+        fileLink.href = blobUrl;
+      } catch (err) {
+        alert('Error fetching signed download: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = "Download Software Package";
+      }
+    }
+  </script>
+</body>
+</html>

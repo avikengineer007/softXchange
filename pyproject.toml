@@ -1,16 +1,45 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "secrets-scanner"
+name = "softxchange"
 version = "0.1.0"
-description = "Deterministic, rule-based secrets scanner for uploaded packages."
+description = "softXchange — Manifest's Marketplace Application"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = []
 
-[project.scripts]
-secrets-scan = "secrets_scanner.cli:main"
-static-scan = "static_analysis.cli:main"
-scan-package = "static_analysis.cli:main_combined"
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+extraPaths = [
+    "./apps/auth-service",
+    "./apps/listings-service",
+    "./apps/buyer-assist",
+    "./apps/seller-assist",
+    "./packages/ml-shared/src"
+]
+
+[tool.pyrefly]
+python-interpreter-path = "d:/Projects/softXchange/.venv/Scripts/python.exe"
+search-path = [
+    "apps/auth-service",
+    "apps/listings-service",
+    "apps/buyer-assist",
+    "apps/seller-assist",
+    "packages/ml-shared/src"
+]
+
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
+pythonpath = [
+    "apps/auth-service",
+    "apps/listings-service",
+    "apps/buyer-assist",
+    "apps/seller-assist",
+    "packages/ml-shared/src"
+]
+testpaths = [
+    "packages/ml-shared/tests",
+    "apps/buyer-assist/tests",
+    "apps/seller-assist/tests"
+]
+
+

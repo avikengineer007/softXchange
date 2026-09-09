@@ -1,0 +1,5 @@
+search-path = [
+    "../../packages/ml-shared/src",
+    "../../apps/listings-service",
+    "."
+]

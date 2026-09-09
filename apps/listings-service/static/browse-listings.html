@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vetted Software Catalog — softXchange</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="site-nav">
+    <a href="/static/browse-listings.html" class="brand-link">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#164e3f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+      <h1>softXchange</h1>
+    </a>
+    <nav class="nav-links">
+      <a href="/static/browse-listings.html" class="active">Catalog</a>
+      <a href="/static/seller-listings.html">Seller Portal</a>
+      <a href="http://localhost:8001/static/customer-login.html" target="_blank">Sign In</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section class="catalog-hero">
+      <h2>Vetted Software Marketplace</h2>
+      <p>Every software package is cryptographically scanned for secrets and seller-verified prior to publication.</p>
+    </section>
+
+    <!-- Search & Filters -->
+    <section class="filter-bar">
+      <input type="text" id="search-query" class="search-input" placeholder="Search developer tools, utilities, libraries...">
+      <select id="category-filter" class="filter-select">
+        <option value="">All Categories</option>
+        <option value="developer-tools">Developer Tools</option>
+        <option value="security">Security & Privacy</option>
+        <option value="productivity">Productivity</option>
+        <option value="infrastructure">Infrastructure</option>
+        <option value="utilities">Utilities</option>
+      </select>
+      <select id="price-filter" class="filter-select">
+        <option value="">Any Price</option>
+        <option value="free">Free ($0.00)</option>
+        <option value="under25">Under $25</option>
+        <option value="under100">Under $100</option>
+      </select>
+      <button id="btn-search" class="btn-filter">Search Catalog</button>
+    </section>
+
+    <!-- Listings Grid -->
+    <div id="listings-container" class="listing-grid">
+      <!-- Dynamically injected cards -->
+      <div style="grid-column: 1 / -1; text-align: center; padding: 48px 0; color: var(--color-ink-muted);">
+        Loading vetted packages...
+      </div>
+    </div>
+  </main>
+
+  <script>
+    async function loadCatalog() {
+      const query = document.getElementById('search-query').value.trim();
+      const category = document.getElementById('category-filter').value;
+      const priceFilter = document.getElementById('price-filter').value;
+
+      let url = '/listings?';
+      const params = new URLSearchParams();
+      if (query) params.append('query', query);
+      if (category) params.append('category', category);
+      
+      if (priceFilter === 'free') {
+        params.append('max_price', '0');
+      } else if (priceFilter === 'under25') {
+        params.append('max_price', '2500');
+      } else if (priceFilter === 'under100') {
+        params.append('max_price', '10000');
+      }
+
+      url += params.toString();
+
+      const container = document.getElementById('listings-container');
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to fetch listings');
+        const data = await res.json();
+        const items = Array.isArray(data) ? data : (data.items || []);
+        
+        container.innerHTML = '';
+        if (items.length === 0) {
+          container.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: #fff; border: 1px dashed var(--color-border); border-radius: var(--radius);">
+              <h3 style="font-family: var(--font-serif); font-size: 20px; color: var(--color-ink-muted); margin-bottom: 8px;">No vetted packages found</h3>
+              <p style="font-size: 14px; color: var(--color-ink-subtle);">Try adjusting your search criteria or check back later.</p>
+            </div>
+          `;
+          return;
+        }
+
+        items.forEach(item => {
+          const card = document.createElement('a');
+          card.className = 'listing-card';
+          card.href = `/static/listing-detail.html?id=${item.id}`;
+
+          const formattedPrice = item.price_cents === 0 ? 'Free' : `$${(item.price_cents / 100).toFixed(2)}`;
+
+          card.innerHTML = `
+            <div>
+              <div class="listing-card-header">
+                <span class="card-category">${escapeHtml(item.category || 'Software')}</span>
+                <span class="card-price">${formattedPrice}</span>
+              </div>
+              <h3 class="card-title">${escapeHtml(item.title)}</h3>
+              <p class="card-description">${escapeHtml(item.description || 'No description provided.')}</p>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; pt: 12px; border-top: 1px solid var(--color-border);">
+                <div class="vetted-badge">
+                  <span class="dot"></span>
+                  <span>Scanned &amp; Vetted</span>
+                </div>
+                <span style="font-size: 12px; color: var(--color-ink-subtle); font-family: monospace;">v${escapeHtml(item.current_version_label || '1.0.0')}</span>
+              </div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        container.innerHTML = `<div style="grid-column: 1 / -1; color: #b91c1c; text-align: center; padding: 32px;">Error loading catalog: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    document.getElementById('btn-search').addEventListener('click', loadCatalog);
+    document.getElementById('search-query').addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') loadCatalog();
+    });
+    document.getElementById('category-filter').addEventListener('change', loadCatalog);
+    document.getElementById('price-filter').addEventListener('change', loadCatalog);
+
+    window.addEventListener('DOMContentLoaded', loadCatalog);
+  </script>
+</body>
+</html>

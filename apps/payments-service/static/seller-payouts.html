@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Payouts — softXchange</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header class="site-nav">
+    <a href="http://localhost:8003/static/browse-listings.html" class="brand-link">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#164e3f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </svg>
+      <h1>softXchange</h1>
+    </a>
+    <nav class="nav-links">
+      <a href="http://localhost:8003/static/seller-listings.html">My Packages</a>
+      <a href="/static/seller-payouts.html" class="active">Payout Dashboard</a>
+      <a href="http://localhost:8001/static/dashboard-seller.html" target="_blank">KYC Status</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Token Bar -->
+    <div style="background: #f0eee6; border: 1px solid var(--color-border); border-radius: 6px; padding: 10px 16px; display: flex; gap: 12px; align-items: center; margin-bottom: 24px; font-size: 13px;">
+      <span style="font-weight: 600;">Seller Access Token:</span>
+      <input type="password" id="seller-token-input" placeholder="Bearer ey..." style="flex: 1; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: 4px; font-family: monospace; font-size: 12px;">
+      <button class="btn-primary" style="padding: 6px 14px; font-size: 12px;" onclick="saveSellerToken()">Set Token</button>
+      <span id="token-status" style="color: var(--color-ink-muted);"></span>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px;">
+      <div>
+        <h2 style="font-family: var(--font-serif); font-size: 32px; color: var(--color-ink);">Seller Payout Dashboard</h2>
+        <p style="color: var(--color-ink-muted); font-size: 14px; margin-top: 4px;">Monitor cleared payouts, ongoing transactions, and Stripe Connect status.</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div id="connect-status-badge"></div>
+        <button id="btn-connect" class="btn-primary" onclick="initiateConnect()">
+          Connect Stripe Account
+        </button>
+      </div>
+    </div>
+
+    <!-- Payout Statistics -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="label">Available for Payout</div>
+        <div id="stat-available" class="value">$0.00</div>
+        <div style="font-size: 11px; color: var(--color-ink-subtle); margin-top: 4px;">Cleared &amp; transferable</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Under Review (Isolated Holds)</div>
+        <div id="stat-review" class="value" style="color: #92400e;">$0.00</div>
+        <div style="font-size: 11px; color: var(--color-ink-subtle); margin-top: 4px;">Routine SLA review (max 48h)</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Completed Sales</div>
+        <div id="stat-count" class="value">0</div>
+        <div style="font-size: 11px; color: var(--color-ink-subtle); margin-top: 4px;">Total verified transactions</div>
+      </div>
+    </div>
+
+    <!-- Recent Sales Table -->
+    <div class="table-card">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Gross Amount</th>
+            <th>Platform Fee (8%)</th>
+            <th>Net Seller Payout</th>
+            <th>Payout Status</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="orders-tbody">
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 32px; color: var(--color-ink-muted);">
+              Loading seller transactions...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    let token = localStorage.getItem('seller_access_token') || '';
+
+    function initToken() {
+      if (token) {
+        document.getElementById('seller-token-input').value = token;
+        document.getElementById('token-status').textContent = 'Token set in session';
+      }
+    }
+
+    function saveSellerToken() {
+      const val = document.getElementById('seller-token-input').value.trim();
+      if (val) {
+        token = val.replace(/^Bearer\s+/i, '');
+        localStorage.setItem('seller_access_token', token);
+        document.getElementById('token-status').textContent = 'Token saved!';
+        loadDashboard();
+        checkConnectStatus();
+      }
+    }
+
+    async function checkConnectStatus() {
+      if (!token) return;
+      try {
+        const res = await fetch('/payments/seller/connect/status', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) return;
+        const status = await res.json();
+        const btn = document.getElementById('btn-connect');
+        const connectBadge = document.getElementById('connect-status-badge');
+
+        if (status.payout_enabled) {
+          btn.style.display = 'none';
+          connectBadge.innerHTML = '<span class="status-pill status-live" style="background:#d1fae5; color:#065f46; font-size:13px; padding:6px 12px; display:inline-flex; align-items:center; gap:6px;"><span>✓</span> Stripe Connect Verified &amp; Payouts Active</span>';
+        } else if (status.connected) {
+          btn.style.display = 'inline-block';
+          btn.textContent = 'Complete Verification';
+          btn.style.backgroundColor = '#d97706';
+          connectBadge.innerHTML = '<span class="status-pill status-pending" style="font-size:13px; padding:6px 12px;">Stripe Onboarding Pending</span>';
+        } else {
+          btn.style.display = 'inline-block';
+          btn.textContent = 'Connect Stripe Account';
+          btn.style.backgroundColor = '';
+          connectBadge.innerHTML = '<span class="status-pill status-draft" style="font-size:13px; padding:6px 12px;">Not Connected</span>';
+        }
+      } catch (err) {
+        console.error('Error fetching connect status:', err);
+      }
+    }
+
+    async function loadDashboard() {
+      if (!token) {
+        document.getElementById('orders-tbody').innerHTML = `
+          <tr><td colspan="6" style="text-align:center; padding:32px;">Please set seller token in the bar above or log in to view payout analytics.</td></tr>
+        `;
+        return;
+      }
+
+      try {
+        const res = await fetch('/payments/seller/dashboard', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        document.getElementById('stat-available').textContent = `$${data.available_payout_usd.toFixed(2)}`;
+        document.getElementById('stat-review').textContent = `$${data.under_review_payout_usd.toFixed(2)}`;
+        document.getElementById('stat-count').textContent = data.total_sales_count;
+
+        const tbody = document.getElementById('orders-tbody');
+        tbody.innerHTML = '';
+        if (data.orders.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--color-ink-muted);">No transactions recorded yet.</td></tr>`;
+          return;
+        }
+
+        data.orders.forEach(o => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><code>#${o.id.slice(0, 8)}</code></td>
+            <td>$${o.amount_usd.toFixed(2)}</td>
+            <td>-$${(o.platform_fee_cents / 100).toFixed(2)}</td>
+            <td><strong>$${o.seller_payout_usd.toFixed(2)}</strong></td>
+            <td><span class="status-pill status-${o.display_status}">${o.display_status.replace(/_/g, ' ')}</span></td>
+            <td><small style="color: var(--color-ink-muted);">${o.status_message}</small></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Dashboard error:", err);
+      }
+    }
+
+    async function initiateConnect() {
+      try {
+        const res = await fetch('/payments/seller/connect/start', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        window.location.href = data.onboarding_url;
+      } catch (err) {
+        alert('Error starting Stripe Connect: ' + err.message);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initToken();
+      loadDashboard();
+      checkConnectStatus();
+    });
+  </script>
+</body>
+</html>

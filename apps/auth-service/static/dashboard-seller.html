@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Dashboard & KYC Gate — softXchange</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="auth-container" style="max-width: 600px;">
+    <div class="brand-header">
+      <div class="brand-badge">
+        <span class="dot"></span>
+        Partner & Seller Portal
+      </div>
+      <h1 class="brand-title">Seller Overview</h1>
+      <p class="brand-subtitle">Listing Management & Payout Gate</p>
+    </div>
+
+    <div class="auth-card">
+      <h2 class="card-title" id="welcome-name">Developer Studio</h2>
+      <p class="card-description" id="user-email">Loading session...</p>
+
+      <!-- KYC Gate Panel -->
+      <div style="background: #faf9f6; border: 1px solid var(--color-border); border-radius: 6px; padding: 20px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 style="font-family: var(--font-serif); font-size: 17px; color: var(--color-seal);">Identity Verification (KYC Gate)</h3>
+          <span id="kyc-badge" class="status-pill status-not_started">Loading...</span>
+        </div>
+
+        <p style="font-size: 13px; color: var(--color-ink-muted); margin-bottom: 12px;">
+          Architecture rule: Sellers cannot receive payouts until identity verification clears.
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; font-size: 13px;">
+          <div style="background: #ffffff; border: 1px solid var(--color-border); padding: 10px; border-radius: 4px;">
+            <div style="color: var(--color-ink-muted); font-size: 11px; text-transform: uppercase;">Payout Status</div>
+            <strong id="payout-status" style="color: #991b1b;">Disabled (Fail-Closed)</strong>
+          </div>
+          <div style="background: #ffffff; border: 1px solid var(--color-border); padding: 10px; border-radius: 4px;">
+            <div style="color: var(--color-ink-muted); font-size: 11px; text-transform: uppercase;">Listing Status</div>
+            <strong id="listing-status">Draft Only</strong>
+          </div>
+        </div>
+
+        <div id="kyc-action-area">
+          <button id="start-kyc-btn" class="btn-primary" style="margin-bottom: 8px;">
+            Start KYC Verification
+          </button>
+          <p id="kyc-action-note" style="font-size: 12px; color: var(--color-ink-muted); text-align: center;"></p>
+        </div>
+      </div>
+
+      <button id="logout-btn" class="btn-primary" style="background-color: #374151;">
+        Sign Out of Seller Portal
+      </button>
+    </div>
+  </div>
+
+  <script src="/static/js/auth.js"></script>
+  <script>
+    let currentUserId = null;
+
+    async function loadKYCStatus() {
+      try {
+        const resp = await window.SoftXchangeAuth.fetchWithAuth("/auth/seller/kyc/status");
+        if (resp.ok) {
+          const kyc = await resp.json();
+          updateKYCUI(kyc);
+        }
+      } catch (err) {
+        console.error("Failed to fetch KYC status", err);
+      }
+    }
+
+    function updateKYCUI(kyc) {
+      const badge = document.getElementById("kyc-badge");
+      const payoutStatus = document.getElementById("payout-status");
+      const listingStatus = document.getElementById("listing-status");
+      const actionArea = document.getElementById("kyc-action-area");
+      const actionNote = document.getElementById("kyc-action-note");
+      const startBtn = document.getElementById("start-kyc-btn");
+
+      badge.textContent = kyc.kyc_status.replace("_", " ");
+      badge.className = "status-pill status-" + kyc.kyc_status;
+
+      if (kyc.payout_enabled) {
+        payoutStatus.textContent = "Enabled";
+        payoutStatus.style.color = "#065f46";
+        listingStatus.textContent = "Publishing Allowed";
+        listingStatus.style.color = "#065f46";
+        startBtn.style.display = "none";
+        actionNote.textContent = "Your identity is verified. Payout account is enabled for listing earnings.";
+      } else if (kyc.kyc_status === "pending") {
+        payoutStatus.textContent = "Disabled (Pending Provider Review)";
+        payoutStatus.style.color = "#92400e";
+        listingStatus.textContent = "Draft Only (Verification Required)";
+        startBtn.style.display = "inline-flex";
+        startBtn.textContent = "Refresh Verification Status";
+        startBtn.className = "btn-primary";
+        startBtn.style.backgroundColor = "#4b5563";
+        actionNote.textContent = "Onboarding submitted. Awaiting identity provider clearance (Stripe/compliance webhook).";
+        startBtn.onclick = async () => {
+          startBtn.textContent = "Checking...";
+          await loadKYCStatus();
+        };
+      } else {
+        payoutStatus.textContent = "Disabled (Fail-Closed)";
+        payoutStatus.style.color = "#991b1b";
+        listingStatus.textContent = "Draft Only";
+        startBtn.style.display = "inline-flex";
+        startBtn.textContent = "Start KYC Verification";
+        startBtn.className = "btn-primary";
+        startBtn.style.backgroundColor = "";
+        actionNote.textContent = "Complete identity verification to activate payout disbursement.";
+        startBtn.onclick = async () => {
+          startBtn.disabled = true;
+          startBtn.textContent = "Initiating onboarding...";
+          const res = await window.SoftXchangeAuth.fetchWithAuth("/auth/seller/kyc/start", {
+            method: "POST"
+          });
+          if (res.ok) {
+            await loadKYCStatus();
+          }
+        };
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      const session = await window.SoftXchangeAuth.silentRefresh();
+      if (!session || !session.access_token) {
+        window.location.href = "/static/login-seller.html";
+        return;
+      }
+
+      const user = session.user;
+      currentUserId = user.id;
+      document.getElementById("welcome-name").textContent = user.display_name ? user.display_name : "Partner Seller";
+      document.getElementById("user-email").textContent = user.email;
+
+      await loadKYCStatus();
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await window.SoftXchangeAuth.logout();
+      window.location.href = "/static/login-seller.html";
+    });
+  </script>
+</body>
+</html>

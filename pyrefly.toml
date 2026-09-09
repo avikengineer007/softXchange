@@ -1,0 +1,10 @@
+python-interpreter-path = "d:/Projects/softXchange/.venv/Scripts/python.exe"
+search-path = [
+    "apps/auth-service",
+    "apps/listings-service",
+    "apps/payments-service",
+    "apps/scan-service",
+    "apps/buyer-assist",
+    "packages/ml-shared/src",
+    "Secret Scanner engine_Manifest"
+]

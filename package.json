@@ -1,0 +1,14 @@
+{
+  "name": "softxchange",
+  "version": "0.1.0",
+  "private": true,
+  "description": "softXchange — Manifest's Marketplace Application",
+  "scripts": {
+    "auth:dev": "python apps/auth-service/run.py",
+    "auth:test": "pytest apps/auth-service/tests/ -v"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Dashboard — softXchange</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="auth-container" style="max-width: 600px;">
+    <div class="brand-header">
+      <div class="brand-badge">
+        <span class="dot"></span>
+        Customer Portal
+      </div>
+      <h1 class="brand-title">Welcome to softXchange</h1>
+      <p class="brand-subtitle">Your Software Marketplace & Licenses</p>
+    </div>
+
+    <div class="auth-card">
+      <h2 class="card-title" id="welcome-name">Hello, Buyer</h2>
+      <p class="card-description" id="user-email">Loading session...</p>
+
+      <div style="background: #f8f6f0; border: 1px solid var(--color-border); border-radius: 6px; padding: 18px; margin-bottom: 24px;">
+        <h3 style="font-family: var(--font-serif); font-size: 16px; margin-bottom: 8px; color: var(--color-seal);">Session Verification</h3>
+        <p style="font-size: 13px; color: var(--color-ink-muted); margin-bottom: 8px;">
+          <strong>Access Token:</strong> Stored securely in in-memory JavaScript state.
+        </p>
+        <p style="font-size: 13px; color: var(--color-ink-muted); margin-bottom: 8px;">
+          <strong>Refresh Token:</strong> Handled securely via httpOnly cookie.
+        </p>
+        <p style="font-size: 13px; color: var(--color-ink-muted);">
+          <strong>Roles:</strong> <span id="user-roles" class="status-pill status-verified">customer</span>
+        </p>
+      </div>
+
+      <button id="logout-btn" class="btn-primary" style="background-color: #374151;">
+        Sign Out
+      </button>
+    </div>
+  </div>
+
+  <script src="/static/js/auth.js"></script>
+  <script>
+    window.addEventListener("DOMContentLoaded", async () => {
+      // Re-hydrate access token into memory via silent refresh
+      const session = await window.SoftXchangeAuth.silentRefresh();
+      if (!session || !session.access_token) {
+        window.location.href = "/static/login-customer.html";
+        return;
+      }
+
+      const user = session.user;
+      document.getElementById("welcome-name").textContent = user.display_name ? `Hello, ${user.display_name}` : "Hello, Customer";
+      document.getElementById("user-email").textContent = user.email;
+      document.getElementById("user-roles").textContent = (user.roles || ["customer"]).join(", ");
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", async () => {
+      await window.SoftXchangeAuth.logout();
+      window.location.href = "/static/login-customer.html";
+    });
+  </script>
+</body>
+</html>
