@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Operations Console — softXchange</title>
+  <meta name="description" content="softXchange platform operations: escrow SLA review, KYC validation, listing moderation, and security auditing.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .admin-tabs {
+      display: flex; gap: 2px;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: 28px;
+    }
+    .admin-tab-btn {
+      background: transparent; border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-secondary);
+      padding: 10px 18px; font-size: 13px; font-weight: 500;
+      cursor: pointer;
+      transition: color var(--transition-fast) var(--easing-standard),
+                  border-color var(--transition-fast) var(--easing-standard);
+    }
+    .admin-tab-btn:hover { color: var(--text-primary); }
+    .admin-tab-btn.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .sla-badge-breached { background: rgba(248,113,113,0.15); color: var(--color-danger); border: 1px solid var(--color-danger); padding: 2px 8px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 500; }
+    .sla-badge-ok { background: var(--badge-green-bg); color: var(--badge-green); border: 1px solid var(--badge-green-border); padding: 2px 8px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 500; }
+    .action-btn-group { display: flex; gap: 6px; }
+    .btn-xs { padding: 4px 10px; font-size: 11px; border-radius: var(--radius-sm); cursor: pointer; font-weight: 500; }
+    .btn-verify { background: var(--badge-green); color: #000; border: none; }
+    .btn-reject { background: transparent; color: var(--color-danger); border: 1px solid var(--color-danger); }
+    .btn-reject:hover { background: rgba(248,113,113,0.1); }
+    .btn-suspend { background: transparent; color: var(--color-warning); border: 1px solid var(--color-warning); }
+    .btn-suspend:hover { background: rgba(251,191,36,0.1); }
+    .elevation-card { background: var(--bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 24px; margin-bottom: 24px; }
+    .elevation-form { display: flex; gap: 10px; margin-top: 10px; }
+    .elevation-input { flex: 1; padding: 10px 14px; background: var(--bg-input); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: var(--font-mono); }
+    .feedback-banner { padding: 12px 20px; border-radius: var(--radius-sm); margin-bottom: 16px; font-size: 13px; font-weight: 500; display: none; }
+    .feedback-success { background: var(--badge-green-bg); border: 1px solid var(--badge-green-border); color: var(--badge-green); }
+    .feedback-error { background: var(--color-danger-bg); border: 1px solid var(--color-danger-border); color: var(--color-danger); }
+  </style>
+</head>
+<body>
+
+  <header class="site-nav" role="banner">
+    <a href="/browse-listings.html" class="brand-link" id="brand-home">
+      <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="admin-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="var(--accent-blue)"/>
+            <stop offset="100%" stop-color="var(--accent-violet)"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#admin-grad)"/>
+      </svg>
+      <span>softXchange <span style="font-size:11px;color:var(--accent-violet);font-weight:400;">ADMIN</span></span>
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="/browse-listings.html">Marketplace</a>
+      <a href="/dashboard-seller.html">Seller Hub</a>
+      <button id="logout-btn" class="btn-secondary" style="padding:6px 12px;font-size:12px;" type="button">Sign Out</button>
+    </nav>
+  </header>
+
+  <main class="container page-transition" role="main">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--color-border);">
+      <div>
+        <h1 style="font-family:var(--font-heading);font-size:26px;font-weight:700;color:var(--text-primary);">Platform Operations Console</h1>
+        <p style="color:var(--text-secondary);font-size:13px;margin-top:4px;">Fail-closed escrow review, KYC validation, listing moderation, and security auditing.</p>
+      </div>
+      <span class="status-pill status-verified" id="operator-badge">Operator Mode Active</span>
+    </div>
+
+    <div id="feedback-alert" class="feedback-banner" role="alert" aria-live="assertive"></div>
+
+    <!-- Elevation Panel (shown when user has no admin role yet) -->
+    <div id="elevation-panel" class="elevation-card" style="display:none;">
+      <h3 style="font-size:16px;margin-bottom:6px;">Elevate Account to Administrator</h3>
+      <p style="color:var(--text-secondary);font-size:13px;">Administrative access requires a high-entropy operator verification code held only by platform staff. Attempts are rate-limited and strictly audit-logged.</p>
+      <form id="elevation-form" class="elevation-form" novalidate>
+        <input type="password" id="provisioning-code" class="elevation-input" placeholder="sx_admin_sec_…" required aria-label="Operator provisioning code">
+        <button type="submit" class="btn-primary" style="white-space:nowrap;">Elevate Role</button>
+      </form>
+    </div>
+
+    <!-- Operational Tabs -->
+    <div class="admin-tabs" role="tablist" aria-label="Admin console sections">
+      <button class="admin-tab-btn active" data-tab="tab-held-orders" role="tab" aria-selected="true" aria-controls="tab-held-orders">Held Orders (Escrow SLA)</button>
+      <button class="admin-tab-btn" data-tab="tab-kyc-queue" role="tab" aria-selected="false" aria-controls="tab-kyc-queue">Seller KYC Queue</button>
+      <button class="admin-tab-btn" data-tab="tab-moderation" role="tab" aria-selected="false" aria-controls="tab-moderation">Listings Moderation</button>
+      <button class="admin-tab-btn" data-tab="tab-audit-log" role="tab" aria-selected="false" aria-controls="tab-audit-log">Security Audit Log</button>
+    </div>
+
+    <!-- Held Orders -->
+    <div id="tab-held-orders" class="tab-panel active" role="tabpanel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="font-size:18px;font-family:var(--font-heading);">Held Escrow Orders (48-Hour SLA Human Review)</h2>
+        <button id="refresh-orders-btn" class="btn-secondary btn-xs" type="button">Refresh Queue</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" aria-label="Held escrow orders">
+          <thead><tr><th scope="col">Order ID</th><th scope="col">Amount</th><th scope="col">Hold Reason</th><th scope="col">Hold Duration</th><th scope="col">SLA Status</th><th scope="col">Actions</th></tr></thead>
+          <tbody id="held-orders-body"><tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">Loading held orders…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- KYC Queue -->
+    <div id="tab-kyc-queue" class="tab-panel" role="tabpanel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="font-size:18px;font-family:var(--font-heading);">Pending Seller Verifications</h2>
+        <button id="refresh-kyc-btn" class="btn-secondary btn-xs" type="button">Refresh KYC</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" aria-label="KYC verification queue">
+          <thead><tr><th scope="col">User ID</th><th scope="col">Email</th><th scope="col">Display Name</th><th scope="col">Status</th><th scope="col">Submitted</th><th scope="col">Actions</th></tr></thead>
+          <tbody id="kyc-body"><tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">Loading KYC queue…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Listings Moderation -->
+    <div id="tab-moderation" class="tab-panel" role="tabpanel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <h2 style="font-size:18px;font-family:var(--font-heading);">Marketplace Listings Moderation</h2>
+        <div style="display:flex;gap:8px;">
+          <select id="status-filter" style="background:var(--bg-surface);border:1px solid var(--color-border);color:var(--text-primary);padding:4px 8px;border-radius:var(--radius-sm);" aria-label="Filter by status">
+            <option value="">All Statuses</option>
+            <option value="live">Live Only</option>
+            <option value="pending_scan">Pending Scan</option>
+            <option value="suspended">Suspended</option>
+          </select>
+          <button id="refresh-listings-btn" class="btn-secondary btn-xs" type="button">Refresh Listings</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" aria-label="Platform listings">
+          <thead><tr><th scope="col">Listing ID</th><th scope="col">Title</th><th scope="col">Category</th><th scope="col">Price</th><th scope="col">Status</th><th scope="col">Actions</th></tr></thead>
+          <tbody id="listings-body"><tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">Loading listings…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Audit Log -->
+    <div id="tab-audit-log" class="tab-panel" role="tabpanel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="font-size:18px;font-family:var(--font-heading);">Operator Audit Trail</h2>
+        <button id="refresh-audit-btn" class="btn-secondary btn-xs" type="button">Refresh Logs</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" aria-label="Security audit log">
+          <thead><tr><th scope="col">Timestamp</th><th scope="col">User ID</th><th scope="col">Source IP</th><th scope="col">Result</th><th scope="col">Reason / Details</th></tr></thead>
+          <tbody id="audit-body"><tr><td colspan="5" style="text-align:center;color:var(--text-secondary);">Loading audit trail…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/auth.js"></script>
+  <script src="/static/js/verification-motif.js" defer></script>
+  <script>
+    const AUTH_API     = (window.__CONFIG__ && window.__CONFIG__.authServiceUrl)     || 'http://localhost:8001';
+    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || 'http://localhost:8004';
+    const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || 'http://localhost:8003';
+
+    // ── Tabs ─────────────────────────────────────────────────────────────────
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.admin-tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+    const feedbackAlert = document.getElementById('feedback-alert');
+    function notify(msg, isError = false) {
+      feedbackAlert.textContent = msg;
+      feedbackAlert.className = `feedback-banner ${isError ? 'feedback-error' : 'feedback-success'}`;
+      feedbackAlert.style.display = 'block';
+      setTimeout(() => { feedbackAlert.style.display = 'none'; }, 6000);
+    }
+
+    // ── Held Orders ───────────────────────────────────────────────────────────
+    async function loadHeldOrders() {
+      const tbody = document.getElementById('held-orders-body');
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/payments/orders/held`);
+        if (!res.ok) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">No held orders or payments service offline.</td></tr>`; return; }
+        const data = await res.json();
+        if (!data || !data.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">Zero held orders. SLA queue clear.</td></tr>`; return; }
+        tbody.innerHTML = data.map(order => `
+          <tr id="order-row-${order.id}">
+            <td><code>${order.id.substring(0, 8)}…</code></td>
+            <td>$${order.amount_usd}</td>
+            <td>${order.hold_reason || 'Escrow Review'}</td>
+            <td>${order.hours_held}h</td>
+            <td><span class="${order.sla_breached ? 'sla-badge-breached' : 'sla-badge-ok'}">${order.sla_breached ? 'SLA BREACHED (>48h)' : 'Within SLA'}</span></td>
+            <td>
+              <div class="action-btn-group">
+                <button class="btn-xs btn-verify" onclick="releaseOrder('${order.id}')">Release</button>
+                <button class="btn-xs btn-reject" onclick="refundOrder('${order.id}')">Refund</button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">Unable to connect to payments service.</td></tr>`;
+      }
+    }
+
+    async function releaseOrder(orderId) {
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/payments/orders/${orderId}/release`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to release order hold.');
+        // Trigger convergence-flourish on the row being released (verification motif)
+        const rowEl = document.getElementById(`order-row-${orderId}`);
+        if (window.VerificationMotif && rowEl) window.VerificationMotif.triggerReleaseFlourish(rowEl);
+        notify(`Order ${orderId.substring(0, 8)} hold released.`);
+        loadHeldOrders();
+      } catch (err) { notify(err.message, true); }
+    }
+
+    async function refundOrder(orderId) {
+      if (!confirm('Refund this order? This action cannot be undone.')) return;
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/payments/orders/${orderId}/refund`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to issue refund.');
+        // Trigger neutral fade for refund — no convergence motif
+        const rowEl = document.getElementById(`order-row-${orderId}`);
+        if (window.VerificationMotif && rowEl) window.VerificationMotif.triggerRefundFade(rowEl);
+        notify(`Order ${orderId.substring(0, 8)} refunded.`);
+        setTimeout(loadHeldOrders, 220);
+      } catch (err) { notify(err.message, true); }
+    }
+
+    // ── KYC Queue ─────────────────────────────────────────────────────────────
+    async function loadKYCQueue() {
+      const tbody = document.getElementById('kyc-body');
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${AUTH_API}/auth/admin/kyc/pending`);
+        if (!res.ok) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">Failed to load KYC queue.</td></tr>`; return; }
+        const data = await res.json();
+        if (!data || !data.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">Zero pending seller verifications.</td></tr>`; return; }
+        tbody.innerHTML = data.map(seller => `
+          <tr>
+            <td><code>${seller.user_id.substring(0, 8)}…</code></td>
+            <td>${seller.email}</td>
+            <td>${seller.display_name || '—'}</td>
+            <td><span class="status-pill status-pending">${seller.kyc_status}</span></td>
+            <td>${new Date(seller.created_at).toLocaleDateString()}</td>
+            <td>
+              <div class="action-btn-group">
+                <button class="btn-xs btn-verify" onclick="verifyKYC('${seller.user_id}')">Verify</button>
+                <button class="btn-xs btn-reject" onclick="rejectKYC('${seller.user_id}')">Reject</button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">Error fetching KYC queue.</td></tr>`;
+      }
+    }
+
+    async function verifyKYC(userId) {
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${AUTH_API}/auth/admin/kyc/${userId}/verify`, { method: 'POST' });
+        if (!res.ok) throw new Error('Verification failed.');
+        notify('Seller KYC verified and payouts enabled.');
+        loadKYCQueue();
+      } catch (err) { notify(err.message, true); }
+    }
+
+    async function rejectKYC(userId) {
+      const reason = prompt('Enter reason for KYC rejection:', 'Incomplete documentation');
+      if (!reason) return;
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${AUTH_API}/auth/admin/kyc/${userId}/reject`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }),
+        });
+        if (!res.ok) throw new Error('Rejection failed.');
+        notify('Seller KYC rejected.');
+        loadKYCQueue();
+      } catch (err) { notify(err.message, true); }
+    }
+
+    // ── Listings Moderation ───────────────────────────────────────────────────
+    async function loadListings() {
+      const tbody = document.getElementById('listings-body');
+      const status = document.getElementById('status-filter').value;
+      const url = status
+        ? `${LISTINGS_API}/listings/admin/all?status=${encodeURIComponent(status)}`
+        : `${LISTINGS_API}/listings/admin/all`;
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(url);
+        if (!res.ok) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">Unable to load listings.</td></tr>`; return; }
+        const data = await res.json();
+        if (!data || !data.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">No listings found matching filter.</td></tr>`; return; }
+        tbody.innerHTML = data.map(listing => `
+          <tr>
+            <td><code>${listing.id.substring(0, 8)}…</code></td>
+            <td><strong>${listing.title}</strong></td>
+            <td>${listing.category}</td>
+            <td>$${listing.price_usd}</td>
+            <td><span class="status-pill status-${listing.status}">${listing.status}</span></td>
+            <td>${listing.status !== 'suspended'
+              ? `<button class="btn-xs btn-suspend" onclick="suspendListing('${listing.id}')">Suspend</button>`
+              : `<span style="font-size:11px;color:var(--text-secondary);">Suspended</span>`}
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-secondary);">Listings service unavailable.</td></tr>`;
+      }
+    }
+
+    async function suspendListing(listingId) {
+      if (!confirm('Suspend listing and purge search index embedding?')) return;
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${LISTINGS_API}/listings/${listingId}/suspend`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to suspend listing.');
+        notify(`Listing ${listingId.substring(0, 8)} suspended and vector embedding removed.`);
+        loadListings();
+      } catch (err) { notify(err.message, true); }
+    }
+
+    // ── Audit Log ─────────────────────────────────────────────────────────────
+    async function loadAuditLog() {
+      const tbody = document.getElementById('audit-body');
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${AUTH_API}/auth/admin/audit-log`);
+        if (!res.ok) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);">Unable to load audit log.</td></tr>`; return; }
+        const data = await res.json();
+        if (!data || !data.length) { tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);">No audit events recorded yet.</td></tr>`; return; }
+        tbody.innerHTML = data.map(log => `
+          <tr>
+            <td>${new Date(log.timestamp).toLocaleString()}</td>
+            <td><code>${log.user_id.substring(0, 8)}…</code></td>
+            <td>${log.source_ip || '—'}</td>
+            <td><span class="status-pill ${log.success ? 'status-verified' : 'status-suspended'}">${log.success ? 'Success' : 'Failed'}</span></td>
+            <td>${log.failure_reason || 'Elevation approved'}</td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);">Error fetching audit logs.</td></tr>`;
+      }
+    }
+
+    // ── Elevation Form ────────────────────────────────────────────────────────
+    document.getElementById('elevation-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = document.getElementById('provisioning-code').value.trim();
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${AUTH_API}/auth/admin/provision`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Elevation failed.');
+        notify('Elevation successful! Operator mode enabled.');
+        document.getElementById('elevation-panel').style.display = 'none';
+        initDashboard();
+      } catch (err) { notify(err.message, true); }
+    });
+
+    // ── Wire-ups ──────────────────────────────────────────────────────────────
+    document.getElementById('refresh-orders-btn').addEventListener('click', loadHeldOrders);
+    document.getElementById('refresh-kyc-btn').addEventListener('click', loadKYCQueue);
+    document.getElementById('refresh-listings-btn').addEventListener('click', loadListings);
+    document.getElementById('status-filter').addEventListener('change', loadListings);
+    document.getElementById('refresh-audit-btn').addEventListener('click', loadAuditLog);
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await window.SoftXchangeAuth.logout();
+      window.location.href = '/login-customer.html';
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    async function initDashboard() {
+      const session = await window.SoftXchangeAuth.silentRefresh();
+      if (!session || !session.user) {
+        window.location.href = '/login-seller.html';
+        return;
+      }
+      const roles = session.user.roles || [];
+      document.getElementById('elevation-panel').style.display = roles.includes('admin') ? 'none' : 'block';
+      await Promise.all([loadHeldOrders(), loadKYCQueue(), loadListings(), loadAuditLog()]);
+    }
+
+    window.addEventListener('DOMContentLoaded', initDashboard);
+  </script>
+</body>
+</html>

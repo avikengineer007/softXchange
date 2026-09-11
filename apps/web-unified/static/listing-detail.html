@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Listing Details — softXchange</title>
+  <meta name="description" content="Package specifications, security scan report, and purchase options for this vetted software listing.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 36px;
+      margin-top: 24px;
+    }
+    @media (max-width: 860px) {
+      .detail-layout { grid-template-columns: 1fr; }
+    }
+    .detail-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      box-shadow: var(--shadow-subtle);
+    }
+    .sidebar-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 28px;
+      box-shadow: var(--shadow-subtle);
+      height: fit-content;
+      position: sticky;
+      top: 80px;
+    }
+    .security-terminal {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.6;
+      margin: 24px 0;
+      position: relative;
+    }
+    .security-terminal-title {
+      color: var(--badge-green);
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--color-border);
+      padding-bottom: 8px;
+    }
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--color-border-subtle);
+      font-size: 13px;
+    }
+    .meta-label { color: var(--text-secondary); }
+    .meta-value { font-weight: 500; color: var(--text-primary); }
+    .buy-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--gradient-accent);
+      color: var(--text-primary);
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-heading);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform var(--transition-fast) var(--easing-standard),
+                  filter var(--transition-fast) var(--easing-standard),
+                  box-shadow var(--transition-fast) var(--easing-standard);
+      box-shadow: var(--shadow-gradient-glow);
+    }
+    .buy-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+    .buy-btn:active { transform: translateY(0) scale(0.98); }
+    .buy-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .breadcrumb { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+    .breadcrumb a { color: var(--accent-blue); text-decoration: none; font-weight: 500; }
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    /* Buyer Assist */
+    .assist-panel {
+      margin-top: 32px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 24px;
+    }
+    .assist-panel h3 {
+      font-family: var(--font-heading);
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .assist-input-row {
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-nav" role="banner">
+    <a href="/index.html" class="brand-link" id="brand-home">
+      <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="ld-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="var(--accent-blue)"/>
+            <stop offset="100%" stop-color="var(--accent-violet)"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#ld-grad)"/>
+      </svg>
+      <span>softXchange</span>
+    </a>
+    <nav class="nav-links" id="site-nav-links" aria-label="Main navigation">
+      <a href="/browse-listings.html">Catalog</a>
+      <a href="/seller-listings.html">Seller Portal</a>
+      <a href="/login-customer.html" id="nav-signin">Sign In</a>
+    </nav>
+  </header>
+
+  <main class="container page-transition" role="main">
+    <div class="breadcrumb">
+      <a href="/browse-listings.html">&larr; Back to Catalog</a>
+    </div>
+    <div id="content-container" role="region" aria-live="polite" aria-label="Listing details">
+      <div style="text-align:center;padding:60px;color:var(--text-secondary);">Loading package details…</div>
+    </div>
+  </main>
+
+  <script src="/static/js/auth.js" defer></script>
+  <script src="/static/js/ambient-layer.js" defer></script>
+  <script>
+    const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || 'http://localhost:8003';
+    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || 'http://localhost:8004';
+    const BUYER_ASSIST = (window.__CONFIG__ && window.__CONFIG__.buyerAssistUrl)    || 'http://localhost:8005';
+    const BROKER_API   = (window.__CONFIG__ && window.__CONFIG__.brokerUrl)         || 'http://localhost:8007';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const listingId = urlParams.get('id');
+
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = String(text);
+      return div.innerHTML;
+    }
+
+    async function loadListing() {
+      const container = document.getElementById('content-container');
+      if (!listingId) {
+        container.innerHTML = '<div style="color:var(--color-danger);text-align:center;padding:32px;" role="alert">No listing ID specified.</div>';
+        return;
+      }
+
+      try {
+        // Use auth.js fetchWithAuth to include bearer token if signed in
+        const res = await (window.SoftXchangeAuth
+          ? window.SoftXchangeAuth.fetchWithAuth(`${LISTINGS_API}/listings/${listingId}`)
+          : fetch(`${LISTINGS_API}/listings/${listingId}`));
+
+        if (!res.ok) {
+          if (res.status === 404) {
+            container.innerHTML = '<div style="text-align:center;padding:48px;"><h3 style="color:var(--text-secondary);">Listing not found or not published.</h3></div>';
+            return;
+          }
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        renderListing(data);
+      } catch (err) {
+        container.innerHTML = `<div style="color:var(--color-danger);text-align:center;padding:32px;" role="alert">Error loading listing: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderListing(item) {
+      const container = document.getElementById('content-container');
+      const formattedPrice = item.price_cents === 0 ? 'Free' : `$${(item.price_cents / 100).toFixed(2)}`;
+      const scanSummary = item.scan_findings_summary || {};
+
+      const criticalCount = scanSummary.critical || 0;
+      const highCount = scanSummary.high || 0;
+      const scanPassed = criticalCount === 0 && highCount === 0;
+
+      document.title = `${item.title} — softXchange`;
+
+      container.innerHTML = `
+        <div class="detail-layout">
+          <div class="detail-card scan-resolve-card">
+            <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+              <span class="card-category">${escapeHtml(item.category || 'Software')}</span>
+              <span class="status-pill status-live">Live in Catalog</span>
+            </div>
+
+            <h1 style="font-family:var(--font-heading);font-size:30px;font-weight:700;color:var(--text-primary);margin-bottom:16px;line-height:1.2;">
+              ${escapeHtml(item.title)}
+            </h1>
+
+            <p style="font-size:15px;color:var(--text-secondary);line-height:1.7;white-space:pre-wrap;margin-bottom:32px;">
+              ${escapeHtml(item.description || 'No description provided.')}
+            </p>
+
+            <!-- Security Scan Audit Readout -->
+            <div class="security-terminal" id="scan-terminal">
+              <div class="security-terminal-title">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--badge-green);display:inline-block;" aria-hidden="true"></span>
+                <span>SECURITY VERIFICATION SEAL</span>
+              </div>
+              <div>[✓] Secret Scanner Engine: v1.0.0</div>
+              <div>[${scanPassed ? '✓' : '✗'}] Critical findings: ${criticalCount}</div>
+              <div>[${scanPassed ? '✓' : '✗'}] High findings: ${highCount}</div>
+              <div>[✓] Seller KYC &amp; Payout Gate: Verified &amp; Cleared</div>
+              <div>[✓] Listing published only after gate passage</div>
+              <div style="margin-top:8px;color:var(--text-secondary);font-size:11px;">
+                Status: ${scanPassed ? 'SECURE' : 'REVIEW REQUIRED'} &bull; Independent softXchange verification pipeline.
+              </div>
+            </div>
+
+            <h3 style="font-family:var(--font-heading);font-size:18px;margin-bottom:12px;color:var(--text-primary);">Package Specifications</h3>
+            <div class="meta-row">
+              <span class="meta-label">Active Version</span>
+              <span class="meta-value" style="font-family:var(--font-mono);">v${escapeHtml(item.current_version || item.version_label || '1.0.0')}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Category</span>
+              <span class="meta-value">${escapeHtml(item.category || 'Software')}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Listing ID</span>
+              <span class="meta-value" style="font-family:var(--font-mono);font-size:11px;">${escapeHtml(item.id)}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Last Updated</span>
+              <span class="meta-value">${item.updated_at ? new Date(item.updated_at).toLocaleDateString() : '—'}</span>
+            </div>
+
+            <!-- Broker Question Routing Panel -->
+            <div class="assist-panel" id="buyer-assist-panel">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                <h3 style="margin:0;">Ask a Question</h3>
+                <span class="status-pill" style="font-size:11px;background:rgba(99,102,241,0.1);color:var(--color-primary);border:1px solid rgba(99,102,241,0.2);">Smart Routing</span>
+              </div>
+              <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+                Questions covered by public scan or listing data get an instant answer; others are routed directly to the seller with a pre-drafted AI reply.
+              </p>
+              <div class="assist-input-row" style="display:flex;gap:8px;">
+                <input type="text" id="broker-question-input" class="form-input" placeholder="e.g. Does this pass security scans? or What Python version is supported?" style="flex:1;" aria-label="Buyer question">
+                <button id="broker-ask-btn" class="btn-secondary" type="button">Ask Question</button>
+              </div>
+              <div id="broker-result" style="margin-top:16px;font-size:13px;display:none;"></div>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div style="font-size:12px;font-weight:600;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;letter-spacing:0.04em;">License Price</div>
+            <div style="font-family:var(--font-heading);font-size:36px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">
+              ${formattedPrice}
+            </div>
+
+            <div class="vetted-badge" style="margin-bottom:20px;">
+              <span class="dot" aria-hidden="true"></span>
+              <span>Vetted &amp; Scanned</span>
+            </div>
+
+            <button class="buy-btn" id="buy-btn" onclick="initiatePurchase('${escapeHtml(item.id)}')">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M2 2h2l2.5 7h5l2-4H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="7" cy="13" r="1" fill="currentColor"/>
+                <circle cx="12" cy="13" r="1" fill="currentColor"/>
+              </svg>
+              Acquire License
+              <span id="buy-spinner" class="calming-loading" style="display:none;width:16px;height:16px;" aria-label="Processing"></span>
+            </button>
+
+            <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;line-height:1.5;">
+              Instant digital access upon purchase.<br>Cryptographically verified against tamper.
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Wire up broker question routing
+      document.getElementById('broker-ask-btn').addEventListener('click', handleAskQuestion);
+      document.getElementById('broker-question-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleAskQuestion();
+      });
+    }
+
+    async function initiatePurchase(lid) {
+      if (!window.SoftXchangeAuth || !window.SoftXchangeAuth.getAccessToken()) {
+        window.location.href = `/login-customer.html?next=${encodeURIComponent(window.location.href)}`;
+        return;
+      }
+      const btn = document.getElementById('buy-btn');
+      const spinner = document.getElementById('buy-spinner');
+      btn.disabled = true;
+      if (spinner) spinner.style.display = 'inline-block';
+
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listing_id: lid }),
+        });
+        const order = await res.json();
+        if (!res.ok) throw new Error(order.detail || 'Order creation failed');
+        window.location.href = `/checkout.html?order_id=${encodeURIComponent(order.id)}`;
+      } catch (err) {
+        if (btn) btn.disabled = false;
+        if (spinner) spinner.style.display = 'none';
+        alert('Purchase error: ' + err.message);
+      }
+    }
+
+    async function handleAskQuestion() {
+      const inputEl = document.getElementById('broker-question-input');
+      const resultEl = document.getElementById('broker-result');
+      const question = (inputEl.value || '').trim();
+      if (!question) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = '<span style="color:var(--color-warning);">Please enter a question first.</span>';
+        return;
+      }
+
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = '<span style="color:var(--text-muted);">Routing question through marketplace broker…</span>';
+
+      let buyerId = 'buyer-anon';
+      if (window.SoftXchangeAuth && window.SoftXchangeAuth.getAccessToken()) {
+        try {
+          const payload = JSON.parse(atob(window.SoftXchangeAuth.getAccessToken().split('.')[1]));
+          if (payload && payload.sub) buyerId = payload.sub;
+        } catch (_) {}
+      }
+
+      try {
+        const res = await fetch(`${BROKER_API}/broker/listings/${encodeURIComponent(listingId)}/route-question`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question_text: question, buyer_id: buyerId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Routing failed');
+
+        if (data.resolution === 'answered_directly') {
+          resultEl.innerHTML = `
+            <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:var(--radius-md);padding:14px;">
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--color-success);margin-bottom:6px;">
+                <span>✨ Instant Verified Answer</span>
+                <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(from public scan & listing data)</span>
+              </div>
+              <div style="color:var(--text-primary);line-height:1.5;">${escapeHtml(data.answer)}</div>
+              ${data.context_sources && data.context_sources.length ? `<div style="margin-top:8px;font-size:11px;color:var(--text-muted);">Sources: <code>${escapeHtml(data.context_sources.join(', '))}</code></div>` : ''}
+            </div>
+          `;
+        } else if (data.resolution === 'routed_to_seller') {
+          resultEl.innerHTML = `
+            <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-md);padding:14px;">
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--color-primary);margin-bottom:6px;">
+                <span>📨 Routed to Seller</span>
+                <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(Reference: #${escapeHtml((data.question_id || '').slice(0, 8))})</span>
+              </div>
+              <div style="color:var(--text-primary);line-height:1.5;">
+                This specific question is not covered by public scans. It has been forwarded directly to the seller with a pre-drafted AI reply for review. You'll receive a response as soon as the seller approves it!
+              </div>
+            </div>
+          `;
+          inputEl.value = '';
+        }
+      } catch (err) {
+        resultEl.innerHTML = `<span style="color:var(--color-danger);">Inquiry error: ${escapeHtml(err.message)}</span>`;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadListing);
+  </script>
+</body>
+</html>

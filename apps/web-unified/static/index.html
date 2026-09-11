@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>softXchange — Vetted Software Marketplace</title>
+  <meta name="description" content="Buy and sell cryptographically vetted software packages. Every listing scanned for secrets before publication. Zero surprises, guaranteed.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="site-nav" role="banner">
+    <a href="/index.html" class="brand-link" id="brand-home">
+      <svg class="brand-logo-icon hero-bowtie-target" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="nav-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="var(--accent-blue)"/>
+            <stop offset="100%" stop-color="var(--accent-violet)"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#nav-grad)"/>
+      </svg>
+      <span>softXchange</span>
+    </a>
+    <nav class="nav-links" id="site-nav-links" aria-label="Main navigation">
+      <a href="/browse-listings.html">Catalog</a>
+      <a href="/login-seller.html">Sell Software</a>
+      <a href="/login-customer.html" id="nav-signin">Sign In</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="container">
+
+      <!-- Hero Section -->
+      <section class="hero-section" aria-labelledby="hero-headline">
+
+        <div class="hero-content">
+          <div class="hero-eyebrow" aria-label="Platform trust signal">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <circle cx="6" cy="6" r="6" fill="var(--badge-green)" opacity="0.3"/>
+              <circle cx="6" cy="6" r="3" fill="var(--badge-green)"/>
+            </svg>
+            Every package cryptographically scanned
+          </div>
+
+          <h1 class="hero-headline" id="hero-headline">
+            Software you can<br>
+            <span>trust completely</span>
+          </h1>
+
+          <p class="hero-subtext">
+            Every listing on softXchange is scanned for secrets, credentials, and vulnerabilities by our AST engine before a seller can publish. No exceptions.
+          </p>
+
+          <div class="hero-actions">
+            <a href="/browse-listings.html" class="btn-hero-primary" id="cta-browse">
+              Browse Vetted Catalog
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+            <a href="/login-seller.html" class="btn-hero-secondary" id="cta-sell">
+              Start Selling →
+            </a>
+          </div>
+        </div>
+
+        <!-- Hero Visual: ambient canvas or gradient fallback -->
+        <div class="hero-visual" aria-hidden="true">
+          <canvas id="hero-canvas"></canvas>
+          <!-- Gradient content rendered inside canvas by ambient-layer.js; fallback below -->
+          <div class="hero-3d-placeholder" id="hero-fallback" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
+            <!-- Decorative bowtie SVG — the attractor target for Tier A particles -->
+            <svg class="hero-bowtie-target" viewBox="0 0 120 80" fill="none" width="160" height="120" aria-hidden="true">
+              <defs>
+                <linearGradient id="hero-bowtie-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#5B8DEF"/>
+                  <stop offset="100%" stop-color="#9B6BF0"/>
+                </linearGradient>
+                <filter id="hero-glow">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+              <path d="M10 10v60l50-30L10 10zm100 0v60L60 40l50-30z" fill="url(#hero-bowtie-grad)" filter="url(#hero-glow)" opacity="0.9"/>
+              <circle cx="60" cy="40" r="4" fill="var(--badge-green)" opacity="0.8"/>
+            </svg>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Trust Bar -->
+      <div class="trust-bar" role="list" aria-label="Platform guarantees">
+        <div class="trust-item" role="listitem">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 1L1.5 4v4c0 3.3 2.8 6.4 6.5 7.5C11.7 14.4 14.5 11.3 14.5 8V4L8 1z" fill="var(--badge-green)" opacity="0.25" stroke="var(--badge-green)" stroke-width="1"/>
+            <path d="M5 8l2 2 4-4" stroke="var(--badge-green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span><strong>AST Secrets Scan</strong> — every upload</span>
+        </div>
+        <div class="trust-item" role="listitem">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <rect x="2" y="6" width="12" height="9" rx="1.5" stroke="var(--accent-blue)" stroke-width="1.2"/>
+            <path d="M5 6V4.5a3 3 0 016 0V6" stroke="var(--accent-blue)" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span><strong>Cryptographic Gate</strong> — no bypasses</span>
+        </div>
+        <div class="trust-item" role="listitem">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <circle cx="8" cy="8" r="6.5" stroke="var(--accent-violet)" stroke-width="1.2"/>
+            <path d="M5 8.5l2 2 4-4" stroke="var(--accent-violet)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span><strong>KYC-Verified</strong> — seller identity</span>
+        </div>
+        <div class="trust-item" role="listitem">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M2 4h12v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4z" stroke="var(--text-secondary)" stroke-width="1.2"/>
+            <path d="M2 4l6 4 6-4" stroke="var(--text-secondary)" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span><strong>Stripe Escrow</strong> — funds held until verified</span>
+        </div>
+      </div>
+
+      <!-- Features Grid -->
+      <section aria-labelledby="features-heading">
+        <h2 id="features-heading" class="section-heading" style="font-size:22px;border:none;margin-bottom:24px;">Why softXchange?</h2>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon" aria-hidden="true">🔍</div>
+            <h3 class="feature-title">Deep Package Scanning</h3>
+            <p class="feature-desc">Our AST engine parses every submitted archive, identifying hardcoded secrets, API keys, private keys, and credentials before any listing goes live.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" aria-hidden="true">⚡</div>
+            <h3 class="feature-title">Instant Buyer Assist</h3>
+            <p class="feature-desc">Natural-language Q&A powered by seller content similarity search. Ask anything about a package before you buy.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" aria-hidden="true">💼</div>
+            <h3 class="feature-title">Seller Workbench</h3>
+            <p class="feature-desc">Upload packages, watch live scan feedback, and manage your catalog from a single dashboard. Stripe Connect for instant payouts.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" aria-hidden="true">🛡️</div>
+            <h3 class="feature-title">Cryptographic Gate</h3>
+            <p class="feature-desc">Listings only go live after passing all security checks. Held orders are only released after admin review. No bypasses, ever.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" aria-hidden="true">📊</div>
+            <h3 class="feature-title">Transparent Audit Trail</h3>
+            <p class="feature-desc">Buyers can view the full scan report — including AST findings summary — for every package on every listing page.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon" aria-hidden="true">🌐</div>
+            <h3 class="feature-title">Open Platform</h3>
+            <p class="feature-desc">Publish developer tools, security utilities, productivity scripts, or infrastructure templates. Any software, fully verified.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Strip -->
+      <section style="text-align:center;padding:48px 0 32px;" aria-label="Call to action">
+        <h2 style="font-family:var(--font-heading);font-size:26px;font-weight:700;margin-bottom:12px;">Ready to explore?</h2>
+        <p style="color:var(--text-secondary);font-size:15px;margin-bottom:28px;">Browse verified packages or list your first product today.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <a href="/browse-listings.html" class="btn-hero-primary" id="cta-catalog-bottom">Browse Catalog</a>
+          <a href="/signup-seller.html" class="btn-hero-secondary" id="cta-signup-seller">Become a Seller</a>
+        </div>
+      </section>
+
+    </div><!-- /container -->
+  </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <p>© 2026 softXchange Marketplace. <a href="/browse-listings.html" style="color:var(--accent-blue);">Browse Catalog</a> · <a href="/login-seller.html" style="color:var(--accent-blue);">Seller Portal</a></p>
+  </footer>
+
+  <!-- Ambient Layer (Tier A/B/C progressive) — loads after critical paint -->
+  <script src="/static/js/auth.js" defer></script>
+  <script src="/static/js/ambient-layer.js" defer></script>
+  <script src="/static/js/verification-motif.js" defer></script>
+  <script>
+    // Hide the hero canvas placeholder once ambient layer has a canvas of its own
+    window.addEventListener('DOMContentLoaded', () => {
+      // The hero-canvas is used by ambient-layer as the particle background.
+      // The hero-fallback SVG shows while tier is determined.
+      const tier = document.documentElement.dataset.tier;
+      const fallback = document.getElementById('hero-fallback');
+      if (tier === 'A' && fallback) {
+        // Ambient layer draws its own full-screen canvas; keep fallback visible
+        // as decorative bowtie center-piece inside hero-visual box
+        fallback.style.background = 'transparent';
+      }
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en" data-tier="C">
+<!-- data-tier default "C" — JS upgrades it after capability detection.
+     Defaulting C means CSS tier selectors never flash wrong styles before JS runs. -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>softXchange — Secure Vetted Software Marketplace</title>
+  <meta name="description" content="Every software asset on softXchange undergoes automated secrets scanning, dependency AST auditing, and seller KYC verification before public release. Browse the cryptographically vetted marketplace.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    /* ── Hero Layout ─────────────────────────────────────────────────── */
+    .hero-wrapper {
+      padding: 64px 0 48px;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 48px;
+      align-items: center;
+    }
+    @media (max-width: 900px) {
+      .hero-wrapper {
+        grid-template-columns: 1fr;
+        padding: 32px 0;
+      }
+    }
+
+    /* ── Hero text / badges ──────────────────────────────────────────── */
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+    .hero-title {
+      font-family: var(--font-heading);
+      font-size: 46px;
+      font-weight: 700;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 18px;
+      color: var(--text-primary);
+    }
+    .hero-title .gradient-text {
+      background: var(--gradient-accent);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-desc {
+      font-size: 17px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+      max-width: 540px;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* ── 3D Hero Viewport ────────────────────────────────────────────── */
+    .hero-3d-viewport {
+      position: relative;
+      /* Fixed aspect ratio so the canvas never distorts on resize */
+      aspect-ratio: 4 / 3.2;
+      min-height: 300px;
+      max-height: 460px;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      /* The placeholder gradient is defined in tokens.css .hero-3d-placeholder */
+    }
+
+    /* Terminal card overlay (Tier A: sits in 3D space as overlay, Tier B/C: below canvas) */
+    /* Terminal card overlay (sits in 3D space as frosted glass overlay at bottom) */
+    .terminal-readout-card {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      z-index: 2;
+      background: var(--bg-surface-translucent);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-elevated);
+      transition: all var(--transition-base) var(--easing-standard);
+    }
+    .terminal-header {
+      background: var(--bg-surface-elevated);
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .terminal-dots { display: flex; gap: 6px; }
+    .t-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--color-border-hover);
+    }
+    .t-dot.active { background: var(--accent-blue); }
+    .terminal-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .terminal-body {
+      padding: 16px 20px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-primary);
+    }
+    .term-line {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 5px;
+      opacity: 0;
+      transform: translateY(4px);
+      animation: pageFadeSlide var(--transition-base) var(--easing-decelerate) forwards;
+    }
+    .term-prompt { color: var(--accent-blue); font-weight: 600; }
+    .term-check  { color: var(--badge-green); font-weight: 700; }
+    .term-info   { color: var(--text-secondary); }
+    .terminal-status-footer {
+      padding: 10px 18px;
+      background: var(--bg-surface-elevated);
+      border-top: 1px solid var(--color-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Site Navigation — critical, renders before any 3D asset touches the DOM -->
+  <header class="site-nav">
+    <a href="/static/index.html" class="brand-link">
+      <!-- Flat SVG logo in nav (always, regardless of 3D tier — too small for 3D) -->
+      <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%"   stop-color="var(--accent-blue)"/>
+            <stop offset="100%" stop-color="var(--accent-violet)"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#brand-grad)"/>
+      </svg>
+      <h1>softXchange</h1>
+    </a>
+    <nav class="nav-links" id="site-nav-links">
+      <a href="/static/browse-listings.html">Catalog</a>
+      <a href="/static/seller-listings.html">Seller Portal</a>
+      <a href="http://localhost:8001/static/login-customer.html" id="nav-signin-link">Sign In</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="hero-wrapper">
+      <!-- LEFT: Text content — fully interactive immediately, no 3D dependency -->
+      <div>
+        <div class="hero-badge">
+          <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;">
+            <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="var(--accent-blue)"/>
+          </svg>
+          Cryptographically Vetted Marketplace
+        </div>
+        <h1 class="hero-title">
+          Engineered for Security.<br>
+          <span class="gradient-text">Zero Compromise.</span>
+        </h1>
+        <p class="hero-desc">
+          Every software asset published to softXchange undergoes automated secrets scanning,
+          dependency AST auditing, and seller KYC verification prior to public release.
+        </p>
+        <div class="hero-actions">
+          <a href="/static/browse-listings.html" class="btn-primary"
+             id="cta-browse"
+             style="text-decoration:none;padding:12px 24px;font-size:14px;display:inline-flex;width:auto;">
+            Explore Vetted Catalog &rarr;
+          </a>
+          <a href="/static/seller-listings.html" class="action-btn"
+             id="cta-seller"
+             style="padding:11px 20px;font-size:14px;">
+            Seller Workbench
+          </a>
+        </div>
+      </div>
+
+      <!-- RIGHT: 3D hero viewport
+           data-tier="C" default means Tier C CSS applies until JS runs.
+           The hero-3d-placeholder class provides the shimmer gradient while loading.
+           hero-3d.js (deferred module) swaps in the real canvas on Tier A/B,
+           or replaces this with a static SVG on Tier C. -->
+      <!-- RIGHT: 3D hero viewport & scanner readout card -->
+      <div class="hero-right-col" style="display: flex; flex-direction: column; gap: 20px;">
+        <div id="hero-3d-viewport" class="hero-3d-viewport hero-3d-placeholder" style="width: 100%; height: 260px; min-height: 260px; position: relative;"></div>
+
+        <!-- Terminal readout card — demos the intake gate scan pipeline -->
+        <div id="hero-scanner-card" class="terminal-readout-card" style="position: relative; width: 100%; bottom: auto; left: auto; right: auto;">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="t-dot active"></span>
+              <span class="t-dot"></span>
+              <span class="t-dot"></span>
+            </div>
+            <div class="terminal-title">softx-scanner v2.4 // intake gate</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--accent-violet);">FAIL-CLOSED</div>
+          </div>
+
+          <div class="terminal-body" id="scanner-terminal-output">
+            <div class="term-line" style="animation-delay:100ms;">
+              <span class="term-prompt">$</span>
+              <span>softx-scan --verify-manifest pkg-prod-2.4.tgz</span>
+            </div>
+            <div class="term-line" style="animation-delay:400ms;">
+              <span class="term-info">[~] Initializing multi-scanner AST parser...</span>
+            </div>
+            <div class="term-line" style="animation-delay:800ms;">
+              <span class="term-check">[✓]</span>
+              <span>Secrets Detection: 0 findings (high entropy checked)</span>
+            </div>
+            <div class="term-line" style="animation-delay:1200ms;">
+              <span class="term-check">[✓]</span>
+              <span>Static Code Analysis: 0 high-risk primitives</span>
+            </div>
+            <div class="term-line" style="animation-delay:1600ms;">
+              <span class="term-check">[✓]</span>
+              <span>Dependency CVE Graph: clean lockfile verified</span>
+            </div>
+          </div>
+
+          <div class="terminal-status-footer">
+            <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary);">
+              GATE STATUS: <span id="scanner-status-text" style="color:var(--badge-green);font-weight:700;">PASSED</span>
+            </div>
+            <div id="scanner-badge-container">
+              <span class="vetted-badge">
+                <span class="dot"></span>
+                Scanned — 0 critical findings
+              </span>
+            </div>
+          </div>
+        </div><!-- /.terminal-readout-card -->
+      </div><!-- /.hero-right-col -->
+
+    </div><!-- /.hero-wrapper -->
+  </main>
+
+  <!-- Scan simulation (runs immediately, before 3D) -->
+  <script>
+    const card       = document.getElementById('hero-scanner-card');
+    const statusText = document.getElementById('scanner-status-text');
+    const badgeCont  = document.getElementById('scanner-badge-container');
+
+    function runScanSimulation() {
+      card.classList.remove('resolved-pass', 'resolved-fail');
+      card.classList.add('scanning');
+      statusText.textContent = 'CHECKING GATE...';
+      statusText.style.color = 'var(--accent-violet)';
+      badgeCont.innerHTML = '<span class="status-pill status-pending_scan">pending_scan</span>';
+
+      setTimeout(() => {
+        card.classList.remove('scanning');
+        card.classList.add('resolved-pass');
+        statusText.textContent = 'PASSED // LIVE';
+        statusText.style.color = 'var(--badge-green)';
+        badgeCont.innerHTML = `
+          <span class="vetted-badge" style="animation:scanResolvePass 300ms var(--easing-decelerate) forwards;">
+            <span class="dot"></span>
+            Scanned — 0 critical findings
+          </span>`;
+      }, 2200);
+    }
+
+    runScanSimulation();
+
+    // Role-aware nav link (admin badge injection)
+    (function() {
+      try {
+        const token = localStorage.getItem('seller_access_token') || localStorage.getItem('admin_access_token');
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if ((payload.roles || []).includes('admin')) {
+            const nav = document.getElementById('site-nav-links');
+            const link = document.createElement('a');
+            link.href = 'http://localhost:8001/static/admin-dashboard.html';
+            link.className = 'nav-admin-link';
+            link.innerHTML = '🛡️ Admin Console';
+            nav.prepend(link);
+          }
+        }
+      } catch (_) {}
+    })();
+  </script>
+
+  <!-- 3D hero initialisation — deferred module, never blocks nav/CTAs above -->
+  <script type="module">
+    import { initHeroScene } from '/static/js/hero-3d.js';
+
+    // Wait for DOMContentLoaded to guarantee the viewport element exists,
+    // but this script itself is type="module" (always deferred), so by the
+    // time this executes the DOM is ready.
+    const viewport = document.getElementById('hero-3d-viewport');
+    if (viewport) {
+      // Small rAF delay to ensure the browser has painted the placeholder
+      // before we start any GL context — prevents a flash of un-styled canvas.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => initHeroScene(viewport));
+      });
+    }
+  </script>
+
+</body>
+</html>

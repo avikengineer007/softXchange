@@ -59,6 +59,15 @@ class Settings(BaseSettings):
         "http://127.0.0.1:8001",
     ]
 
+    # -------------------------------------------------------------------------
+    # Admin Role & Code-Gated Provisioning Settings (Prompt 3)
+    # -------------------------------------------------------------------------
+    ADMIN_PROVISIONING_CODE: Optional[str] = "sx_admin_sec_9f7a28e4c19d4b8e8f2a1b3c4d5e6f7a"
+    ADMIN_PROVISIONING_CODE_HASH: Optional[str] = None
+    ADMIN_PROVISION_MAX_ATTEMPTS: int = 3
+    ADMIN_PROVISION_WINDOW_HOURS: int = 1
+    ADMIN_CODE_EXPLICITLY_ROTATED: bool = False
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

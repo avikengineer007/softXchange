@@ -6,5 +6,5 @@ search-path = [
     "apps/scan-service",
     "apps/buyer-assist",
     "packages/ml-shared/src",
-    "Secret Scanner engine_Manifest"
+    "Secret Scanner engine"
 ]

@@ -111,6 +111,34 @@ class VerificationToken(Base):
     user: Mapped["User"] = relationship("User", back_populates="verification_tokens")
 
 
+class AdminProvisionAuditLog(Base):
+    """
+    Audit log recording every administrative provisioning attempt.
+    Admin-readable only. Records user_id, timestamp, success/failure, source IP, failure reason.
+    """
+    __tablename__ = "admin_provision_audit_logs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
+    success: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    source_ip: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    failure_reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+
+class AdminProvisioningState(Base):
+    """
+    Persistent single-use tracking for the operator's admin provisioning code.
+    Prevents reuse after successful account elevation until operator rotates.
+    """
+    __tablename__ = "admin_provisioning_state"
+
+    code_hash: Mapped[str] = mapped_column(String(255), primary_key=True)
+    is_used: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    used_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    used_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 # ============================================================================
 # Pydantic Schemas
 # ============================================================================
@@ -127,11 +155,13 @@ class UserSignup(BaseModel):
     def validate_roles(cls, v):
         if v is None:
             return None
-        valid_roles = {UserRole.CUSTOMER.value, UserRole.SELLER.value, UserRole.ADMIN.value}
+        valid_roles = {UserRole.CUSTOMER.value, UserRole.SELLER.value}
         if isinstance(v, str):
             v = [v]
         cleaned = [r.lower().strip() for r in v]
         for r in cleaned:
+            if r == UserRole.ADMIN.value:
+                raise ValueError("Admin role cannot be self-registered. Code-gated elevation required.")
             if r not in valid_roles:
                 raise ValueError(f"Invalid role: {r}. Must be 'customer' or 'seller'")
         return cleaned
@@ -223,3 +253,50 @@ class KYCWebhookPayload(BaseModel):
     event: str
     status: str  # "verified" or "rejected"
     details: Optional[Dict[str, Any]] = None
+
+
+class KYCSubmitRequest(BaseModel):
+    legal_name: str = Field(..., min_length=2, description="Full legal name of seller or authorized representative")
+    business_name: Optional[str] = None
+    tax_id: Optional[str] = None
+    country: str = Field(default="US", min_length=2, max_length=2)
+    address_line1: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    postal_code: Optional[str] = None
+    document_type: Optional[str] = "passport"
+    document_number: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class AdminProvisionRequest(BaseModel):
+    code: str = Field(..., min_length=16, description="High-entropy operator verification code")
+
+
+class AdminProvisionResponse(BaseModel):
+    message: str
+    user_id: str
+    roles: List[str]
+    access_token: str
+    token_type: str = "bearer"
+
+
+class AdminAuditLogItem(BaseModel):
+    id: str
+    user_id: str
+    timestamp: datetime
+    success: bool
+    source_ip: Optional[str] = None
+    failure_reason: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SellerPendingKYCItem(BaseModel):
+    user_id: str
+    email: str
+    display_name: Optional[str] = None
+    kyc_status: str
+    created_at: datetime
+    details: Optional[Dict[str, Any]] = None
+

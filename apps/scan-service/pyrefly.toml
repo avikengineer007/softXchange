@@ -1,5 +1,5 @@
 python-interpreter-path = "../../.venv/Scripts/python.exe"
 search-path = [
     ".",
-    "../../Secret Scanner engine_Manifest"
+    "../../Secret Scanner engine"
 ]

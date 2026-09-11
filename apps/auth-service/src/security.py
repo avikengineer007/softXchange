@@ -339,3 +339,26 @@ def require_customer(auth_context: AuthContext = Depends(require_auth)) -> AuthC
             detail="Customer role required for this action",
         )
     return auth_context
+
+
+def require_admin(auth_context: AuthContext = Depends(require_auth)) -> AuthContext:
+    """Ensure authenticated context strictly possesses the admin role."""
+    if "admin" not in auth_context.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin role required for this action",
+        )
+    return auth_context
+
+
+def require_role(role: str):
+    """Reusable role dependency factory matching existing require_role pattern."""
+    def dependency(auth_context: AuthContext = Depends(require_auth)) -> AuthContext:
+        if not auth_context.has_role(role):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"{role.capitalize()} role required for this action",
+            )
+        return auth_context
+    return dependency
+

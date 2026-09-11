@@ -1,9 +1,8 @@
 from contextlib import asynccontextmanager
 import logging
-from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 
 from src.config import settings
 from src.database import init_db
@@ -55,10 +54,10 @@ app.include_router(webhooks_router)
 app.include_router(admin_router)
 app.include_router(seller_router)
 
-# Mount static frontend pages
-STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
-if STATIC_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
+
+@app.get("/", include_in_schema=False)
+def root_redirect():
+    return RedirectResponse(url="http://localhost:8000/")
 
 
 @app.get("/healthz", tags=["Health"])

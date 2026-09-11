@@ -4,17 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seller Login — softXchange</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-  <div class="auth-container">
+  <div class="auth-container page-transition">
     <div class="brand-header">
       <div class="brand-badge">
-        <span class="dot"></span>
-        Manifest Marketplace
+        <!-- Geometric Bowtie Logo Mark -->
+        <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="login-s-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--accent-blue)"/>
+              <stop offset="100%" stop-color="var(--accent-violet)"/>
+            </linearGradient>
+          </defs>
+          <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#login-s-grad)"/>
+        </svg>
+        <span>softXchange Partner Portal</span>
       </div>
       <h1 class="brand-title">softXchange</h1>
-      <p class="brand-subtitle">Partner & Developer Portal</p>
+      <p class="brand-subtitle">Partner &amp; Developer Portal</p>
     </div>
 
     <div class="auth-card">
@@ -111,12 +124,11 @@
 
       try {
         const result = await window.SoftXchangeAuth.login(email, password);
-        // Ensure user has seller role
         const userRoles = (result.user && result.user.roles) || [];
         if (!userRoles.includes("seller") && !userRoles.includes("admin")) {
           throw new Error("This account does not have seller permissions. Please log in as a customer or register as a seller.");
         }
-        window.location.href = "/static/dashboard-seller.html";
+        window.SoftXchangeAuth.routeUserAfterLogin(result.user);
       } catch (err) {
         setLoading(false);
         showError(err.message || "Invalid credentials. Please verify your email and password.");
@@ -128,7 +140,7 @@
       if (session && session.access_token) {
         const userRoles = (session.user && session.user.roles) || [];
         if (userRoles.includes("seller") || userRoles.includes("admin")) {
-          window.location.href = "/static/dashboard-seller.html";
+          window.SoftXchangeAuth.routeUserAfterLogin(session.user);
         }
       }
     });

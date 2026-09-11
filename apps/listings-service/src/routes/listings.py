@@ -24,7 +24,7 @@ from src.models.listing import (
     QuestionResponse,
     utc_now,
 )
-from src.auth import require_auth, require_seller, get_optional_auth, AuthContext
+from src.auth import require_auth, require_seller, require_admin, get_optional_auth, AuthContext
 
 from src.scanner_client import scanner_client
 from src.gate import evaluate_publish_gate, sync_seller_kyc
@@ -220,6 +220,31 @@ def get_my_listings(
             )
         )
     return items
+
+
+# ============================================================================
+# Prompt 4: Admin Moderation
+# ============================================================================
+
+@router.get(
+    "/admin/all",
+    response_model=List[ListingResponse],
+    summary="List all listings across all statuses for administrative moderation",
+)
+def list_all_listings_admin(
+    status_filter: Optional[str] = Query(None, alias="status", description="Filter by listing status"),
+    auth_ctx: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Administrative overview of all marketplace listings across all statuses.
+    Requires admin role.
+    """
+    query = db.query(Listing)
+    if status_filter:
+        query = query.filter(Listing.status == status_filter.strip().lower())
+    listings = query.order_by(Listing.created_at.desc()).all()
+    return [ListingResponse.from_orm_listing(l) for l in listings]
 
 
 # ============================================================================
@@ -590,4 +615,39 @@ def reply_buyer_question(
     db.commit()
     db.refresh(question)
     return QuestionResponse.model_validate(question)
+
+
+# ============================================================================
+# Prompt 4: Admin Listing Suspension
+# ============================================================================
+
+@router.post(
+    "/{listing_id}/suspend",
+    response_model=ListingResponse,
+    summary="Admin suspension of listing and removal from search embeddings",
+)
+def suspend_listing_admin(
+    listing_id: str,
+    auth_ctx: AuthContext = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Suspends a listing immediately.
+    Guarantees removal of embedding from the search index via remove_listing_embedding().
+    """
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+
+    listing.status = ListingStatus.SUSPENDED.value
+    listing.status_message = f"Suspended by platform admin ({auth_ctx.user_id})."
+    listing.updated_at = utc_now()
+    db.commit()
+
+    # Reuse existing remove_listing_embedding to purge from vector search index
+    removed = remove_listing_embedding(listing_id=listing.id, db=db)
+    logger.info(f"Admin {auth_ctx.user_id} suspended listing {listing.id} (embedding removed: {removed})")
+
+    db.refresh(listing)
+    return ListingResponse.from_orm_listing(listing)
 

@@ -12,7 +12,10 @@ from src.models.user import (
     KYCStartResponse,
     KYCStatusResponse,
     KYCWebhookPayload,
+    KYCSubmitRequest,
+    KYCStatus,
     SellerProfile,
+    utc_now,
 )
 from src.security import require_auth, require_seller, AuthContext
 from src.kyc.service import (
@@ -207,6 +210,65 @@ async def kyc_provider_webhook(
     )
 
 
+@router.post(
+    "/submit",
+    response_model=KYCStatusResponse,
+    summary="Submit KYC identity verification details for authenticated seller",
+)
+def submit_kyc_details(
+    payload: Optional[KYCSubmitRequest] = None,
+    auth_ctx: AuthContext = Depends(require_seller),
+    db: Session = Depends(get_db),
+):
+    """
+    Submits identity verification details, updates seller profile metadata with redacted
+    identifiers, and transitions status to 'pending'.
+    """
+    profile = get_or_create_seller_profile(auth_ctx.user_id, db)
+    meta = dict(profile.kyc_metadata or {})
+
+    submission_data = {}
+    if payload:
+        masked_tax_id = None
+        if payload.tax_id:
+            cleaned_tax = payload.tax_id.replace("-", "").strip()
+            masked_tax_id = f"***-**-{cleaned_tax[-4:]}" if len(cleaned_tax) >= 4 else "***"
+
+        submission_data = {
+            "legal_name": payload.legal_name,
+            "business_name": payload.business_name,
+            "country": payload.country,
+            "tax_id_masked": masked_tax_id,
+            "address_line1": payload.address_line1,
+            "city": payload.city,
+            "state": payload.state,
+            "postal_code": payload.postal_code,
+            "document_type": payload.document_type,
+            "phone": payload.phone,
+            "submitted_at": utc_now().isoformat(),
+        }
+    else:
+        submission_data = {
+            "legal_name": "Standard Seller Verification",
+            "submitted_at": utc_now().isoformat(),
+        }
+
+    meta["submission"] = submission_data
+    profile.kyc_metadata = meta
+    profile.kyc_status = KYCStatus.PENDING.value
+    profile.payout_enabled = False
+    profile.updated_at = utc_now()
+    db.commit()
+    db.refresh(profile)
+
+    return KYCStatusResponse(
+        user_id=auth_ctx.user_id,
+        kyc_status=profile.kyc_status,
+        payout_enabled=profile.payout_enabled,
+        details=profile.kyc_metadata,
+    )
+
+
 # ============================================================================
 # Inter-Service & Compatibility Router (/kyc)
 # Provides inter-service endpoints (e.g. /kyc/seller/{seller_id}/payout-status)
@@ -228,17 +290,11 @@ def legacy_get_kyc_status(
 
 @interservice_kyc_router.post("/submit", response_model=KYCStatusResponse)
 def legacy_submit_kyc(
+    payload: Optional[KYCSubmitRequest] = None,
     auth_ctx: AuthContext = Depends(require_seller),
     db: Session = Depends(get_db),
 ):
-    start_seller_kyc(user_id=auth_ctx.user_id, db=db)
-    profile = get_or_create_seller_profile(auth_ctx.user_id, db)
-    return KYCStatusResponse(
-        user_id=auth_ctx.user_id,
-        kyc_status=profile.kyc_status,
-        payout_enabled=profile.payout_enabled,
-        details=profile.kyc_metadata,
-    )
+    return submit_kyc_details(payload=payload, auth_ctx=auth_ctx, db=db)
 
 
 @interservice_kyc_router.get(

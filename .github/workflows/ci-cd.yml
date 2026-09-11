@@ -1,0 +1,161 @@
+name: softXchange CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Job 1: Quality, Security, and Automated Test Battery ──────────────────
+  test-and-lint:
+    name: Quality & Test Battery
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Node Dependencies
+        run: npm ci || npm install
+
+      - name: Gate 1 — 3D Asset Budget Enforcement
+        run: node packages/3d-assets/check-asset-budget.js
+
+      - name: Install Python Dependencies & Platform Packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install wheel pytest pytest-asyncio anyio httpx alembic psycopg2-binary
+          # Install wheels / platform packages
+          pip install -e "./Secret Scanner engine"
+          pip install -e "./packages/ml-shared"
+          # Install service requirements
+          for req in apps/*/requirements.txt; do
+            if [ -f "$req" ]; then
+              pip install -r "$req"
+            fi
+          done
+
+      - name: Gate 2 — Zero Local Storage Rule Verification
+        run: pytest tests/test_storage_rule.py -v
+
+      - name: Gate 3 — Multi-Service Parity Integration Verification
+        run: pytest tests/test_shared_backend_parity.py -v
+
+      - name: Gate 4 — Production Fail-Closed Security Gates
+        run: pytest tests/test_production_fail_closed.py -v
+
+      - name: Gate 5 — Database Migrations & Privacy Invariant Verification
+        run: pytest tests/test_database_migrations.py -v
+
+      - name: Gate 6 — ML Engine & Assist Services Battery
+        run: |
+          pytest packages/ml-shared/tests -v
+          pytest apps/buyer-assist/tests -v
+          pytest apps/seller-assist/tests -v
+          pytest apps/broker/tests -v
+
+      - name: Gate 7 — Microservices Pytest Battery
+        run: |
+          pytest apps/auth-service/tests -v
+          pytest apps/listings-service/tests -v
+          pytest apps/payments-service/tests -v
+          pytest apps/scan-service/tests -v
+          pytest apps/web-unified/tests -v
+
+      - name: Gate 8 — Secret Scanner & Static Analysis Engine Battery
+        run: pytest "Secret Scanner engine/tests" -v
+
+  # ── Job 2: Container Image Build ───────────────────────────────────────────
+  build-containers:
+    name: Build Multi-Stage Container Images
+    needs: [test-and-lint]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - auth-service
+          - listings-service
+          - scan-service
+          - payments-service
+          - buyer-assist
+          - seller-assist
+          - broker
+          - web-unified
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Service Container Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/${{ matrix.service }}/Dockerfile
+          push: false
+          tags: softxchange/${{ matrix.service }}:${{ github.sha }}
+
+  # ── Job 3: Database Migrations (Explicit Step) ─────────────────────────────
+  migrate-database:
+    name: Apply Database Migrations
+    needs: [build-containers]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Migration Toolchain
+        run: pip install alembic psycopg2-binary
+
+      - name: Run Alembic Migrations
+        env:
+          DATABASE_URL_AUTH: ${{ secrets.DATABASE_URL_AUTH }}
+          DATABASE_URL_LISTINGS: ${{ secrets.DATABASE_URL_LISTINGS }}
+          DATABASE_URL_PAYMENTS: ${{ secrets.DATABASE_URL_PAYMENTS }}
+          DATABASE_URL_SCAN: ${{ secrets.DATABASE_URL_SCAN }}
+        run: |
+          echo "Applying migrations to softxchange_auth..."
+          DATABASE_URL="$DATABASE_URL_AUTH" alembic -c apps/auth-service/alembic.ini upgrade head
+          echo "Applying migrations to softxchange_listings..."
+          DATABASE_URL="$DATABASE_URL_LISTINGS" alembic -c apps/listings-service/alembic.ini upgrade head
+          echo "Applying migrations to softxchange_payments..."
+          DATABASE_URL="$DATABASE_URL_PAYMENTS" alembic -c apps/payments-service/alembic.ini upgrade head
+          echo "Applying migrations to softxchange_scan..."
+          DATABASE_URL="$DATABASE_URL_SCAN" alembic -c apps/scan-service/alembic.ini upgrade head
+
+  # ── Job 4: Production Deployment (Manual Approval Gate) ───────────────────
+  deploy-production:
+    name: Production Deploy (Gated)
+    needs: [migrate-database]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy Stack
+        run: |
+          echo "Deploying verified softXchange container stack to production host..."
+          # Deploy step: pull images and docker compose up -d

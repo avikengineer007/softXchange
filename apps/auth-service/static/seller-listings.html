@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Management — softXchange</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--bg-surface-translucent);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal.active { display: flex; }
+    .modal-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      width: 100%;
+      max-width: 680px;
+      padding: 28px;
+      box-shadow: var(--shadow-elevated);
+      max-height: 90vh;
+      overflow-y: auto;
+      color: var(--text-primary);
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-primary);
+    }
+    .form-control {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-family: inherit;
+      transition: border-color var(--transition-fast) var(--easing-standard);
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--color-border-focus);
+    }
+    .token-bar {
+      background: var(--bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 24px;
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+    .findings-box {
+      background: var(--bg-input);
+      color: var(--color-danger);
+      border: 1px solid var(--color-border);
+      padding: 14px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 12px;
+    }
+    .ai-box {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+    .ai-box-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--accent-blue);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .ai-suggestion-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .badge-sev {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+    .badge-critical {
+      background: var(--color-danger-bg);
+      color: var(--color-danger);
+      border: 1px solid var(--color-danger-border);
+    }
+    .badge-high {
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+      border: 1px solid var(--color-warning-border);
+    }
+    .badge-medium {
+      background: var(--color-info-bg);
+      color: var(--accent-blue);
+      border: 1px solid var(--color-info-border);
+    }
+    .badge-low {
+      background: var(--bg-surface-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--color-border);
+    }
+    .question-card {
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-bottom: 14px;
+      background: var(--bg-surface-elevated);
+    }
+    .draft-badge {
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .notice-box {
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--color-border);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="site-nav">
+    <a href="/static/index.html" class="brand-link">
+      <!-- Geometric Bowtie Logo Mark -->
+      <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="sl-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="var(--accent-blue)"/>
+            <stop offset="100%" stop-color="var(--accent-violet)"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#sl-grad)"/>
+      </svg>
+      <h1>softXchange</h1>
+    </a>
+    <nav class="nav-links" id="site-nav-links">
+      <a href="/static/browse-listings.html">Public Catalog</a>
+      <a href="/static/seller-listings.html" class="active">Seller Portal</a>
+      <a href="http://localhost:8004/static/seller-payouts.html">Payout Dashboard</a>
+      <a href="http://localhost:8001/static/dashboard-seller.html">Auth &amp; KYC Status</a>
+    </nav>
+  </header>
+
+  <main class="container page-transition">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
+      <div>
+        <h2 style="font-family: var(--font-heading); font-size: 32px; font-weight: 700; color: var(--text-primary);">Seller Package Manager</h2>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">Submit software packages for security scanning and manage published versions with AI Assist.</p>
+      </div>
+      <button class="btn-filter" onclick="openCreateModal()">+ Create New Listing</button>
+    </div>
+
+    <!-- Auth / Token & Regional Currency Bar -->
+    <div class="token-bar">
+      <div style="flex: 1; display: flex; gap: 8px; align-items: center; min-width: 300px;">
+        <strong style="color: var(--text-primary);">Seller Session:</strong>
+        <input type="password" id="auth-token" class="form-control" style="flex:1;" placeholder="Paste Seller JWT Access Token here...">
+        <button class="btn-filter" style="padding: 8px 14px;" onclick="saveTokenAndReload()">Apply Token</button>
+      </div>
+
+      <!-- Region-centric currency selection -->
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <strong style="color: var(--text-primary);">Market Region:</strong>
+        <select id="region-selector" class="form-control" style="width: auto; padding: 6px 10px;" onchange="handleRegionChange()">
+          <option value="US">USA ($ USD)</option>
+          <option value="RU">Russia (₽ RUB)</option>
+          <option value="IN">India (₹ INR)</option>
+          <option value="EU">Europe (€ EUR)</option>
+          <option value="GB">UK (£ GBP)</option>
+          <option value="JP">Japan (¥ JPY)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table class="listings-table">
+        <thead>
+          <tr>
+            <th>Package Title</th>
+            <th>Version</th>
+            <th>Price</th>
+            <th>Lifecycle Status</th>
+            <th>Security Findings</th>
+            <th style="text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="listings-tbody">
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 36px; color: var(--text-secondary);">
+              Enter your seller access token above to load listings.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Create Listing Modal with AI Assist -->
+  <div id="modal-create" class="modal">
+    <div class="modal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-family: var(--font-heading); font-size: 22px; font-weight: 700;">Create Listing Draft</h3>
+        <button type="button" class="btn-filter" style="font-size: 12px;" onclick="fetchCopySuggestions()">
+          ⚡ AI Copy &amp; Price Assist
+        </button>
+      </div>
+
+      <!-- AI Suggestions Panel -->
+      <div id="ai-suggestions-panel" class="ai-box" style="display: none;">
+        <div class="ai-box-title">
+          <span>AI Advisory Suggestions (Grounded in Live Market Data)</span>
+          <span style="font-size: 11px; font-weight: normal; color: var(--badge-green);">Advisory only — you control what applies</span>
+        </div>
+        <div id="ai-guidance-content" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;"></div>
+        <div id="ai-suggestions-list"></div>
+      </div>
+
+      <form id="form-create" onsubmit="handleCreateListing(event)">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="create-title" class="form-control" required placeholder="e.g. Cloud Security CLI">
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="create-category" class="form-control" required>
+            <option value="developer-tools">Developer Tools</option>
+            <option value="security">Security &amp; Privacy</option>
+            <option value="productivity">Productivity</option>
+            <option value="infrastructure">Infrastructure</option>
+            <option value="utilities">Utilities</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Price in Cents (e.g. 4900 = $49.00, 0 = Free)</label>
+          <input type="number" id="create-price" class="form-control" min="0" value="0" required>
+          <small id="create-price-local" style="color: var(--text-secondary); font-size: 12px; margin-top: 4px; display: block;"></small>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="create-desc" class="form-control" rows="4" placeholder="Overview of software functionality..."></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+          <button type="button" class="action-btn" onclick="closeModal('modal-create')">Cancel</button>
+          <button type="submit" class="btn-filter">Save Draft</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Submit / Resubmit Version Modal -->
+  <div id="modal-version" class="modal">
+    <div class="modal-card">
+      <h3 id="version-modal-title" style="font-family: var(--font-heading); font-size: 22px; font-weight: 700; margin-bottom: 16px;">Submit Version for Scanning</h3>
+      <form id="form-version" onsubmit="handleSubmitVersion(event)">
+        <input type="hidden" id="version-listing-id">
+        <div class="form-group">
+          <label>Version String (SemVer)</label>
+          <input type="text" id="version-semver" class="form-control" required placeholder="1.0.0">
+        </div>
+        <div class="form-group">
+          <label>Package Source Path (Path to package or zip for scan-service intake)</label>
+          <input type="text" id="version-package-path" class="form-control" required placeholder="e.g. /packages/myapp-v1.0.0.zip">
+        </div>
+        <div class="form-group">
+          <label>Changelog / Notes</label>
+          <textarea id="version-changelog" class="form-control" rows="2" placeholder="Initial release..."></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+          <button type="button" class="action-btn" onclick="closeModal('modal-version')">Cancel</button>
+          <button type="submit" class="btn-filter">Submit for Intake &amp; Scan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Findings Modal with Plain-English Translation -->
+  <div id="modal-findings" class="modal">
+    <div class="modal-card" style="max-width: 780px;">
+      <h3 style="font-family: var(--font-heading); font-size: 22px; font-weight: 700; margin-bottom: 6px;">Security Scan Findings &amp; Advisory</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+        Plain-English translation grounded in verified findings from secret-scanner-engine.
+      </p>
+
+      <div id="findings-advisory" style="margin-bottom: 16px;">
+        <div class="notice-box">
+          Loading plain-English explanation...
+        </div>
+      </div>
+
+      <details>
+        <summary style="font-size: 12px; font-weight: 600; cursor: pointer; color: var(--accent-blue); margin-bottom: 8px;">
+          View Raw Scanner Engine JSON Report
+        </summary>
+        <div id="findings-content" class="findings-box">
+          Loading raw findings...
+        </div>
+      </details>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button type="button" class="btn-filter" onclick="closeModal('modal-findings')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Buyer Questions Modal -->
+  <div id="modal-questions" class="modal">
+    <div class="modal-card" style="max-width: 760px;">
+      <h3 style="font-family: var(--font-heading); font-size: 22px; font-weight: 700; margin-bottom: 6px;">Buyer Inquiries &amp; Q&amp;A</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+        Respond to prospective buyers. AI drafts suggestions that you review, edit, and manually send.
+      </p>
+
+      <div id="questions-list">
+        Loading inquiries...
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button type="button" class="btn-filter" onclick="closeModal('modal-questions')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SELLER_ASSIST_URL = 'http://localhost:8006';
+    let currentToken = localStorage.getItem('seller_access_token') || '';
+    let currentRegion = localStorage.getItem('seller_region') || 'US';
+    let activeListingForQuestions = null;
+
+    const CURRENCY_MAP = {
+      'US': { code: 'USD', symbol: '$', rate: 1.0 },
+      'RU': { code: 'RUB', symbol: '₽', rate: 92.0 },
+      'IN': { code: 'INR', symbol: '₹', rate: 83.5 },
+      'EU': { code: 'EUR', symbol: '€', rate: 0.92 },
+      'GB': { code: 'GBP', symbol: '£', rate: 0.79 },
+      'JP': { code: 'JPY', symbol: '¥', rate: 155.0 }
+    };
+
+    function checkTokenFromUrl() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      if (token) {
+        currentToken = token;
+        localStorage.setItem('seller_access_token', token);
+      }
+      if (currentToken) {
+        document.getElementById('auth-token').value = currentToken;
+      }
+      document.getElementById('region-selector').value = currentRegion;
+    }
+
+    function saveTokenAndReload() {
+      currentToken = document.getElementById('auth-token').value.trim();
+      localStorage.setItem('seller_access_token', currentToken);
+      loadSellerListings();
+    }
+
+    function handleRegionChange() {
+      currentRegion = document.getElementById('region-selector').value;
+      localStorage.setItem('seller_region', currentRegion);
+      loadSellerListings();
+    }
+
+    function formatPriceInRegion(cents) {
+      const info = CURRENCY_MAP[currentRegion] || CURRENCY_MAP['US'];
+      const converted = (cents / 100.0) * info.rate;
+      if (info.code === 'RUB' || info.code === 'JPY') {
+        return `${Math.round(converted).toLocaleString()} ${info.symbol}`;
+      }
+      return `${info.symbol}${converted.toFixed(2)}`;
+    }
+
+    async function loadSellerListings() {
+      if (!currentToken) return;
+
+      const tbody = document.getElementById('listings-tbody');
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-secondary);">Refreshing listing status and KYC checks...</td></tr>';
+
+      try {
+        const res = await fetch('/listings/mine', {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            tbody.innerHTML = `<tr><td colspan="6" style="color: var(--color-danger); text-align: center; padding: 24px;">Unauthorized or insufficient seller permissions. Please check your token.</td></tr>`;
+            return;
+          }
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const listings = await res.json();
+        renderTable(listings);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color: var(--color-danger); text-align: center; padding: 24px;">Error: ${escapeHtml(err.message)}</td></tr>`;
+      }
+    }
+
+    function renderTable(listings) {
+      const tbody = document.getElementById('listings-tbody');
+      tbody.innerHTML = '';
+
+      if (listings.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 36px; color: var(--text-secondary);">You have no listings yet. Click "+ Create New Listing" to begin.</td></tr>`;
+        return;
+      }
+
+      listings.forEach(item => {
+        const tr = document.createElement('tr');
+        const localFormattedPrice = item.price_cents === 0 ? 'Free' : formatPriceInRegion(item.price_cents);
+        
+        let actionBtn = '';
+        if (item.status === 'draft') {
+          actionBtn = `
+            <button class="action-btn" onclick="openVersionModal('${item.id}', '${escapeHtml(item.version_label || '1.0.0')}')">Submit for Scan</button>
+          `;
+        } else if (item.status === 'pending_scan') {
+          actionBtn = `<span style="font-size: 12px; color: var(--accent-violet);">Scanning in progress...</span>`;
+        } else if (item.status === 'scan_passed_awaiting_kyc') {
+          actionBtn = `<a href="http://localhost:8001/static/dashboard-seller.html" target="_blank" class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue);">Complete KYC &rarr;</a>`;
+        } else if (item.status === 'scan_passed_verification_unavailable') {
+          actionBtn = `<button class="action-btn" onclick="loadSellerListings()">Retry KYC Check</button>`;
+        } else if (item.status === 'scan_failed') {
+          actionBtn = `
+            <button class="action-btn" style="color:var(--color-danger);" onclick="viewFindings('${item.id}', '${item.version_label}', '${item.id}')">View Findings &amp; Advisory</button>
+            <button class="action-btn" onclick="openVersionModal('${item.id}', '1.0.1')">Resubmit</button>
+          `;
+        } else if (item.status === 'live') {
+          actionBtn = `
+            <button class="action-btn" style="color:var(--accent-blue);" onclick="openQuestionsModal('${item.id}', '${escapeHtml(item.title)}')">Buyer Q&amp;A</button>
+            <a href="/static/listing-detail.html?id=${item.id}" target="_blank" class="action-btn">View Live</a>
+            <button class="action-btn" style="color:var(--text-muted);" onclick="withdrawListing('${item.id}')">Withdraw</button>
+          `;
+        } else if (item.status === 'withdrawn') {
+          actionBtn = `<span style="font-size: 12px; color: var(--text-muted);">Withdrawn</span>`;
+        } else if (item.status === 'suspended') {
+          actionBtn = `<span style="font-size: 12px; color: var(--color-danger);">Suspended by Admin</span>`;
+        }
+
+        const findingsSummary = item.severity_summary && Object.keys(item.severity_summary).length > 0 ? 
+          `Crit: ${item.severity_summary.critical || 0}, High: ${item.severity_summary.high || 0}` : 
+          (item.status === 'live' ? '0 findings (passed)' : '—');
+
+        tr.innerHTML = `
+          <td>
+            <strong>${escapeHtml(item.title)}</strong><br>
+            <small style="color: var(--text-muted);">${escapeHtml(item.category)} &bull; ID: ${escapeHtml(item.id.slice(0, 8))}...</small>
+          </td>
+          <td><code style="font-family: var(--font-mono); color: var(--text-secondary);">${escapeHtml(item.version_label || '1.0.0')}</code></td>
+          <td><strong>${localFormattedPrice}</strong></td>
+          <td><span class="status-pill status-${item.status}">${item.status.replace(/_/g, ' ')}</span></td>
+          <td style="font-family: var(--font-mono); font-size: 12px;">${findingsSummary}</td>
+          <td style="text-align: right;">${actionBtn}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function fetchCopySuggestions() {
+      const draftTitle = document.getElementById('create-title').value.trim();
+      const draftDesc = document.getElementById('create-desc').value.trim();
+      const draftCat = document.getElementById('create-category').value;
+      const draftPrice = parseInt(document.getElementById('create-price').value, 10) || 0;
+
+      const panel = document.getElementById('ai-suggestions-panel');
+      const guidanceDiv = document.getElementById('ai-guidance-content');
+      const listDiv = document.getElementById('ai-suggestions-list');
+
+      panel.style.display = 'block';
+      guidanceDiv.innerHTML = '<em>Consulting softXchange seller-assist AI agent...</em>';
+      listDiv.innerHTML = '';
+
+      const payload = {
+        title: draftTitle || 'New Software Tool',
+        description: draftDesc || 'Developer utility software package',
+        category: draftCat,
+        rough_price_cents: draftPrice
+      };
+
+      try {
+        const res = await fetch(`${SELLER_ASSIST_URL}/assist/seller/listings/draft-new/suggest-improvements`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          renderClientSideAiPreview(payload);
+          return;
+        }
+
+        const data = await res.json();
+        renderAiSuggestions(data);
+      } catch (err) {
+        renderClientSideAiPreview({ title: draftTitle, description: draftDesc, category: draftCat, rough_price_cents: draftPrice });
+      }
+    }
+
+    function renderAiSuggestions(data) {
+      const guidanceDiv = document.getElementById('ai-guidance-content');
+      const listDiv = document.getElementById('ai-suggestions-list');
+
+      const priceRange = data.price_guidance ? data.price_guidance.recommended_range : 'Set price independently';
+      guidanceDiv.innerHTML = `
+        <strong style="color: var(--text-primary);">Recommended Range:</strong> <span style="font-weight:700; color:var(--accent-blue);">${escapeHtml(priceRange)}</span>
+        <br><small style="color:var(--text-secondary);">${escapeHtml(data.confidence_note)}</small>
+      `;
+
+      listDiv.innerHTML = `
+        <div class="ai-suggestion-item">
+          <div>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">SUGGESTED TITLE</span>
+            <div style="font-weight:600; font-size:14px; margin-top:2px;">${escapeHtml(data.suggested_title)}</div>
+          </div>
+          <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyTitle('${escapeHtml(data.suggested_title)}')">Apply</button>
+        </div>
+
+        <div class="ai-suggestion-item">
+          <div>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">SUGGESTED DESCRIPTION</span>
+            <div style="font-size:12px; white-space:pre-line; margin-top:2px; max-height:80px; overflow-y:auto;">${escapeHtml(data.suggested_description)}</div>
+          </div>
+          <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyDescription(${JSON.stringify(data.suggested_description)})">Apply</button>
+        </div>
+
+        ${data.price_guidance ? `
+        <div class="ai-suggestion-item">
+          <div>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">RECOMMENDED MEDIAN PRICE</span>
+            <div style="font-weight:600; font-size:14px; margin-top:2px;">${data.price_guidance.median_price_formatted} ($${(data.price_guidance.base_median_cents/100).toFixed(2)})</div>
+          </div>
+          <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyPrice(${data.price_guidance.base_median_cents})">Apply Price</button>
+        </div>` : ''}
+      `;
+    }
+
+    function renderClientSideAiPreview(payload) {
+      const guidanceDiv = document.getElementById('ai-guidance-content');
+      const listDiv = document.getElementById('ai-suggestions-list');
+
+      const defaultRange = `${formatPriceInRegion(3900)} - ${formatPriceInRegion(7900)}`;
+
+      guidanceDiv.innerHTML = `
+        <strong style="color: var(--text-primary);">Recommended Range:</strong> <span style="font-weight:700; color:var(--accent-blue);">${defaultRange}</span>
+        <br><small style="color:var(--text-secondary);">Grounded in comparable marketplace software packages in ${escapeHtml(payload.category)}.</small>
+      `;
+
+      const refinedTitle = payload.title ? `${payload.title} — Verified ${payload.category} Package` : `Enterprise ${payload.category} Suite`;
+      const refinedDesc = `${payload.description || 'Production-grade software package'}\n\nKey Features & Highlights:\n- Clean modular architecture with verified dependency manifests.\n- Continuous security scan vetting and developer documentation.\n- Built for high performance ${payload.category} workflows.`;
+
+      listDiv.innerHTML = `
+        <div class="ai-suggestion-item">
+          <div>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">SUGGESTED TITLE</span>
+            <div style="font-weight:600; font-size:14px; margin-top:2px;">${escapeHtml(refinedTitle)}</div>
+          </div>
+          <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyTitle('${escapeHtml(refinedTitle)}')">Apply</button>
+        </div>
+
+        <div class="ai-suggestion-item">
+          <div>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">SUGGESTED DESCRIPTION</span>
+            <div style="font-size:12px; white-space:pre-line; margin-top:2px; max-height:80px; overflow-y:auto;">${escapeHtml(refinedDesc)}</div>
+          </div>
+          <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyDescription(${JSON.stringify(refinedDesc)})">Apply</button>
+        </div>
+
+        <div class="ai-suggestion-item">
+          <div>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">RECOMMENDED MEDIAN PRICE</span>
+            <div style="font-weight:600; font-size:14px; margin-top:2px;">${formatPriceInRegion(4900)} ($49.00)</div>
+          </div>
+          <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyPrice(4900)">Apply Price</button>
+        </div>
+      `;
+    }
+
+    function applyTitle(val) {
+      document.getElementById('create-title').value = val;
+    }
+    function applyDescription(val) {
+      document.getElementById('create-desc').value = val;
+    }
+    function applyPrice(cents) {
+      document.getElementById('create-price').value = cents;
+      updateLocalPriceHint();
+    }
+
+    function updateLocalPriceHint() {
+      const cents = parseInt(document.getElementById('create-price').value, 10) || 0;
+      document.getElementById('create-price-local').textContent = `Localized preview in ${currentRegion}: ${formatPriceInRegion(cents)}`;
+    }
+    document.getElementById('create-price').addEventListener('input', updateLocalPriceHint);
+
+    async function viewFindings(listingId, version, versionId) {
+      const box = document.getElementById('findings-content');
+      const advisory = document.getElementById('findings-advisory');
+      box.textContent = 'Loading raw JSON findings...';
+      advisory.innerHTML = '<div class="notice-box">Translating findings into plain English...</div>';
+      document.getElementById('modal-findings').classList.add('active');
+
+      try {
+        const res = await fetch(`/listings/${listingId}/versions/${version}/findings`, {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          box.textContent = JSON.stringify(data, null, 2);
+        }
+      } catch (err) {
+        box.textContent = 'Failed to load raw findings: ' + err.message;
+      }
+
+      try {
+        if (!versionId) versionId = version;
+        const resAdv = await fetch(`${SELLER_ASSIST_URL}/assist/seller/versions/${versionId}/explain-findings`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!resAdv.ok) {
+          advisory.innerHTML = `<div class="notice-box" style="border-color:var(--color-danger-border); color:var(--color-danger-text);">Plain-English advisory service unavailable for this version. Please review the raw report below.</div>`;
+          return;
+        }
+
+        const advData = await resAdv.json();
+        renderFindingsAdvisory(advData);
+      } catch (err) {
+        advisory.innerHTML = `<div class="notice-box" style="border-color:var(--color-warning-border); color:var(--color-warning);">${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderFindingsAdvisory(data) {
+      const advisory = document.getElementById('findings-advisory');
+      if (!data.has_issues) {
+        advisory.innerHTML = `
+          <div class="notice-box" style="border-color:var(--badge-green-border); color:var(--badge-green);">
+            <strong>✓ Clean Scan Confirmation</strong>
+            <p style="margin-top:4px; font-size:13px;">${escapeHtml(data.overall_summary)}</p>
+          </div>
+        `;
+        return;
+      }
+
+      let groupsHtml = '';
+      const severities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+      severities.forEach(sev => {
+        const items = data.grouped_findings[sev] || [];
+        if (items.length > 0) {
+          groupsHtml += `
+            <div style="margin-top:10px;">
+              <span class="badge-sev badge-${sev.toLowerCase()}">${sev} (${items.length})</span>
+              <ul style="margin:6px 0 0 16px; padding:0; font-size:13px; color:var(--text-secondary);">
+                ${items.map(it => `
+                  <li style="margin-bottom:6px;">
+                    <strong style="color:var(--text-primary);">[${escapeHtml(it.rule_id)}]</strong> ${escapeHtml(it.plain_english_summary)}<br>
+                    <span style="color:var(--accent-blue); font-size:12px;">&rarr; ${escapeHtml(it.remediation_action)}</span>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          `;
+        }
+      });
+
+      advisory.innerHTML = `
+        <div class="notice-box" style="border-color:var(--color-warning-border);">
+          <strong style="color:var(--color-warning);">Security Advisory: ${data.total_findings} Actionable Issue(s) Identified</strong>
+          <div style="font-size:13px; color:var(--text-secondary); margin-top:6px; white-space:pre-line;">
+            ${escapeHtml(data.overall_summary.split('\n\n')[0])}
+          </div>
+          ${groupsHtml}
+        </div>
+      `;
+    }
+
+    async function openQuestionsModal(listingId, listingTitle) {
+      activeListingForQuestions = listingId;
+      document.getElementById('modal-questions').classList.add('active');
+      const listDiv = document.getElementById('questions-list');
+      listDiv.innerHTML = '<em>Loading buyer inquiries...</em>';
+
+      try {
+        const res = await fetch(`/listings/${listingId}/questions`, {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const questions = await res.json();
+        renderQuestions(questions);
+      } catch (err) {
+        listDiv.innerHTML = `<div style="color:var(--color-danger);">Error loading inquiries: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderQuestions(questions) {
+      const listDiv = document.getElementById('questions-list');
+      if (questions.length === 0) {
+        listDiv.innerHTML = `<p style="color:var(--text-secondary); text-align:center; padding:24px;">No buyer questions have been submitted for this listing yet.</p>`;
+        return;
+      }
+
+      listDiv.innerHTML = questions.map(q => {
+        const isAnswered = !!q.seller_response;
+        return `
+          <div class="question-card" id="q-card-${q.id}">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:12px; color:var(--text-muted);">From Buyer: <code style="font-family:var(--font-mono);">${escapeHtml(q.buyer_id.slice(0, 8))}...</code></span>
+              <span class="${isAnswered ? 'status-pill status-live' : 'draft-badge'}">${isAnswered ? 'Replied' : 'Pending Reply'}</span>
+            </div>
+            <div style="font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:10px;">
+              "${escapeHtml(q.question_text)}"
+            </div>
+
+            ${isAnswered ? `
+              <div class="notice-box" style="border-color:var(--badge-green-border); color:var(--badge-green); padding:10px;">
+                <strong>Your Reply:</strong><br><span style="color:var(--text-primary);">${escapeHtml(q.seller_response)}</span>
+              </div>
+            ` : `
+              <div id="reply-box-${q.id}" style="margin-top:10px;">
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
+                  <button type="button" class="btn-filter" style="font-size:12px;" onclick="draftAiReply('${q.id}')">
+                    ✨ Generate AI Draft Reply
+                  </button>
+                  <span id="draft-notice-${q.id}" style="font-size:11px; color:var(--color-warning); display:none; align-items:center;">
+                    ⚠️ Drafted for review — not yet sent
+                  </span>
+                </div>
+                <textarea id="reply-textarea-${q.id}" class="form-control" rows="3" placeholder="Type your reply to the buyer..."></textarea>
+                <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+                  <button type="button" class="btn-filter" style="font-size:12px;" onclick="handleSendReply('${q.id}')">
+                    Send Reply to Buyer &rarr;
+                  </button>
+                </div>
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function draftAiReply(questionId) {
+      const textarea = document.getElementById(`reply-textarea-${questionId}`);
+      const notice = document.getElementById(`draft-notice-${questionId}`);
+      textarea.value = 'Generating grounded draft reply...';
+      textarea.disabled = true;
+
+      try {
+        const res = await fetch(`${SELLER_ASSIST_URL}/assist/seller/questions/${questionId}/draft-reply`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail ? (err.detail.message || JSON.stringify(err.detail)) : 'Draft failed');
+        }
+
+        const data = await res.json();
+        textarea.value = data.suggested_reply;
+        textarea.disabled = false;
+        notice.style.display = 'inline-flex';
+      } catch (err) {
+        textarea.value = '';
+        textarea.disabled = false;
+        alert('Could not draft reply: ' + err.message);
+      }
+    }
+
+    async function handleSendReply(questionId) {
+      const textarea = document.getElementById(`reply-textarea-${questionId}`);
+      const replyText = textarea.value.trim();
+      if (!replyText) {
+        alert('Please enter a response before sending.');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${SELLER_ASSIST_URL}/assist/seller/questions/${questionId}/send`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ response_text: replyText })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail ? (err.detail.message || JSON.stringify(err.detail)) : 'Failed to send reply');
+        }
+
+        alert('Reply sent successfully!');
+        openQuestionsModal(activeListingForQuestions, '');
+      } catch (err) {
+        alert('Error sending reply: ' + err.message);
+      }
+    }
+
+    function openCreateModal() {
+      document.getElementById('modal-create').classList.add('active');
+      document.getElementById('ai-suggestions-panel').style.display = 'none';
+      updateLocalPriceHint();
+    }
+
+    function openVersionModal(listingId, defaultVersion) {
+      document.getElementById('version-listing-id').value = listingId;
+      document.getElementById('version-semver').value = defaultVersion || '1.0.0';
+      document.getElementById('modal-version').classList.add('active');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    async function handleCreateListing(e) {
+      e.preventDefault();
+      const payload = {
+        title: document.getElementById('create-title').value.trim(),
+        category: document.getElementById('create-category').value,
+        price_cents: parseInt(document.getElementById('create-price').value, 10),
+        description: document.getElementById('create-desc').value.trim()
+      };
+
+      try {
+        const res = await fetch('/listings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        closeModal('modal-create');
+        loadSellerListings();
+      } catch (err) {
+        alert('Error creating listing: ' + err.message);
+      }
+    }
+
+    async function handleSubmitVersion(e) {
+      e.preventDefault();
+      const listingId = document.getElementById('version-listing-id').value;
+      const payload = {
+        version: document.getElementById('version-semver').value.trim(),
+        package_path: document.getElementById('version-package-path').value.trim(),
+        changelog: document.getElementById('version-changelog').value.trim()
+      };
+
+      try {
+        const res = await fetch(`/listings/${listingId}/versions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentToken}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        closeModal('modal-version');
+        loadSellerListings();
+      } catch (err) {
+        alert('Error submitting version: ' + err.message);
+      }
+    }
+
+    async function withdrawListing(listingId) {
+      if (!confirm('Are you sure you want to withdraw this listing from the catalog?')) return;
+      try {
+        const res = await fetch(`/listings/${listingId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${currentToken}` }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        loadSellerListings();
+      } catch (err) {
+        alert('Error withdrawing listing: ' + err.message);
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      checkTokenFromUrl();
+      if (currentToken) loadSellerListings();
+
+      try {
+        const token = localStorage.getItem('seller_access_token') || localStorage.getItem('admin_access_token');
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const roles = payload.roles || [];
+          const nav = document.getElementById('site-nav-links');
+          if (roles.includes('admin')) {
+            const adminLink = document.createElement('a');
+            adminLink.href = 'http://localhost:8001/static/admin-dashboard.html';
+            adminLink.className = 'nav-admin-link';
+            adminLink.innerHTML = '🛡️ Admin Console';
+            nav.prepend(adminLink);
+          }
+        }
+      } catch (e) {}
+    });
+  </script>
+</body>
+</html>

@@ -74,6 +74,11 @@ def draft_buyer_reply(
             listing=listing,
             forced_reply_for_test=forced_reply,
         )
+        # Store draft for instant retrieval when seller opens the view
+        # Maintains zero send side-effects: seller_response and responded_at remain None
+        question.draft_reply = draft.suggested_reply
+        db.commit()
+        db.refresh(question)
         return draft
     except GuardrailViolationError as exc:
         refusal_msg = format_guardrail_refusal(exc)

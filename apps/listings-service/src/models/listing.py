@@ -91,10 +91,24 @@ class BuyerQuestion(Base):
     buyer_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     question_text: Mapped[str] = mapped_column(String(2000), nullable=False)
     seller_response: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
+    draft_reply: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
     responded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     listing: Mapped["Listing"] = relationship("Listing", back_populates="questions")
+
+
+class SearchEvent(Base):
+    """
+    Search event log for demand signal aggregation.
+    Guarantees strict buyer privacy: stores ZERO buyer IDs or user identity information.
+    """
+    __tablename__ = "buyer_search_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    query_text: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
+    matched_category: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False, index=True)
 
 
 
@@ -236,6 +250,7 @@ class QuestionResponse(BaseModel):
     buyer_id: str
     question_text: str
     seller_response: Optional[str] = None
+    draft_reply: Optional[str] = None
     created_at: datetime
     responded_at: Optional[datetime] = None
 

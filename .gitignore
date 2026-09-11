@@ -40,3 +40,19 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Secrets & Keys
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+!.env.production.template
+secrets_generated/
+
+# Android & Gradle
+.gradle/
+*.iml
+local.properties
+.cxx/
+

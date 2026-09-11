@@ -23,7 +23,7 @@ softXchange is organized as a modular monorepo containing microservices under `a
 - **`packages/db`**: Shared database abstractions and models.
 - **`packages/types`**: Shared types, event contracts, and interfaces.
 
-### Security Engine (`Secret Scanner engine_Manifest/`)
+### Security Engine (`Secret Scanner engine/`)
 
 - Contains the core secrets scanner, static code analyzer, and dependency manifest inspection rules.
 
@@ -56,6 +56,32 @@ pytest packages/ml-shared/tests
 pytest apps/buyer-assist/tests
 pytest apps/seller-assist/tests
 ```
+
+### 3D Asset Pipeline
+
+> **Note**: Node.js (v18+) is required for the 3D build pipeline. This is in addition to Python — the backend services are still Python-only, but the 3D asset generator and budget enforcer run in Node.
+
+```powershell
+# Generate the bowtie/hourglass glTF models (logo-hi.glb, logo-lo.glb)
+npm run 3d:generate
+
+# Copy 3D assets + vendored Three.js into each service's static directory
+# Use this instead of symlinks (Windows requires admin for symlinks)
+npm run 3d:copy
+
+# Or both steps at once:
+npm run 3d:build
+
+# Verify all 3D assets are within the byte-size budget (CI gate, exits 1 on failure):
+npm run check:assets
+```
+
+The 3D models live in `packages/3d-assets/` (source of truth).
+Three.js is vendored at `packages/vendor/` (self-hosted — no CDN dependency).
+After running `npm run 3d:copy`, distributed copies appear in:
+- `apps/listings-service/static/js/` — glb models + tier-detection.js
+- `apps/listings-service/static/js/vendor/` — three.module.min.js + GLTFLoader.js
+
 
 ---
 

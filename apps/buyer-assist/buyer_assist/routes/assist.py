@@ -18,7 +18,7 @@ from buyer_assist.search import (
 
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from src.models.listing import Listing, ListingStatus, ListingVersion
+from src.models.listing import Listing, ListingStatus, ListingVersion, SearchEvent
 from ml_shared.context import ListingContextBundle, SellerDocument
 from buyer_assist.rag import ListingQAService, AnswerResult
 
@@ -66,6 +66,20 @@ def search_endpoint(
             limit=payload.limit,
             min_score=payload.min_score,
         )
+
+        # Record search query event for aggregate demand signals (strictly zero buyer identity)
+        try:
+            matched_cat = results[0].category if results else None
+            search_event = SearchEvent(
+                query_text=payload.query.strip(),
+                matched_category=matched_cat,
+            )
+            db.add(search_event)
+            db.commit()
+        except Exception as log_err:
+            logger.warning(f"Failed to record search query event: {log_err}")
+            db.rollback()
+
         return SearchQueryResponse(
             query=payload.query,
             total=len(results),

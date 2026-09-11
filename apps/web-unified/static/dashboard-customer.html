@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Purchases — softXchange</title>
+  <meta name="description" content="View your softXchange purchase history and manage your software licenses.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <header class="site-nav" role="banner">
+    <a href="/index.html" class="brand-link" id="brand-home">
+      <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="dc-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="var(--accent-blue)"/>
+            <stop offset="100%" stop-color="var(--accent-violet)"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#dc-grad)"/>
+      </svg>
+      <span>softXchange</span>
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="/browse-listings.html">Catalog</a>
+      <a href="/dashboard-customer.html" class="active">My Account</a>
+    </nav>
+  </header>
+
+  <main class="container page-transition" role="main">
+    <div style="max-width:640px;margin:0 auto;">
+      <!-- Welcome card -->
+      <div class="overview-card glass-panel" style="margin-bottom:24px;padding:28px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <h1 id="welcome-name" style="font-family:var(--font-heading);font-size:22px;font-weight:700;margin-bottom:4px;">Hello, Buyer</h1>
+            <p id="user-email" style="font-size:13px;color:var(--text-secondary);">Loading session…</p>
+          </div>
+          <div id="admin-badge-container"></div>
+        </div>
+
+        <div style="background:var(--bg-surface-elevated);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px;">
+          <h3 style="font-family:var(--font-heading);font-size:14px;margin-bottom:10px;color:var(--accent-blue);">Session Identity</h3>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;">
+            <strong>Access Token:</strong> Stored securely in memory (JS closure — no browser storage).
+          </p>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:6px;">
+            <strong>Refresh Cookie:</strong> Strict httpOnly session persistence.
+          </p>
+          <p style="font-size:13px;color:var(--text-secondary);">
+            <strong>Active Roles:</strong> <span id="user-roles" class="status-pill status-verified">customer</span>
+          </p>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+          <a href="/browse-listings.html" class="btn-primary" style="text-decoration:none;flex:1;text-align:center;">
+            Browse Vetted Software Catalog →
+          </a>
+        </div>
+
+        <div id="role-navigation-panel" style="margin-bottom:16px;"></div>
+
+        <button id="logout-btn" class="btn-secondary" style="width:100%;text-align:center;" type="button">
+          Sign Out
+        </button>
+      </div>
+
+      <!-- Purchase History -->
+      <h2 class="section-heading">Purchase History</h2>
+      <div id="purchase-list" style="color:var(--text-secondary);font-size:14px;" role="region" aria-live="polite" aria-label="Purchase history">
+        Loading your purchases…
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/auth.js"></script>
+  <script src="/static/js/ambient-layer.js" defer></script>
+  <script>
+    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || 'http://localhost:8004';
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const d = document.createElement('div');
+      d.textContent = String(text);
+      return d.innerHTML;
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const session = await window.SoftXchangeAuth.silentRefresh();
+      if (!session || !session.access_token) {
+        window.location.href = '/login-customer.html';
+        return;
+      }
+
+      const user = session.user;
+      document.getElementById('welcome-name').textContent =
+        user.display_name ? `Hello, ${user.display_name}` : 'Hello, Buyer';
+      document.getElementById('user-email').textContent = user.email || '';
+      const roles = user.roles || ['customer'];
+      document.getElementById('user-roles').textContent = roles.join(', ');
+
+      const navPanel = document.getElementById('role-navigation-panel');
+      let navHtml = '';
+      if (roles.includes('seller')) {
+        navHtml += `<a href="/seller-listings.html" class="btn-secondary" style="display:block;text-align:center;margin-bottom:10px;">Go to Seller Management Dashboard →</a>`;
+      }
+      if (roles.includes('admin')) {
+        document.getElementById('admin-badge-container').innerHTML =
+          `<a href="/admin-dashboard.html" class="admin-badge-pill" style="text-decoration:none;">🛡️ Admin Console</a>`;
+        navHtml += `<a href="/admin-dashboard.html" class="btn-secondary" style="display:block;text-align:center;border-color:var(--accent-violet);color:var(--accent-violet);margin-bottom:10px;">Open Elevated Admin Oversight Console →</a>`;
+      }
+      navPanel.innerHTML = navHtml;
+
+      // Load purchase history
+      loadPurchaseHistory();
+    });
+
+    async function loadPurchaseHistory() {
+      const listEl = document.getElementById('purchase-list');
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/orders`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const orders = await res.json();
+        if (!Array.isArray(orders) || orders.length === 0) {
+          listEl.innerHTML = `
+            <div style="text-align:center;padding:32px;background:var(--bg-surface);border:1px dashed var(--color-border);border-radius:var(--radius-md);">
+              <p style="color:var(--text-muted);">No purchases yet. <a href="/browse-listings.html" style="color:var(--accent-blue);">Browse the catalog →</a></p>
+            </div>`;
+          return;
+        }
+        listEl.innerHTML = orders.map(order => `
+          <div style="background:var(--bg-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:18px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);margin-bottom:4px;">Order ${escapeHtml(order.id.slice(0, 8))}…</div>
+              <div style="font-size:14px;font-weight:600;color:var(--text-primary);">$${Number(order.amount_usd || 0).toFixed(2)}</div>
+              <div style="font-size:12px;color:var(--text-secondary);">${order.created_at ? new Date(order.created_at).toLocaleDateString() : '—'}</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <span class="status-pill ${order.status === 'paid' ? 'status-verified' : 'status-pending'}">${escapeHtml(order.status || '').toUpperCase()}</span>
+              ${order.status === 'paid' ? `<a href="/order-confirmation.html?order_id=${encodeURIComponent(order.id)}" style="color:var(--accent-blue);font-size:13px;text-decoration:none;">Download →</a>` : ''}
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        listEl.innerHTML = `<div style="color:var(--color-danger);font-size:14px;" role="alert">Failed to load purchases: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      await window.SoftXchangeAuth.logout();
+      window.location.href = '/login-customer.html';
+    });
+  </script>
+</body>
+</html>

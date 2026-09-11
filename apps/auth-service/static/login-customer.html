@@ -4,14 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Customer Login — softXchange</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-  <div class="auth-container">
+  <div class="auth-container page-transition">
     <div class="brand-header">
       <div class="brand-badge">
-        <span class="dot"></span>
-        Manifest Marketplace
+        <!-- Geometric Bowtie Logo Mark -->
+        <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="login-c-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--accent-blue)"/>
+              <stop offset="100%" stop-color="var(--accent-violet)"/>
+            </linearGradient>
+          </defs>
+          <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#login-c-grad)"/>
+        </svg>
+        <span>softXchange Marketplace</span>
       </div>
       <h1 class="brand-title">softXchange</h1>
       <p class="brand-subtitle">Curated software assets and licenses</p>
@@ -111,9 +124,7 @@
 
       try {
         const result = await window.SoftXchangeAuth.login(email, password);
-        // On success: token stored strictly in-memory by SoftXchangeAuth
-        // Redirect to customer dashboard
-        window.location.href = "/static/dashboard-customer.html";
+        window.SoftXchangeAuth.routeUserAfterLogin(result.user);
       } catch (err) {
         setLoading(false);
         showError(err.message || "Invalid credentials. Please verify your email and password.");
@@ -124,8 +135,7 @@
     window.addEventListener("DOMContentLoaded", async () => {
       const session = await window.SoftXchangeAuth.silentRefresh();
       if (session && session.access_token) {
-        // Already authenticated
-        window.location.href = "/static/dashboard-customer.html";
+        window.SoftXchangeAuth.routeUserAfterLogin(session.user);
       }
     });
   </script>

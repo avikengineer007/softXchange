@@ -1,0 +1,263 @@
+services:
+  # ── Infrastructure: PostgreSQL 16 ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: softxchange-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: softxchange
+      POSTGRES_PASSWORD: softxchange_dev_pass
+      POSTGRES_DB: softxchange_auth
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U softxchange -d softxchange_auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - softxchange-network
+
+  # ── Infrastructure: MinIO S3 Object Storage ────────────────────────────────
+  minio:
+    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+    container_name: softxchange-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: softxchange_admin
+      MINIO_ROOT_PASSWORD: softxchange_minio_pass
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - softxchange-network
+
+  minio-init:
+    image: minio/mc:RELEASE.2024-01-16T16-06-34Z
+    container_name: softxchange-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 softxchange_admin softxchange_minio_pass;
+      mc mb myminio/softxchange-packages --ignore-existing;
+      mc mb myminio/softxchange-artifacts --ignore-existing;
+      exit 0;
+      "
+    networks:
+      - softxchange-network
+
+  # ── Microservice 1: Auth Service (Port 8001) ────────────────────────────────
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/auth-service/Dockerfile
+    container_name: softxchange-auth-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://softxchange:softxchange_dev_pass@postgres:5432/softxchange_auth
+      JWT_ALGORITHM: RS256
+      INTERNAL_SERVICE_SECRET: softxchange-internal-hmac-secret-dev
+    ports:
+      - "8001:8001"
+    networks:
+      - softxchange-network
+
+  # ── Microservice 2: Scan Service (Port 8002) ────────────────────────────────
+  scan-service:
+    build:
+      context: .
+      dockerfile: apps/scan-service/Dockerfile
+    container_name: softxchange-scan-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://softxchange:softxchange_dev_pass@postgres:5432/softxchange_scan
+      SCAN_OSV_FAIL_OPEN: "false"
+    ports:
+      - "8002:8002"
+    networks:
+      - softxchange-network
+
+  # ── Microservice 3: Listings Service (Port 8003) ────────────────────────────
+  listings-service:
+    build:
+      context: .
+      dockerfile: apps/listings-service/Dockerfile
+    container_name: softxchange-listings-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      scan-service:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://softxchange:softxchange_dev_pass@postgres:5432/softxchange_listings
+      AUTH_SERVICE_URL: http://auth-service:8001
+      SCAN_SERVICE_URL: http://scan-service:8002
+    ports:
+      - "8003:8003"
+    networks:
+      - softxchange-network
+
+  # ── Microservice 4: Payments Service (Port 8004) ────────────────────────────
+  payments-service:
+    build:
+      context: .
+      dockerfile: apps/payments-service/Dockerfile
+    container_name: softxchange-payments-service
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://softxchange:softxchange_dev_pass@postgres:5432/softxchange_payments
+      AUTH_SERVICE_URL: http://auth-service:8001
+      LISTINGS_SERVICE_URL: http://listings-service:8003
+      INTERNAL_SERVICE_SECRET: softxchange-internal-hmac-secret-dev
+    ports:
+      - "8004:8004"
+    networks:
+      - softxchange-network
+
+  # ── Microservice 5: Buyer Assist (Port 8005) ────────────────────────────────
+  buyer-assist:
+    build:
+      context: .
+      dockerfile: apps/buyer-assist/Dockerfile
+    container_name: softxchange-buyer-assist
+    restart: unless-stopped
+    depends_on:
+      listings-service:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://softxchange:softxchange_dev_pass@postgres:5432/softxchange_listings
+      LISTINGS_SERVICE_URL: http://listings-service:8003
+    ports:
+      - "8005:8005"
+    networks:
+      - softxchange-network
+
+  # ── Microservice 6: Seller Assist (Port 8006) ───────────────────────────────
+  seller-assist:
+    build:
+      context: .
+      dockerfile: apps/seller-assist/Dockerfile
+    container_name: softxchange-seller-assist
+    restart: unless-stopped
+    depends_on:
+      listings-service:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: development
+      LISTINGS_SERVICE_URL: http://listings-service:8003
+    ports:
+      - "8006:8006"
+    networks:
+      - softxchange-network
+
+  # ── Microservice 7: Broker Service (Port 8007) ──────────────────────────────
+  broker:
+    build:
+      context: .
+      dockerfile: apps/broker/Dockerfile
+    container_name: softxchange-broker
+    restart: unless-stopped
+    depends_on:
+      listings-service:
+        condition: service_healthy
+      buyer-assist:
+        condition: service_healthy
+      seller-assist:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://softxchange:softxchange_dev_pass@postgres:5432/softxchange_listings
+      LISTINGS_SERVICE_URL: http://listings-service:8003
+      BUYER_ASSIST_URL: http://buyer-assist:8005
+      SELLER_ASSIST_URL: http://seller-assist:8006
+    ports:
+      - "8007:8007"
+    networks:
+      - softxchange-network
+
+  # ── Microservice 8: Unified Web Frontend (Port 8000) ────────────────────────
+  web-unified:
+    build:
+      context: .
+      dockerfile: apps/web-unified/Dockerfile
+    container_name: softxchange-web-unified
+    restart: unless-stopped
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      listings-service:
+        condition: service_healthy
+      payments-service:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - softxchange-network
+
+  # ── Reverse Proxy & Edge TLS: Caddy (Ports 80, 443) ────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: softxchange-caddy
+    restart: unless-stopped
+    depends_on:
+      - web-unified
+      - auth-service
+      - listings-service
+      - payments-service
+      - scan-service
+      - buyer-assist
+      - seller-assist
+      - broker
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - softxchange-network
+
+networks:
+  softxchange-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vetted Software Catalog — softXchange</title>
+  <meta name="description" content="Browse cryptographically scanned and seller-verified software packages on the softXchange marketplace.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="site-nav" role="banner">
+    <a href="/index.html" class="brand-link" id="brand-home">
+      <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="bl-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="var(--accent-blue)"/>
+            <stop offset="100%" stop-color="var(--accent-violet)"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#bl-grad)"/>
+      </svg>
+      <span>softXchange</span>
+    </a>
+    <nav class="nav-links" id="site-nav-links" aria-label="Main navigation">
+      <a href="/browse-listings.html" class="active">Catalog</a>
+      <a href="/seller-listings.html">Seller Portal</a>
+      <a href="/login-customer.html" id="nav-signin">Sign In</a>
+    </nav>
+  </header>
+
+  <main class="container page-transition" role="main">
+    <section class="catalog-hero" aria-labelledby="catalog-heading">
+      <h1 id="catalog-heading">Vetted Software Marketplace</h1>
+      <p>Every software package is cryptographically scanned for secrets and seller-verified prior to publication.</p>
+    </section>
+
+    <!-- Search & Filters — glass panel treatment -->
+    <section class="filter-bar" aria-label="Search and filter listings">
+      <input
+        type="search"
+        id="search-query"
+        class="search-input"
+        placeholder="Search developer tools, utilities, libraries..."
+        aria-label="Search catalog"
+      >
+      <select id="category-filter" class="filter-select" aria-label="Filter by category">
+        <option value="">All Categories</option>
+        <option value="developer-tools">Developer Tools</option>
+        <option value="security">Security &amp; Privacy</option>
+        <option value="productivity">Productivity</option>
+        <option value="infrastructure">Infrastructure</option>
+        <option value="utilities">Utilities</option>
+      </select>
+      <select id="price-filter" class="filter-select" aria-label="Filter by price">
+        <option value="">Any Price</option>
+        <option value="free">Free ($0.00)</option>
+        <option value="under25">Under $25</option>
+        <option value="under100">Under $100</option>
+      </select>
+      <button id="btn-search" class="btn-filter" type="button">Search Catalog</button>
+    </section>
+
+    <!-- Listings Grid — cards receive badge-converge from verification-motif.js -->
+    <div id="listings-container" class="listing-grid" role="list" aria-live="polite" aria-label="Listings">
+      <div style="grid-column: 1 / -1; text-align: center; padding: 48px 0; color: var(--text-secondary);" aria-label="Loading">
+        Loading vetted packages…
+      </div>
+    </div>
+  </main>
+
+  <script src="/static/js/auth.js" defer></script>
+  <script src="/static/js/ambient-layer.js" defer></script>
+  <script src="/static/js/verification-motif.js" defer></script>
+  <script>
+    const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || 'http://localhost:8003';
+
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = String(text);
+      return div.innerHTML;
+    }
+
+    async function loadCatalog() {
+      const query    = document.getElementById('search-query').value.trim();
+      const category = document.getElementById('category-filter').value;
+      const priceFilter = document.getElementById('price-filter').value;
+
+      const params = new URLSearchParams();
+      if (query) params.append('search', query);
+      if (category) params.append('category', category);
+      if (priceFilter === 'free')     params.append('max_price_cents', '0');
+      if (priceFilter === 'under25')  params.append('max_price_cents', '2500');
+      if (priceFilter === 'under100') params.append('max_price_cents', '10000');
+
+      const qs = params.toString();
+      const url = `${LISTINGS_API}/listings${qs ? '?' + qs : ''}`;
+      const container = document.getElementById('listings-container');
+
+      container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--text-secondary);">Loading…</div>';
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to fetch listings');
+        const items = await res.json();
+
+        container.innerHTML = '';
+
+        if (!Array.isArray(items) || items.length === 0) {
+          container.innerHTML = `
+            <div style="grid-column:1/-1;text-align:center;padding:60px 20px;background:var(--bg-surface);border:1px dashed var(--color-border);border-radius:var(--radius-md);" role="status">
+              <h3 style="font-family:var(--font-heading);font-size:20px;color:var(--text-secondary);margin-bottom:8px;">No vetted packages found</h3>
+              <p style="font-size:14px;color:var(--text-muted);">Try adjusting your search criteria or check back later.</p>
+            </div>
+          `;
+          return;
+        }
+
+        items.forEach(item => {
+          const card = document.createElement('a');
+          card.className = 'listing-card';
+          card.href = `/listing-detail.html?id=${encodeURIComponent(item.id)}`;
+          card.setAttribute('role', 'listitem');
+          card.setAttribute('aria-label', `${item.title} — ${item.price_cents === 0 ? 'Free' : '$' + (item.price_cents / 100).toFixed(2)}`);
+
+          const formattedPrice = item.price_cents === 0 ? 'Free' : `$${(item.price_cents / 100).toFixed(2)}`;
+
+          card.innerHTML = `
+            <div>
+              <div class="listing-card-header">
+                <span class="card-category">${escapeHtml(item.category || 'Software')}</span>
+                <span class="card-price">${formattedPrice}</span>
+              </div>
+              <h3 class="card-title">${escapeHtml(item.title)}</h3>
+              <p class="card-description">${escapeHtml(item.description || 'No description provided.')}</p>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--color-border);">
+                <div class="vetted-badge">
+                  <span class="dot" aria-hidden="true"></span>
+                  <span>Scanned — verified</span>
+                </div>
+                <span style="font-size:12px;color:var(--text-muted);font-family:var(--font-mono);">v${escapeHtml(item.version_label || '1.0.0')}</span>
+              </div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+        // Trigger badge convergence for newly rendered cards
+        if (window.VerificationMotif) {
+          window.VerificationMotif.initBrowseBadgeConvergence();
+        }
+
+      } catch (err) {
+        container.innerHTML = `
+          <div style="grid-column:1/-1;color:var(--color-danger);text-align:center;padding:32px;" role="alert">
+            Error loading catalog: ${escapeHtml(err.message)}
+          </div>
+        `;
+      }
+    }
+
+    document.getElementById('btn-search').addEventListener('click', loadCatalog);
+    document.getElementById('search-query').addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') loadCatalog();
+    });
+    document.getElementById('category-filter').addEventListener('change', loadCatalog);
+    document.getElementById('price-filter').addEventListener('change', loadCatalog);
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadCatalog();
+
+      // Admin nav link — reads from in-memory SoftXchangeAuth, no localStorage
+      // The persistent admin bar is injected by auth.js if user is admin
+    });
+  </script>
+</body>
+</html>

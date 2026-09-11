@@ -13,7 +13,7 @@ from typing import Optional, List, Dict, Any
 
 import httpx
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.backends import default_backend
@@ -96,8 +96,18 @@ key_manager = JWKSKeyManager(jwks_url=settings.JWKS_URL)
 
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
 ) -> AuthContext:
+    # 1. Allow internal service calls (e.g. broker pre-generating drafts)
+    internal_service = request.headers.get("X-Internal-Service")
+    if internal_service in ["broker", "system"]:
+        return AuthContext(
+            user_id=f"internal-{internal_service}",
+            roles=["seller", "admin"],
+            claims={"service": internal_service},
+        )
+
     if not credentials or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

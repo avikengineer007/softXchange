@@ -3,18 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Seller Signup — softXchange</title>
+  <title>Seller Registration — softXchange</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-  <div class="auth-container">
+  <div class="auth-container page-transition">
     <div class="brand-header">
       <div class="brand-badge">
-        <span class="dot"></span>
-        Manifest Marketplace
+        <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="ss-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--accent-blue)"/>
+              <stop offset="100%" stop-color="var(--accent-violet)"/>
+            </linearGradient>
+          </defs>
+          <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#ss-grad)"/>
+        </svg>
+        <span>softXchange Partner Portal</span>
       </div>
       <h1 class="brand-title">softXchange</h1>
-      <p class="brand-subtitle">Become a verified software partner</p>
+      <p class="brand-subtitle">Become a verified software publisher</p>
     </div>
 
     <div class="auth-card">
@@ -24,7 +36,7 @@
       </div>
 
       <h2 class="card-title">Register as a Seller</h2>
-      <p class="card-description">Publish software packages, monetize tools, and receive verified payouts.</p>
+      <p class="card-description">Publish your software packages, protect your intellectual property, and receive automatic payouts.</p>
 
       <!-- Inline Error Alert -->
       <div id="error-alert" class="alert alert-error" role="alert">
@@ -39,33 +51,30 @@
         <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0;">
           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
         </svg>
-        <div>
-          <strong id="success-heading">Seller Account Created!</strong>
-          <p id="success-message" style="margin-top:4px; font-size:12px;"></p>
-        </div>
+        <span id="success-message"></span>
       </div>
 
       <form id="signup-form">
         <div class="form-group">
-          <label class="form-label" for="display-name">Studio / Developer Name</label>
+          <label class="form-label" for="display_name">Developer / Studio Name</label>
           <input 
             type="text" 
-            id="display-name" 
-            name="display-name" 
+            id="display_name" 
+            name="display_name" 
             class="form-input" 
-            placeholder="Acme Systems Ltd" 
-            required
+            placeholder="Apex Security Labs" 
+            autocomplete="organization"
           />
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="email">Business Email Address</label>
+          <label class="form-label" for="email">Developer / Company Email</label>
           <input 
             type="email" 
             id="email" 
             name="email" 
             class="form-input" 
-            placeholder="developer@acme.com" 
+            placeholder="dev@apexlabs.com" 
             required 
             autocomplete="email"
           />
@@ -80,19 +89,19 @@
             class="form-input" 
             placeholder="••••••••" 
             required 
-            minlength="8"
+            minlength="8" 
             autocomplete="new-password"
           />
         </div>
 
         <button type="submit" id="submit-btn" class="btn-primary">
-          <span id="btn-text">Register as Partner Seller</span>
+          <span id="btn-text">Register as Seller</span>
           <div id="btn-spinner" class="spinner"></div>
         </button>
       </form>
 
       <div class="auth-footer">
-        Already registered as a seller? 
+        Already registered? 
         <a href="/static/login-seller.html">Sign in to seller portal</a>
       </div>
     </div>
@@ -119,10 +128,9 @@
       successMessage.textContent = msg;
       successAlert.classList.add("show");
       errorAlert.classList.remove("show");
-      signupForm.style.display = "none";
     }
 
-    function clearMessages() {
+    function clearAlerts() {
       errorAlert.classList.remove("show");
       successAlert.classList.remove("show");
     }
@@ -130,25 +138,27 @@
     function setLoading(isLoading) {
       submitBtn.disabled = isLoading;
       btnSpinner.style.display = isLoading ? "inline-block" : "none";
-      btnText.textContent = isLoading ? "Registering seller..." : "Register as Partner Seller";
+      btnText.textContent = isLoading ? "Registering..." : "Register as Seller";
     }
 
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      clearMessages();
+      clearAlerts();
       setLoading(true);
 
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      const displayName = document.getElementById("display-name").value;
+      const displayName = document.getElementById("display_name").value || null;
 
       try {
         const result = await window.SoftXchangeAuth.signup(email, password, ["seller"], displayName);
-        setLoading(false);
-        showSuccess(result.message + " You can now log into the Seller Portal to start KYC onboarding.");
+        showSuccess("Seller account registered! Redirecting to seller sign in...");
+        setTimeout(() => {
+          window.location.href = "/static/login-seller.html";
+        }, 1200);
       } catch (err) {
         setLoading(false);
-        showError(err.message || "Failed to create seller account.");
+        showError(err.message || "Failed to register seller account.");
       }
     });
   </script>

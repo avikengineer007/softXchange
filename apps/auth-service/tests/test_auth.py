@@ -64,15 +64,14 @@ def override_get_db():
         db.close()
 
 
-app.dependency_overrides[get_db] = override_get_db
-
-
 @pytest.fixture(autouse=True)
 def setup_database():
+    app.dependency_overrides[get_db] = override_get_db
     Base.metadata.create_all(bind=engine)
     login_rate_limiter.reset_all()
     yield
     Base.metadata.drop_all(bind=engine)
+    app.dependency_overrides.pop(get_db, None)
 
 
 @pytest.fixture
@@ -407,6 +406,38 @@ def test_seller_kyc_gate_lifecycle_and_fail_closed(client):
     db.close()
 
 
+def test_seller_kyc_submit_form_endpoint(client):
+    """
+    Submitting KYC form details transitions status to 'pending',
+    stores masked tax identifier, and leaves payout_enabled=False until verified.
+    """
+    client.post(
+        "/auth/signup",
+        json={"email": "kycform@example.com", "password": "Password123!", "roles": ["seller"]},
+    )
+    login_resp = client.post(
+        "/auth/login",
+        json={"email": "kycform@example.com", "password": "Password123!"},
+    )
+    token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload = {
+        "legal_name": "Jane Developer",
+        "business_name": "Dev Labs Studio",
+        "tax_id": "12-3456789",
+        "country": "US",
+        "city": "Austin",
+    }
+    resp = client.post("/auth/seller/kyc/submit", json=payload, headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["kyc_status"] == "pending"
+    assert data["payout_enabled"] is False
+    assert data["details"]["submission"]["legal_name"] == "Jane Developer"
+    assert data["details"]["submission"]["tax_id_masked"] == "***-**-6789"
+
+
 # ============================================================================
 # Prompt 4 Tests: Password Reset & Email Verification
 # ============================================================================
@@ -535,7 +566,7 @@ def test_password_reset_revokes_all_refresh_tokens(client):
 # ============================================================================
 
 def test_static_login_and_signup_pages_served(client):
-    """Verify customer & seller login and signup pages are served properly."""
+    """Verify auth-service is pure API: /static is not mounted (404) and root redirects to unified frontend."""
     pages = [
         "/static/login-customer.html",
         "/static/login-seller.html",
@@ -550,12 +581,12 @@ def test_static_login_and_signup_pages_served(client):
     ]
     for page in pages:
         resp = client.get(page)
-        assert resp.status_code == 200, f"Page {page} returned status {resp.status_code}"
+        assert resp.status_code == 404, f"Page {page} returned status {resp.status_code}, expected 404 (API-only)"
 
-    # Root redirect
+    # Root redirect to unified frontend
     root_resp = client.get("/", follow_redirects=False)
     assert root_resp.status_code == 307
-    assert "/static/login-customer.html" in root_resp.headers["location"]
+    assert root_resp.headers["location"] == "http://localhost:8000/login-customer.html"
 
 
 def test_production_fails_closed_when_keys_missing(monkeypatch):

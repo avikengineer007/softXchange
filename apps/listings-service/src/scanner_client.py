@@ -66,9 +66,19 @@ class ScannerClient:
                     }
                 resp.raise_for_status()
                 return resp.json()
+        except httpx.ConnectError:
+            logger.debug(f"Scan service offline or unreachable at {url}")
+            return {
+                "listing_id": listing_id,
+                "version": version,
+                "scan_status": "pending_scan",
+                "severity_counts": {},
+                "findings": [],
+            }
         except httpx.HTTPError as exc:
-            logger.error(f"Failed to query scan-service status ({url}): {exc}", exc_info=True)
+            logger.warning(f"Failed to query scan-service status ({url}): {exc}")
             raise RuntimeError(f"Scan service status query error: {exc}")
+
 
 
 # Global default client

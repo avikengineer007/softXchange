@@ -86,6 +86,18 @@ def start_connect_onboarding(
     )
 
 
+@router.post(
+    "/onboard",
+    response_model=ConnectStartResponse,
+    summary="Initiate Stripe Connect Express onboarding for authenticated seller (alias for /start)",
+)
+def onboard_connect_alias(
+    auth_ctx: AuthContext = Depends(require_seller),
+    db: Session = Depends(get_db),
+):
+    return start_connect_onboarding(auth_ctx=auth_ctx, db=db)
+
+
 @router.get(
     "/status",
     response_model=ConnectStatusResponse,

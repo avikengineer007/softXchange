@@ -4,30 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seller Management — softXchange</title>
-  <link rel="stylesheet" href="/static/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
   <style>
     .modal {
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
+      background: var(--bg-surface-translucent);
+      backdrop-filter: blur(8px);
       z-index: 1000;
       justify-content: center;
       align-items: center;
     }
     .modal.active { display: flex; }
     .modal-card {
-      background: white;
-      border-radius: 8px;
+      background: var(--bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
       width: 100%;
       max-width: 680px;
       padding: 28px;
-      box-shadow: var(--shadow-hover);
+      box-shadow: var(--shadow-elevated);
       max-height: 90vh;
       overflow-y: auto;
+      color: var(--text-primary);
     }
     .form-group {
       margin-bottom: 16px;
@@ -37,42 +41,51 @@
       font-size: 13px;
       font-weight: 600;
       margin-bottom: 6px;
-      color: var(--color-ink);
+      color: var(--text-primary);
     }
     .form-control {
       width: 100%;
-      padding: 10px 12px;
+      padding: 10px 14px;
       border: 1px solid var(--color-border);
-      border-radius: 6px;
+      border-radius: var(--radius-sm);
       font-size: 14px;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-family: inherit;
+      transition: border-color var(--transition-fast) var(--easing-standard);
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--color-border-focus);
     }
     .token-bar {
-      background: #f0eee6;
+      background: var(--bg-surface);
       border: 1px solid var(--color-border);
-      border-radius: 6px;
-      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
       display: flex;
-      gap: 12px;
+      gap: 16px;
       align-items: center;
       margin-bottom: 24px;
       font-size: 13px;
       flex-wrap: wrap;
     }
     .findings-box {
-      background: #1a1f1e;
-      color: #f87171;
+      background: var(--bg-input);
+      color: var(--color-danger);
+      border: 1px solid var(--color-border);
       padding: 14px;
-      border-radius: 6px;
-      font-family: 'JetBrains Mono', monospace;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
       font-size: 12px;
       max-height: 200px;
       overflow-y: auto;
       margin-top: 12px;
     }
     .ai-box {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      border-radius: 8px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
       padding: 16px;
       margin-top: 16px;
       margin-bottom: 16px;
@@ -80,16 +93,16 @@
     .ai-box-title {
       font-weight: 600;
       font-size: 13px;
-      color: #166534;
+      color: var(--accent-blue);
       display: flex;
       align-items: center;
       justify-content: space-between;
       margin-bottom: 8px;
     }
     .ai-suggestion-item {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
+      background: var(--bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
       padding: 10px 14px;
       margin-top: 8px;
       display: flex;
@@ -100,29 +113,53 @@
     .badge-sev {
       display: inline-block;
       padding: 2px 8px;
-      border-radius: 4px;
+      border-radius: var(--radius-sm);
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
+      font-family: var(--font-mono);
     }
-    .badge-critical { background: #fee2e2; color: #991b1b; }
-    .badge-high { background: #ffedd5; color: #9a3412; }
-    .badge-medium { background: #fef9c3; color: #854d0e; }
-    .badge-low { background: #f1f5f9; color: #475569; }
+    .badge-critical {
+      background: var(--color-danger-bg);
+      color: var(--color-danger);
+      border: 1px solid var(--color-danger-border);
+    }
+    .badge-high {
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+      border: 1px solid var(--color-warning-border);
+    }
+    .badge-medium {
+      background: var(--color-info-bg);
+      color: var(--accent-blue);
+      border: 1px solid var(--color-info-border);
+    }
+    .badge-low {
+      background: var(--bg-surface-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--color-border);
+    }
     .question-card {
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
       padding: 14px;
       margin-bottom: 14px;
-      background: #fafafa;
+      background: var(--bg-surface-elevated);
     }
     .draft-badge {
-      background: #fef3c7;
-      color: #92400e;
-      padding: 2px 6px;
-      border-radius: 4px;
+      background: var(--color-warning-bg);
+      color: var(--color-warning);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
       font-size: 11px;
       font-weight: 600;
+    }
+    .notice-box {
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--color-border);
     }
   </style>
 </head>
@@ -130,26 +167,32 @@
 
   <!-- Navigation -->
   <header class="site-nav">
-    <a href="/static/browse-listings.html" class="brand-link">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#164e3f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        <path d="M9 12l2 2 4-4"/>
+    <a href="/static/index.html" class="brand-link">
+      <!-- Geometric Bowtie Logo Mark -->
+      <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none">
+        <defs>
+          <linearGradient id="sl-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="var(--accent-blue)"/>
+            <stop offset="100%" stop-color="var(--accent-violet)"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#sl-grad)"/>
       </svg>
       <h1>softXchange</h1>
     </a>
-    <nav class="nav-links">
+    <nav class="nav-links" id="site-nav-links">
       <a href="/static/browse-listings.html">Public Catalog</a>
       <a href="/static/seller-listings.html" class="active">Seller Portal</a>
       <a href="http://localhost:8004/static/seller-payouts.html">Payout Dashboard</a>
-      <a href="http://localhost:8001/static/dashboard-seller.html" target="_blank">Auth &amp; KYC Status</a>
+      <a href="http://localhost:8001/static/dashboard-seller.html">Auth &amp; KYC Status</a>
     </nav>
   </header>
 
-  <main class="container">
+  <main class="container page-transition">
     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px;">
       <div>
-        <h2 style="font-family: var(--font-serif); font-size: 32px; color: var(--color-ink);">Seller Package Manager</h2>
-        <p style="color: var(--color-ink-muted); font-size: 14px; margin-top: 4px;">Submit software packages for security scanning and manage published versions with AI Assist.</p>
+        <h2 style="font-family: var(--font-heading); font-size: 32px; font-weight: 700; color: var(--text-primary);">Seller Package Manager</h2>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">Submit software packages for security scanning and manage published versions with AI Assist.</p>
       </div>
       <button class="btn-filter" onclick="openCreateModal()">+ Create New Listing</button>
     </div>
@@ -157,14 +200,14 @@
     <!-- Auth / Token & Regional Currency Bar -->
     <div class="token-bar">
       <div style="flex: 1; display: flex; gap: 8px; align-items: center; min-width: 300px;">
-        <strong>Seller Session:</strong>
+        <strong style="color: var(--text-primary);">Seller Session:</strong>
         <input type="password" id="auth-token" class="form-control" style="flex:1;" placeholder="Paste Seller JWT Access Token here...">
         <button class="btn-filter" style="padding: 8px 14px;" onclick="saveTokenAndReload()">Apply Token</button>
       </div>
 
       <!-- Region-centric currency selection -->
       <div style="display: flex; gap: 8px; align-items: center;">
-        <strong>Market Region:</strong>
+        <strong style="color: var(--text-primary);">Market Region:</strong>
         <select id="region-selector" class="form-control" style="width: auto; padding: 6px 10px;" onchange="handleRegionChange()">
           <option value="US">USA ($ USD)</option>
           <option value="RU">Russia (₽ RUB)</option>
@@ -190,7 +233,7 @@
         </thead>
         <tbody id="listings-tbody">
           <tr>
-            <td colspan="6" style="text-align: center; padding: 36px; color: var(--color-ink-muted);">
+            <td colspan="6" style="text-align: center; padding: 36px; color: var(--text-secondary);">
               Enter your seller access token above to load listings.
             </td>
           </tr>
@@ -203,8 +246,8 @@
   <div id="modal-create" class="modal">
     <div class="modal-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h3 style="font-family: var(--font-serif); font-size: 22px;">Create Listing Draft</h3>
-        <button type="button" class="btn-filter" style="background:#0f766e; border-color:#0f766e; font-size: 12px;" onclick="fetchCopySuggestions()">
+        <h3 style="font-family: var(--font-heading); font-size: 22px; font-weight: 700;">Create Listing Draft</h3>
+        <button type="button" class="btn-filter" style="font-size: 12px;" onclick="fetchCopySuggestions()">
           ⚡ AI Copy &amp; Price Assist
         </button>
       </div>
@@ -213,9 +256,9 @@
       <div id="ai-suggestions-panel" class="ai-box" style="display: none;">
         <div class="ai-box-title">
           <span>AI Advisory Suggestions (Grounded in Live Market Data)</span>
-          <span style="font-size: 11px; font-weight: normal; color: #15803d;">Advisory only — you control what applies</span>
+          <span style="font-size: 11px; font-weight: normal; color: var(--badge-green);">Advisory only — you control what applies</span>
         </div>
-        <div id="ai-guidance-content" style="font-size: 13px; color: #334155; margin-bottom: 8px;"></div>
+        <div id="ai-guidance-content" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;"></div>
         <div id="ai-suggestions-list"></div>
       </div>
 
@@ -228,7 +271,7 @@
           <label>Category</label>
           <select id="create-category" class="form-control" required>
             <option value="developer-tools">Developer Tools</option>
-            <option value="security">Security & Privacy</option>
+            <option value="security">Security &amp; Privacy</option>
             <option value="productivity">Productivity</option>
             <option value="infrastructure">Infrastructure</option>
             <option value="utilities">Utilities</option>
@@ -237,7 +280,7 @@
         <div class="form-group">
           <label>Price in Cents (e.g. 4900 = $49.00, 0 = Free)</label>
           <input type="number" id="create-price" class="form-control" min="0" value="0" required>
-          <small id="create-price-local" style="color: var(--color-ink-muted); font-size: 12px; margin-top: 4px; display: block;"></small>
+          <small id="create-price-local" style="color: var(--text-secondary); font-size: 12px; margin-top: 4px; display: block;"></small>
         </div>
         <div class="form-group">
           <label>Description</label>
@@ -254,7 +297,7 @@
   <!-- Submit / Resubmit Version Modal -->
   <div id="modal-version" class="modal">
     <div class="modal-card">
-      <h3 id="version-modal-title" style="font-family: var(--font-serif); font-size: 22px; margin-bottom: 16px;">Submit Version for Scanning</h3>
+      <h3 id="version-modal-title" style="font-family: var(--font-heading); font-size: 22px; font-weight: 700; margin-bottom: 16px;">Submit Version for Scanning</h3>
       <form id="form-version" onsubmit="handleSubmitVersion(event)">
         <input type="hidden" id="version-listing-id">
         <div class="form-group">
@@ -280,21 +323,19 @@
   <!-- Findings Modal with Plain-English Translation -->
   <div id="modal-findings" class="modal">
     <div class="modal-card" style="max-width: 780px;">
-      <h3 style="font-family: var(--font-serif); font-size: 22px; margin-bottom: 6px;">Security Scan Findings &amp; Advisory</h3>
-      <p style="font-size: 13px; color: var(--color-ink-muted); margin-bottom: 14px;">
+      <h3 style="font-family: var(--font-heading); font-size: 22px; font-weight: 700; margin-bottom: 6px;">Security Scan Findings &amp; Advisory</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
         Plain-English translation grounded in verified findings from secret-scanner-engine.
       </p>
 
-      <!-- Plain English Summary Section -->
       <div id="findings-advisory" style="margin-bottom: 16px;">
-        <div style="padding: 12px; background: #f8fafc; border-radius: 6px; font-size: 13px;">
+        <div class="notice-box">
           Loading plain-English explanation...
         </div>
       </div>
 
-      <!-- Raw Technical Findings (collapsible for technical sellers) -->
       <details>
-        <summary style="font-size: 12px; font-weight: 600; cursor: pointer; color: var(--color-ink-subtle); margin-bottom: 8px;">
+        <summary style="font-size: 12px; font-weight: 600; cursor: pointer; color: var(--accent-blue); margin-bottom: 8px;">
           View Raw Scanner Engine JSON Report
         </summary>
         <div id="findings-content" class="findings-box">
@@ -311,8 +352,8 @@
   <!-- Buyer Questions Modal -->
   <div id="modal-questions" class="modal">
     <div class="modal-card" style="max-width: 760px;">
-      <h3 style="font-family: var(--font-serif); font-size: 22px; margin-bottom: 6px;">Buyer Inquiries &amp; Q&amp;A</h3>
-      <p style="font-size: 13px; color: var(--color-ink-muted); margin-bottom: 16px;">
+      <h3 style="font-family: var(--font-heading); font-size: 22px; font-weight: 700; margin-bottom: 6px;">Buyer Inquiries &amp; Q&amp;A</h3>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
         Respond to prospective buyers. AI drafts suggestions that you review, edit, and manually send.
       </p>
 
@@ -332,7 +373,6 @@
     let currentRegion = localStorage.getItem('seller_region') || 'US';
     let activeListingForQuestions = null;
 
-    // Region currency exchange reference table
     const CURRENCY_MAP = {
       'US': { code: 'USD', symbol: '$', rate: 1.0 },
       'RU': { code: 'RUB', symbol: '₽', rate: 92.0 },
@@ -380,7 +420,7 @@
       if (!currentToken) return;
 
       const tbody = document.getElementById('listings-tbody');
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px;">Refreshing listing status and KYC checks...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-secondary);">Refreshing listing status and KYC checks...</td></tr>';
 
       try {
         const res = await fetch('/listings/mine', {
@@ -389,7 +429,7 @@
 
         if (!res.ok) {
           if (res.status === 401 || res.status === 403) {
-            tbody.innerHTML = `<tr><td colspan="6" style="color: #b91c1c; text-align: center; padding: 24px;">Unauthorized or insufficient seller permissions. Please check your token.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="color: var(--color-danger); text-align: center; padding: 24px;">Unauthorized or insufficient seller permissions. Please check your token.</td></tr>`;
             return;
           }
           throw new Error(`HTTP ${res.status}`);
@@ -398,7 +438,7 @@
         const listings = await res.json();
         renderTable(listings);
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="6" style="color: #b91c1c; text-align: center; padding: 24px;">Error: ${escapeHtml(err.message)}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="color: var(--color-danger); text-align: center; padding: 24px;">Error: ${escapeHtml(err.message)}</td></tr>`;
       }
     }
 
@@ -407,7 +447,7 @@
       tbody.innerHTML = '';
 
       if (listings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 36px; color: var(--color-ink-muted);">You have no listings yet. Click "+ Create New Listing" to begin.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 36px; color: var(--text-secondary);">You have no listings yet. Click "+ Create New Listing" to begin.</td></tr>`;
         return;
       }
 
@@ -418,90 +458,82 @@
         let actionBtn = '';
         if (item.status === 'draft') {
           actionBtn = `
-            <button class="action-btn" onclick="openVersionModal('${item.id}', '${escapeHtml(item.current_version || '1.0.0')}')">Submit for Scan</button>
+            <button class="action-btn" onclick="openVersionModal('${item.id}', '${escapeHtml(item.version_label || '1.0.0')}')">Submit for Scan</button>
           `;
         } else if (item.status === 'pending_scan') {
-          actionBtn = `<span style="font-size: 12px; color: var(--color-ink-muted);">Scanning in progress...</span>`;
+          actionBtn = `<span style="font-size: 12px; color: var(--accent-violet);">Scanning in progress...</span>`;
         } else if (item.status === 'scan_passed_awaiting_kyc') {
-          actionBtn = `<a href="http://localhost:8001/static/dashboard-seller.html" target="_blank" class="action-btn" style="background:#e0e7ff; color:#3730a3; border-color:#c7d2fe;">Complete KYC &rarr;</a>`;
+          actionBtn = `<a href="http://localhost:8001/static/dashboard-seller.html" target="_blank" class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue);">Complete KYC &rarr;</a>`;
         } else if (item.status === 'scan_passed_verification_unavailable') {
           actionBtn = `<button class="action-btn" onclick="loadSellerListings()">Retry KYC Check</button>`;
         } else if (item.status === 'scan_failed') {
           actionBtn = `
-            <button class="action-btn" style="color:#b91c1c;" onclick="viewFindings('${item.id}', '${item.current_version}', '${item.current_version_id || ''}')">View Findings &amp; Advisory</button>
+            <button class="action-btn" style="color:var(--color-danger);" onclick="viewFindings('${item.id}', '${item.version_label}', '${item.id}')">View Findings &amp; Advisory</button>
             <button class="action-btn" onclick="openVersionModal('${item.id}', '1.0.1')">Resubmit</button>
           `;
         } else if (item.status === 'live') {
           actionBtn = `
-            <button class="action-btn" style="color:#0f766e;" onclick="openQuestionsModal('${item.id}', '${escapeHtml(item.title)}')">Buyer Q&amp;A</button>
+            <button class="action-btn" style="color:var(--accent-blue);" onclick="openQuestionsModal('${item.id}', '${escapeHtml(item.title)}')">Buyer Q&amp;A</button>
             <a href="/static/listing-detail.html?id=${item.id}" target="_blank" class="action-btn">View Live</a>
-            <button class="action-btn" style="color:#6b7280;" onclick="withdrawListing('${item.id}')">Withdraw</button>
+            <button class="action-btn" style="color:var(--text-muted);" onclick="withdrawListing('${item.id}')">Withdraw</button>
           `;
         } else if (item.status === 'withdrawn') {
-          actionBtn = `<span style="font-size: 12px; color: #9ca3af;">Withdrawn</span>`;
+          actionBtn = `<span style="font-size: 12px; color: var(--text-muted);">Withdrawn</span>`;
+        } else if (item.status === 'suspended') {
+          actionBtn = `<span style="font-size: 12px; color: var(--color-danger);">Suspended by Admin</span>`;
         }
 
-        const findingsSummary = item.findings_summary ? 
-          `Crit: ${item.findings_summary.critical || 0}, High: ${item.findings_summary.high || 0}` : 
+        const findingsSummary = item.severity_summary && Object.keys(item.severity_summary).length > 0 ? 
+          `Crit: ${item.severity_summary.critical || 0}, High: ${item.severity_summary.high || 0}` : 
           (item.status === 'live' ? '0 findings (passed)' : '—');
 
         tr.innerHTML = `
           <td>
             <strong>${escapeHtml(item.title)}</strong><br>
-            <span style="font-size: 11px; color: var(--color-ink-subtle);">${escapeHtml(item.category)}</span>
+            <small style="color: var(--text-muted);">${escapeHtml(item.category)} &bull; ID: ${escapeHtml(item.id.slice(0, 8))}...</small>
           </td>
-          <td><code>v${escapeHtml(item.current_version || '1.0.0')}</code></td>
-          <td><strong>${localFormattedPrice}</strong> <small style="color:#94a3b8;">($${(item.price_cents/100).toFixed(2)})</small></td>
+          <td><code style="font-family: var(--font-mono); color: var(--text-secondary);">${escapeHtml(item.version_label || '1.0.0')}</code></td>
+          <td><strong>${localFormattedPrice}</strong></td>
           <td><span class="status-pill status-${item.status}">${item.status.replace(/_/g, ' ')}</span></td>
-          <td><small>${findingsSummary}</small></td>
-          <td style="text-align: right; white-space: nowrap;">${actionBtn}</td>
+          <td style="font-family: var(--font-mono); font-size: 12px;">${findingsSummary}</td>
+          <td style="text-align: right;">${actionBtn}</td>
         `;
         tbody.appendChild(tr);
       });
     }
 
-    // ============================================================================
-    // Prompt 1: AI Copy & Pricing Suggestions
-    // ============================================================================
-
     async function fetchCopySuggestions() {
-      const panel = document.getElementById('ai-suggestions-panel');
-      const guidanceDiv = document.getElementById('ai-guidance-content');
-      const listDiv = document.getElementById('ai-suggestions-list');
-
-      panel.style.display = 'block';
-      guidanceDiv.innerHTML = '<em>Searching comparable listings and computing pricing guidance...</em>';
-      listDiv.innerHTML = '';
-
       const draftTitle = document.getElementById('create-title').value.trim();
       const draftDesc = document.getElementById('create-desc').value.trim();
       const draftCat = document.getElementById('create-category').value;
       const draftPrice = parseInt(document.getElementById('create-price').value, 10) || 0;
 
-      try {
-        // We first save or use draft listing if available, or query seller-assist
-        const payload = {
-          title: draftTitle || undefined,
-          description: draftDesc || undefined,
-          category: draftCat,
-          rough_price_cents: draftPrice,
-          region: currentRegion
-        };
+      const panel = document.getElementById('ai-suggestions-panel');
+      const guidanceDiv = document.getElementById('ai-guidance-content');
+      const listDiv = document.getElementById('ai-suggestions-list');
 
-        // Note: For brand new unsaved listing, we use existing draft endpoint or seed draft
-        // Create an ephemeral draft or query with existing listing
-        let listingId = 'draft-new';
-        const res = await fetch(`${SELLER_ASSIST_URL}/assist/seller/listings/${listingId}/suggest-copy`, {
+      panel.style.display = 'block';
+      guidanceDiv.innerHTML = '<em>Consulting softXchange seller-assist AI agent...</em>';
+      listDiv.innerHTML = '';
+
+      const payload = {
+        title: draftTitle || 'New Software Tool',
+        description: draftDesc || 'Developer utility software package',
+        category: draftCat,
+        rough_price_cents: draftPrice
+      };
+
+      try {
+        const res = await fetch(`${SELLER_ASSIST_URL}/assist/seller/listings/draft-new/suggest-improvements`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${currentToken}`
+            'Authorization': `Bearer ${currentToken}`,
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(payload)
         });
 
         if (!res.ok) {
-          // If draft-new not found in DB, fallback to client-grounded guidance preview
           renderClientSideAiPreview(payload);
           return;
         }
@@ -519,14 +551,14 @@
 
       const priceRange = data.price_guidance ? data.price_guidance.recommended_range : 'Set price independently';
       guidanceDiv.innerHTML = `
-        <strong>Recommended Range:</strong> <span style="font-weight:700; color:#0f766e;">${escapeHtml(priceRange)}</span>
-        <br><small style="color:#64748b;">${escapeHtml(data.confidence_note)}</small>
+        <strong style="color: var(--text-primary);">Recommended Range:</strong> <span style="font-weight:700; color:var(--accent-blue);">${escapeHtml(priceRange)}</span>
+        <br><small style="color:var(--text-secondary);">${escapeHtml(data.confidence_note)}</small>
       `;
 
       listDiv.innerHTML = `
         <div class="ai-suggestion-item">
           <div>
-            <span style="font-size:11px; font-weight:700; color:#475569;">SUGGESTED TITLE</span>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">SUGGESTED TITLE</span>
             <div style="font-weight:600; font-size:14px; margin-top:2px;">${escapeHtml(data.suggested_title)}</div>
           </div>
           <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyTitle('${escapeHtml(data.suggested_title)}')">Apply</button>
@@ -534,7 +566,7 @@
 
         <div class="ai-suggestion-item">
           <div>
-            <span style="font-size:11px; font-weight:700; color:#475569;">SUGGESTED DESCRIPTION</span>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">SUGGESTED DESCRIPTION</span>
             <div style="font-size:12px; white-space:pre-line; margin-top:2px; max-height:80px; overflow-y:auto;">${escapeHtml(data.suggested_description)}</div>
           </div>
           <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyDescription(${JSON.stringify(data.suggested_description)})">Apply</button>
@@ -543,7 +575,7 @@
         ${data.price_guidance ? `
         <div class="ai-suggestion-item">
           <div>
-            <span style="font-size:11px; font-weight:700; color:#475569;">RECOMMENDED MEDIAN PRICE</span>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">RECOMMENDED MEDIAN PRICE</span>
             <div style="font-weight:600; font-size:14px; margin-top:2px;">${data.price_guidance.median_price_formatted} ($${(data.price_guidance.base_median_cents/100).toFixed(2)})</div>
           </div>
           <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyPrice(${data.price_guidance.base_median_cents})">Apply Price</button>
@@ -555,12 +587,11 @@
       const guidanceDiv = document.getElementById('ai-guidance-content');
       const listDiv = document.getElementById('ai-suggestions-list');
 
-      const info = CURRENCY_MAP[currentRegion] || CURRENCY_MAP['US'];
       const defaultRange = `${formatPriceInRegion(3900)} - ${formatPriceInRegion(7900)}`;
 
       guidanceDiv.innerHTML = `
-        <strong>Recommended Range:</strong> <span style="font-weight:700; color:#0f766e;">${defaultRange}</span>
-        <br><small style="color:#64748b;">Grounded in comparable marketplace software packages in ${escapeHtml(payload.category)}.</small>
+        <strong style="color: var(--text-primary);">Recommended Range:</strong> <span style="font-weight:700; color:var(--accent-blue);">${defaultRange}</span>
+        <br><small style="color:var(--text-secondary);">Grounded in comparable marketplace software packages in ${escapeHtml(payload.category)}.</small>
       `;
 
       const refinedTitle = payload.title ? `${payload.title} — Verified ${payload.category} Package` : `Enterprise ${payload.category} Suite`;
@@ -569,7 +600,7 @@
       listDiv.innerHTML = `
         <div class="ai-suggestion-item">
           <div>
-            <span style="font-size:11px; font-weight:700; color:#475569;">SUGGESTED TITLE</span>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">SUGGESTED TITLE</span>
             <div style="font-weight:600; font-size:14px; margin-top:2px;">${escapeHtml(refinedTitle)}</div>
           </div>
           <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyTitle('${escapeHtml(refinedTitle)}')">Apply</button>
@@ -577,7 +608,7 @@
 
         <div class="ai-suggestion-item">
           <div>
-            <span style="font-size:11px; font-weight:700; color:#475569;">SUGGESTED DESCRIPTION</span>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">SUGGESTED DESCRIPTION</span>
             <div style="font-size:12px; white-space:pre-line; margin-top:2px; max-height:80px; overflow-y:auto;">${escapeHtml(refinedDesc)}</div>
           </div>
           <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyDescription(${JSON.stringify(refinedDesc)})">Apply</button>
@@ -585,7 +616,7 @@
 
         <div class="ai-suggestion-item">
           <div>
-            <span style="font-size:11px; font-weight:700; color:#475569;">RECOMMENDED MEDIAN PRICE</span>
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted);">RECOMMENDED MEDIAN PRICE</span>
             <div style="font-weight:600; font-size:14px; margin-top:2px;">${formatPriceInRegion(4900)} ($49.00)</div>
           </div>
           <button type="button" class="btn-filter" style="padding:4px 8px; font-size:11px;" onclick="applyPrice(4900)">Apply Price</button>
@@ -610,18 +641,13 @@
     }
     document.getElementById('create-price').addEventListener('input', updateLocalPriceHint);
 
-    // ============================================================================
-    // Prompt 2: Plain-English Scan Finding Summaries
-    // ============================================================================
-
     async function viewFindings(listingId, version, versionId) {
       const box = document.getElementById('findings-content');
       const advisory = document.getElementById('findings-advisory');
       box.textContent = 'Loading raw JSON findings...';
-      advisory.innerHTML = '<div style="padding:12px; background:#f8fafc; border-radius:6px; font-size:13px;">Translating findings into plain English...</div>';
+      advisory.innerHTML = '<div class="notice-box">Translating findings into plain English...</div>';
       document.getElementById('modal-findings').classList.add('active');
 
-      // 1. Fetch raw findings
       try {
         const res = await fetch(`/listings/${listingId}/versions/${version}/findings`, {
           headers: { 'Authorization': `Bearer ${currentToken}` }
@@ -634,7 +660,6 @@
         box.textContent = 'Failed to load raw findings: ' + err.message;
       }
 
-      // 2. Fetch plain-English advisory summary
       try {
         if (!versionId) versionId = version;
         const resAdv = await fetch(`${SELLER_ASSIST_URL}/assist/seller/versions/${versionId}/explain-findings`, {
@@ -646,14 +671,14 @@
         });
 
         if (!resAdv.ok) {
-          advisory.innerHTML = `<div style="padding:12px; background:#fee2e2; color:#991b1b; border-radius:6px; font-size:13px;">Plain-English advisory service unavailable for this version. Please review the raw report below.</div>`;
+          advisory.innerHTML = `<div class="notice-box" style="border-color:var(--color-danger-border); color:var(--color-danger-text);">Plain-English advisory service unavailable for this version. Please review the raw report below.</div>`;
           return;
         }
 
         const advData = await resAdv.json();
         renderFindingsAdvisory(advData);
       } catch (err) {
-        advisory.innerHTML = `<div style="padding:12px; background:#fef3c7; color:#92400e; border-radius:6px; font-size:13px;">${escapeHtml(err.message)}</div>`;
+        advisory.innerHTML = `<div class="notice-box" style="border-color:var(--color-warning-border); color:var(--color-warning);">${escapeHtml(err.message)}</div>`;
       }
     }
 
@@ -661,7 +686,7 @@
       const advisory = document.getElementById('findings-advisory');
       if (!data.has_issues) {
         advisory.innerHTML = `
-          <div style="padding:14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; color:#166534;">
+          <div class="notice-box" style="border-color:var(--badge-green-border); color:var(--badge-green);">
             <strong>✓ Clean Scan Confirmation</strong>
             <p style="margin-top:4px; font-size:13px;">${escapeHtml(data.overall_summary)}</p>
           </div>
@@ -677,11 +702,11 @@
           groupsHtml += `
             <div style="margin-top:10px;">
               <span class="badge-sev badge-${sev.toLowerCase()}">${sev} (${items.length})</span>
-              <ul style="margin:6px 0 0 16px; padding:0; font-size:13px;">
+              <ul style="margin:6px 0 0 16px; padding:0; font-size:13px; color:var(--text-secondary);">
                 ${items.map(it => `
                   <li style="margin-bottom:6px;">
-                    <strong>[${escapeHtml(it.rule_id)}]</strong> ${escapeHtml(it.plain_english_summary)}<br>
-                    <span style="color:#0f766e; font-size:12px;">→ ${escapeHtml(it.remediation_action)}</span>
+                    <strong style="color:var(--text-primary);">[${escapeHtml(it.rule_id)}]</strong> ${escapeHtml(it.plain_english_summary)}<br>
+                    <span style="color:var(--accent-blue); font-size:12px;">&rarr; ${escapeHtml(it.remediation_action)}</span>
                   </li>
                 `).join('')}
               </ul>
@@ -691,19 +716,15 @@
       });
 
       advisory.innerHTML = `
-        <div style="padding:14px; background:#fff7ed; border:1px solid #fed7aa; border-radius:6px;">
-          <strong style="color:#9a3412;">Security Advisory: ${data.total_findings} Actionable Issue(s) Identified</strong>
-          <div style="font-size:13px; color:#334155; margin-top:6px; white-space:pre-line;">
+        <div class="notice-box" style="border-color:var(--color-warning-border);">
+          <strong style="color:var(--color-warning);">Security Advisory: ${data.total_findings} Actionable Issue(s) Identified</strong>
+          <div style="font-size:13px; color:var(--text-secondary); margin-top:6px; white-space:pre-line;">
             ${escapeHtml(data.overall_summary.split('\n\n')[0])}
           </div>
           ${groupsHtml}
         </div>
       `;
     }
-
-    // ============================================================================
-    // Prompt 3: Buyer Questions View & Draft-Then-Send
-    // ============================================================================
 
     async function openQuestionsModal(listingId, listingTitle) {
       activeListingForQuestions = listingId;
@@ -719,14 +740,14 @@
         const questions = await res.json();
         renderQuestions(questions);
       } catch (err) {
-        listDiv.innerHTML = `<div style="color:#b91c1c;">Error loading inquiries: ${escapeHtml(err.message)}</div>`;
+        listDiv.innerHTML = `<div style="color:var(--color-danger);">Error loading inquiries: ${escapeHtml(err.message)}</div>`;
       }
     }
 
     function renderQuestions(questions) {
       const listDiv = document.getElementById('questions-list');
       if (questions.length === 0) {
-        listDiv.innerHTML = `<p style="color:var(--color-ink-muted); text-align:center; padding:24px;">No buyer questions have been submitted for this listing yet.</p>`;
+        listDiv.innerHTML = `<p style="color:var(--text-secondary); text-align:center; padding:24px;">No buyer questions have been submitted for this listing yet.</p>`;
         return;
       }
 
@@ -735,24 +756,24 @@
         return `
           <div class="question-card" id="q-card-${q.id}">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:12px; color:var(--color-ink-subtle);">From Buyer: <code>${escapeHtml(q.buyer_id.slice(0, 8))}...</code></span>
+              <span style="font-size:12px; color:var(--text-muted);">From Buyer: <code style="font-family:var(--font-mono);">${escapeHtml(q.buyer_id.slice(0, 8))}...</code></span>
               <span class="${isAnswered ? 'status-pill status-live' : 'draft-badge'}">${isAnswered ? 'Replied' : 'Pending Reply'}</span>
             </div>
-            <div style="font-size:14px; font-weight:600; color:var(--color-ink); margin-bottom:10px;">
+            <div style="font-size:14px; font-weight:600; color:var(--text-primary); margin-bottom:10px;">
               "${escapeHtml(q.question_text)}"
             </div>
 
             ${isAnswered ? `
-              <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:6px; padding:10px; font-size:13px; color:#166534;">
-                <strong>Your Reply:</strong><br>${escapeHtml(q.seller_response)}
+              <div class="notice-box" style="border-color:var(--badge-green-border); color:var(--badge-green); padding:10px;">
+                <strong>Your Reply:</strong><br><span style="color:var(--text-primary);">${escapeHtml(q.seller_response)}</span>
               </div>
             ` : `
               <div id="reply-box-${q.id}" style="margin-top:10px;">
                 <div style="display:flex; gap:8px; margin-bottom:8px;">
-                  <button type="button" class="btn-filter" style="background:#0f766e; border-color:#0f766e; font-size:12px;" onclick="draftAiReply('${q.id}')">
+                  <button type="button" class="btn-filter" style="font-size:12px;" onclick="draftAiReply('${q.id}')">
                     ✨ Generate AI Draft Reply
                   </button>
-                  <span id="draft-notice-${q.id}" style="font-size:11px; color:#92400e; display:none; align-items:center;">
+                  <span id="draft-notice-${q.id}" style="font-size:11px; color:var(--color-warning); display:none; align-items:center;">
                     ⚠️ Drafted for review — not yet sent
                   </span>
                 </div>
@@ -830,10 +851,6 @@
       }
     }
 
-    // ============================================================================
-    // Common Actions
-    // ============================================================================
-
     function openCreateModal() {
       document.getElementById('modal-create').classList.add('active');
       document.getElementById('ai-suggestions-panel').style.display = 'none';
@@ -852,6 +869,18 @@
 
     async function handleCreateListing(e) {
       e.preventDefault();
+      
+      if (!currentToken) {
+        const inputVal = document.getElementById('auth-token').value.trim();
+        if (inputVal) {
+          currentToken = inputVal;
+          localStorage.setItem('seller_access_token', currentToken);
+        } else {
+          alert('Seller Session Required:\n\nPlease paste your Seller JWT Access Token into the "Seller Session" bar at the top of the page, or visit http://localhost:8001/static/dashboard-seller.html to sync your active session.');
+          return;
+        }
+      }
+
       const payload = {
         title: document.getElementById('create-title').value.trim(),
         category: document.getElementById('create-category').value,
@@ -878,6 +907,18 @@
 
     async function handleSubmitVersion(e) {
       e.preventDefault();
+
+      if (!currentToken) {
+        const inputVal = document.getElementById('auth-token').value.trim();
+        if (inputVal) {
+          currentToken = inputVal;
+          localStorage.setItem('seller_access_token', currentToken);
+        } else {
+          alert('Seller Session Required: Please paste your Seller JWT Access Token into the "Seller Session" bar at the top.');
+          return;
+        }
+      }
+
       const listingId = document.getElementById('version-listing-id').value;
       const payload = {
         version: document.getElementById('version-semver').value.trim(),
@@ -926,6 +967,22 @@
     window.addEventListener('DOMContentLoaded', () => {
       checkTokenFromUrl();
       if (currentToken) loadSellerListings();
+
+      try {
+        const token = localStorage.getItem('seller_access_token') || localStorage.getItem('admin_access_token');
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const roles = payload.roles || [];
+          const nav = document.getElementById('site-nav-links');
+          if (roles.includes('admin')) {
+            const adminLink = document.createElement('a');
+            adminLink.href = 'http://localhost:8001/static/admin-dashboard.html';
+            adminLink.className = 'nav-admin-link';
+            adminLink.innerHTML = '🛡️ Admin Console';
+            nav.prepend(adminLink);
+          }
+        }
+      } catch (e) {}
     });
   </script>
 </body>

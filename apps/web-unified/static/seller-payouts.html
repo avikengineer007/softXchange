@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Payouts — softXchange</title>
+  <meta name="description" content="Monitor your softXchange seller payouts, Stripe Connect status, and transaction history.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--bg-surface-translucent);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md);
+      padding: 20px;
+    }
+    .stat-card .label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+    .stat-card .value {
+      font-family: var(--font-heading);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .status-cleared { background: var(--badge-green-bg); color: var(--badge-green); border: 1px solid var(--badge-green-border); }
+    .status-under_review { background: var(--color-warning-bg); color: var(--color-warning); border: 1px solid var(--color-warning-border); }
+    .status-refunded { background: var(--color-danger-bg); color: var(--color-danger); border: 1px solid var(--color-danger-border); }
+    .status-draft { background: var(--bg-surface-elevated); color: var(--text-muted); border: 1px solid var(--color-border); }
+  </style>
+</head>
+<body>
+
+  <header class="site-nav" role="banner">
+    <a href="/index.html" class="brand-link" id="brand-home">
+      <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="sp-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="var(--accent-blue)"/>
+            <stop offset="100%" stop-color="var(--accent-violet)"/>
+          </linearGradient>
+        </defs>
+        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#sp-grad)"/>
+      </svg>
+      <span>softXchange</span>
+    </a>
+    <nav class="nav-links" id="site-nav-links" aria-label="Main navigation">
+      <a href="/seller-listings.html">My Packages</a>
+      <a href="/seller-payouts.html" class="active">Payout Dashboard</a>
+      <a href="/dashboard-seller.html">KYC Status</a>
+    </nav>
+  </header>
+
+  <main class="container page-transition" role="main">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;flex-wrap:wrap;gap:16px;">
+      <div>
+        <h1 style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--text-primary);">Seller Payout Dashboard</h1>
+        <p style="color:var(--text-secondary);font-size:14px;margin-top:4px;">Monitor cleared payouts, ongoing transactions, and Stripe Connect status.</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div id="connect-status-badge"></div>
+        <button id="btn-connect" class="btn-primary" type="button">Connect Stripe Account</button>
+      </div>
+    </div>
+
+    <!-- Payout Statistics — glass panel cards -->
+    <div class="stat-grid" role="region" aria-label="Payout statistics">
+      <div class="stat-card">
+        <div class="label">Available for Payout</div>
+        <div id="stat-available" class="value">$0.00</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Cleared &amp; transferable</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Under Review (Holds)</div>
+        <div id="stat-review" class="value" style="color:var(--color-warning);">$0.00</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Routine SLA review (max 48h)</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Completed Sales</div>
+        <div id="stat-count" class="value">0</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Total verified transactions</div>
+      </div>
+    </div>
+
+    <!-- Recent Sales Table — glass panel treatment -->
+    <h2 class="section-heading">Transaction Ledger</h2>
+    <div style="overflow-x:auto;">
+      <table class="data-table" role="table" aria-label="Transaction ledger">
+        <thead>
+          <tr>
+            <th scope="col">Order ID</th>
+            <th scope="col">Gross Amount</th>
+            <th scope="col">Platform Fee (8%)</th>
+            <th scope="col">Net Seller Payout</th>
+            <th scope="col">Status</th>
+            <th scope="col">Notes</th>
+          </tr>
+        </thead>
+        <tbody id="orders-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-secondary);">Loading seller transactions…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/static/js/auth.js"></script>
+  <script src="/static/js/ambient-layer.js" defer></script>
+  <script>
+    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || 'http://localhost:8004';
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const d = document.createElement('div');
+      d.textContent = String(text);
+      return d.innerHTML;
+    }
+
+    async function checkConnectStatus() {
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/seller/connect/status`);
+        if (!res.ok) return;
+        const status = await res.json();
+        const btn = document.getElementById('btn-connect');
+        const badge = document.getElementById('connect-status-badge');
+
+        if (status.payout_enabled) {
+          btn.style.display = 'none';
+          badge.innerHTML = '<span class="status-pill status-cleared" style="font-size:13px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;"><span>✓</span> Stripe Connect Active</span>';
+        } else if (status.connected) {
+          btn.textContent = 'Complete Verification';
+          badge.innerHTML = '<span class="status-pill status-under_review" style="font-size:13px;padding:6px 14px;">Onboarding Pending</span>';
+        } else {
+          badge.innerHTML = '<span class="status-pill status-draft" style="font-size:13px;padding:6px 14px;">Not Connected</span>';
+        }
+      } catch (err) {
+        console.error('Connect status error:', err);
+      }
+    }
+
+    async function initiateConnect() {
+      if (!window.SoftXchangeAuth || !window.SoftXchangeAuth.getAccessToken()) {
+        window.location.href = '/login-seller.html';
+        return;
+      }
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/seller/connect/onboard`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          alert('Onboarding failed: ' + (err.detail || res.statusText));
+          return;
+        }
+        const data = await res.json();
+        if (data.onboarding_url) window.open(data.onboarding_url, '_blank');
+      } catch (err) {
+        alert('Network error: ' + err.message);
+      }
+    }
+
+    async function loadDashboard() {
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/seller/payouts`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        document.getElementById('stat-available').textContent = `$${Number(data.available_usd || 0).toFixed(2)}`;
+        document.getElementById('stat-review').textContent = `$${Number(data.held_usd || 0).toFixed(2)}`;
+        document.getElementById('stat-count').textContent = (data.orders || []).length;
+
+        const tbody = document.getElementById('orders-tbody');
+        tbody.innerHTML = '';
+        const orders = data.orders || [];
+        if (orders.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-secondary);">No sales transactions recorded yet.</td></tr>';
+          return;
+        }
+
+        orders.forEach(order => {
+          const tr = document.createElement('tr');
+          const gross = `$${Number(order.amount_usd || 0).toFixed(2)}`;
+          const fee   = `$${Number((order.platform_fee_cents || 0) / 100).toFixed(2)}`;
+          const net   = `$${Number((order.seller_net_cents || 0) / 100).toFixed(2)}`;
+
+          let statusClass = 'status-cleared';
+          let statusLabel = (order.hold_status || 'cleared').toUpperCase();
+          let note = 'Cleared for payout transfer';
+
+          if (order.hold_status === 'held') {
+            statusClass = 'status-under_review';
+            statusLabel = 'HELD (REVIEW)';
+            note = order.hold_reason || 'Under fraud review SLA';
+          } else if (order.hold_status === 'refunded') {
+            statusClass = 'status-refunded';
+            note = 'Order refunded to buyer';
+          }
+
+          tr.innerHTML = `
+            <td><code style="font-family:var(--font-mono);">${escapeHtml(order.id.slice(0, 8))}…</code></td>
+            <td>${gross}</td>
+            <td style="color:var(--text-muted);">${fee}</td>
+            <td><strong>${net}</strong></td>
+            <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+            <td style="color:var(--text-secondary);font-size:12px;">${escapeHtml(note)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        document.getElementById('orders-tbody').innerHTML =
+          `<tr><td colspan="6" style="color:var(--color-danger);text-align:center;padding:24px;" role="alert">Error loading data: ${escapeHtml(err.message)}</td></tr>`;
+      }
+    }
+
+    document.getElementById('btn-connect').addEventListener('click', initiateConnect);
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      const session = await window.SoftXchangeAuth.silentRefresh();
+      if (!session || !session.access_token) {
+        window.location.href = '/login-seller.html';
+        return;
+      }
+      await checkConnectStatus();
+      await loadDashboard();
+    });
+  </script>
+</body>
+</html>

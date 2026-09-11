@@ -194,6 +194,16 @@ def require_seller(auth_ctx: AuthContext = Depends(require_auth)) -> AuthContext
     return auth_ctx
 
 
+def require_admin(auth_ctx: AuthContext = Depends(require_auth)) -> AuthContext:
+    """Ensure authenticated caller has the 'admin' role."""
+    if "admin" not in auth_ctx.roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin role required for this action",
+        )
+    return auth_ctx
+
+
 def get_optional_auth(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
 ) -> Optional[AuthContext]:
@@ -209,3 +219,4 @@ def get_optional_auth(
     except Exception:
         pass
     return None
+

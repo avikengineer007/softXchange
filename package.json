@@ -5,7 +5,12 @@
   "description": "softXchange — Manifest's Marketplace Application",
   "scripts": {
     "auth:dev": "python apps/auth-service/run.py",
-    "auth:test": "pytest apps/auth-service/tests/ -v"
+    "auth:test": "pytest apps/auth-service/tests/ -v",
+    "3d:generate": "node packages/3d-assets/generate-logo-glb.js",
+    "3d:copy": "powershell -ExecutionPolicy Bypass -File scripts/copy-assets.ps1",
+    "3d:build": "npm run 3d:generate && npm run 3d:copy",
+    "check:assets": "node packages/3d-assets/check-asset-budget.js",
+    "precheck": "npm run check:assets"
   },
   "workspaces": [
     "apps/*",

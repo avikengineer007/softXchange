@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Signup — softXchange</title>
+  <meta name="description" content="Create your softXchange buyer account to access verified software packages.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="auth-layout">
+  <div class="auth-container page-transition">
+    <div class="brand-header">
+      <div class="brand-badge">
+        <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="sc-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--accent-blue)"/>
+              <stop offset="100%" stop-color="var(--accent-violet)"/>
+            </linearGradient>
+          </defs>
+          <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#sc-grad)"/>
+        </svg>
+        <span>softXchange Marketplace</span>
+      </div>
+      <h1 class="brand-title">softXchange</h1>
+      <p class="brand-subtitle">Create your customer account</p>
+    </div>
+
+    <div class="auth-card">
+      <div class="role-tabs">
+        <a href="/signup-customer.html" class="role-tab active">Customer Signup</a>
+        <a href="/signup-seller.html" class="role-tab">Seller Signup</a>
+      </div>
+
+      <h2 class="card-title">Join softXchange</h2>
+      <p class="card-description">Get instant access to verified software packages, source code, and licenses.</p>
+
+      <div id="error-alert" class="alert alert-error" role="alert" aria-live="assertive">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0;" aria-hidden="true">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+        </svg>
+        <span id="error-message"></span>
+      </div>
+
+      <div id="success-alert" class="alert alert-success" role="status" aria-live="polite">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink:0;" aria-hidden="true">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <span id="success-message"></span>
+      </div>
+
+      <form id="signup-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="display_name">Full Name / Display Name (Optional)</label>
+          <input type="text" id="display_name" name="display_name" class="form-input" placeholder="Ada Lovelace" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address</label>
+          <input type="email" id="email" name="email" class="form-input" placeholder="you@example.com" required autocomplete="email" aria-required="true">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Password (min 8 characters)</label>
+          <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required minlength="8" autocomplete="new-password" aria-required="true">
+        </div>
+        <button type="submit" id="submit-btn" class="btn-primary">
+          <span id="btn-text">Create Customer Account</span>
+          <div id="btn-spinner" class="spinner" aria-hidden="true"></div>
+        </button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a href="/login-customer.html">Sign in here</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/auth.js"></script>
+  <script>
+    const signupForm   = document.getElementById('signup-form');
+    const errorAlert   = document.getElementById('error-alert');
+    const successAlert = document.getElementById('success-alert');
+    const submitBtn    = document.getElementById('submit-btn');
+    const btnText      = document.getElementById('btn-text');
+    const btnSpinner   = document.getElementById('btn-spinner');
+
+    function showError(msg) {
+      document.getElementById('error-message').textContent = msg;
+      errorAlert.classList.add('show');
+      successAlert.classList.remove('show');
+    }
+    function showSuccess(msg) {
+      document.getElementById('success-message').textContent = msg;
+      successAlert.classList.add('show');
+      errorAlert.classList.remove('show');
+    }
+    function clearAlerts() { errorAlert.classList.remove('show'); successAlert.classList.remove('show'); }
+    function setLoading(on) {
+      submitBtn.disabled = on;
+      btnSpinner.style.display = on ? 'inline-block' : 'none';
+      btnText.textContent = on ? 'Creating Account…' : 'Create Customer Account';
+    }
+
+    signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlerts();
+      setLoading(true);
+      try {
+        await window.SoftXchangeAuth.signup(
+          document.getElementById('email').value,
+          document.getElementById('password').value,
+          ['customer'],
+          document.getElementById('display_name').value || null
+        );
+        showSuccess('Account created successfully! Redirecting to sign in…');
+        setTimeout(() => { window.location.href = '/login-customer.html'; }, 1200);
+      } catch (err) {
+        setLoading(false);
+        showError(err.message || 'Failed to create customer account.');
+      }
+    });
+  </script>
+</body>
+</html>

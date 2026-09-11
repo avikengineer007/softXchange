@@ -176,6 +176,9 @@ _WARRANTY_LEGAL_PATTERNS = [
     r"\bindemnif(?:y|ication)\s+guaranteed\b",
     r"\bguaranteed\s+refund\b",
     r"\b100%\s+money\s+back\b",
+    r"\bguaranteed\s+(?:sales?|revenue|profit|returns?)\b",
+    r"\b(?:promise|guarantee)\s+(?:that\s+)?you(?:'ll|\s+will)\s+sell\b",
+    r"\byou(?:'ll|\s+will)\s+sell\s+\d+\s+(?:more\s+)?(?:units?|licenses?|copies?)\b",
 ]
 _WARRANTY_LEGAL_REGEX = re.compile("|".join(_WARRANTY_LEGAL_PATTERNS), re.IGNORECASE)
 

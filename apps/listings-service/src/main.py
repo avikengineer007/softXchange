@@ -1,12 +1,10 @@
 from contextlib import asynccontextmanager
 import logging
-from pathlib import Path
 import threading
 import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
 
 from src.config import settings
 from src.database import init_db, SessionLocal
@@ -85,15 +83,9 @@ app.add_middleware(
 
 app.include_router(listings_router)
 
-# Mount static web directory
-STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
-if STATIC_DIR.exists():
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
-
-
 @app.get("/", include_in_schema=False)
 def root_redirect():
-    return RedirectResponse(url="/static/browse-listings.html")
+    return RedirectResponse(url="http://localhost:8000/browse-listings.html")
 
 
 @app.get("/healthz", tags=["Health"])
