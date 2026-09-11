@@ -50,6 +50,30 @@ def test_auth_service_refuses_ephemeral_rs256_in_production(monkeypatch):
         import src.security as sec
 
 
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+
+# Pre-generate valid test RSA keypair for production lifespan tests
+_TEST_RSA_KEY = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+_TEST_RSA_PRIV_PEM = _TEST_RSA_KEY.private_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PrivateFormat.PKCS8,
+    encryption_algorithm=serialization.NoEncryption(),
+).decode("utf-8")
+_TEST_RSA_PUB_PEM = _TEST_RSA_KEY.public_key().public_bytes(
+    encoding=serialization.Encoding.PEM,
+    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+).decode("utf-8")
+
+
+def _provide_valid_rsa_keys(monkeypatch, settings):
+    monkeypatch.setattr(settings, "JWT_ALGORITHM", "RS256")
+    monkeypatch.setattr(settings, "JWT_PRIVATE_KEY", _TEST_RSA_PRIV_PEM)
+    monkeypatch.setattr(settings, "JWT_PUBLIC_KEY", _TEST_RSA_PUB_PEM)
+    monkeypatch.setattr(settings, "JWT_PRIVATE_KEY_PATH", None)
+    monkeypatch.setattr(settings, "JWT_PUBLIC_KEY_PATH", None)
+
+
 def test_auth_service_refuses_dev_default_admin_code_in_production(monkeypatch):
     """auth-service lifespan must raise RuntimeError when ADMIN_PROVISIONING_CODE is the known dev default."""
     _clean_src_modules()
@@ -58,6 +82,7 @@ def test_auth_service_refuses_dev_default_admin_code_in_production(monkeypatch):
 
     from src.config import settings
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    _provide_valid_rsa_keys(monkeypatch, settings)
     monkeypatch.setattr(settings, "ADMIN_PROVISIONING_CODE", "sx_admin_sec_9f7a28e4c19d4b8e8f2a1b3c4d5e6f7a")
 
     from src.main import app
@@ -75,6 +100,7 @@ def test_auth_service_refuses_unrotated_dev_token_in_production(monkeypatch):
 
     from src.config import settings
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    _provide_valid_rsa_keys(monkeypatch, settings)
     monkeypatch.setattr(settings, "ADMIN_PROVISIONING_CODE", "sx_admin_dev_token_long_enough_32_characters_long")
     monkeypatch.setattr(settings, "ADMIN_CODE_EXPLICITLY_ROTATED", False)
 
@@ -93,6 +119,7 @@ def test_auth_service_refuses_low_entropy_admin_code_in_production(monkeypatch):
 
     from src.config import settings
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    _provide_valid_rsa_keys(monkeypatch, settings)
     monkeypatch.setattr(settings, "ADMIN_PROVISIONING_CODE", "short_secret")
 
     from src.main import app
