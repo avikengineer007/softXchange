@@ -15,6 +15,19 @@ class TestSecretsScanner(unittest.TestCase):
 
     def setUp(self):
         self.fixtures_dir = os.path.join(os.path.dirname(__file__), "fixtures", "package")
+        # Ensure dummy ignored directories exist for git-clean environments (where .gitignore skips node_modules)
+        nm_dir = os.path.join(self.fixtures_dir, "node_modules")
+        os.makedirs(nm_dir, exist_ok=True)
+        ignored_js = os.path.join(nm_dir, "ignored.js")
+        if not os.path.exists(ignored_js):
+            with open(ignored_js, "w") as f:
+                f.write('// Should never be scanned\nconst SECRET_IN_NODE_MODULES = "AKIAIOSFODNN7NODE123";\n')
+        git_dir = os.path.join(self.fixtures_dir, ".git")
+        os.makedirs(git_dir, exist_ok=True)
+        git_config = os.path.join(git_dir, "config")
+        if not os.path.exists(git_config):
+            with open(git_config, "w") as f:
+                f.write('[core]\n\trepositoryformatversion = 0\n')
         self.scanner = SecretsScanner()
 
     def test_fixture_directory_scan(self):
