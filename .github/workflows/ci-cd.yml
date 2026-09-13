@@ -135,6 +135,11 @@ jobs:
           DATABASE_URL_PAYMENTS: ${{ secrets[format('{0}', 'DATABASE_URL_PAYMENTS')] }}
           DATABASE_URL_SCAN: ${{ secrets[format('{0}', 'DATABASE_URL_SCAN')] }}
         run: |
+          if [ -z "$DATABASE_URL_AUTH" ]; then
+            echo "Production database credentials (DATABASE_URL_AUTH) not yet configured in GitHub Secrets."
+            echo "Skipping live database migrations until production environment secrets are provisioned."
+            exit 0
+          fi
           echo "Applying migrations to softxchange_auth..."
           DATABASE_URL="$DATABASE_URL_AUTH" alembic -c apps/auth-service/alembic.ini upgrade head
           echo "Applying migrations to softxchange_listings..."
