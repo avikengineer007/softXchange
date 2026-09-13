@@ -960,8 +960,11 @@ def test_check_entitlement_access_control_and_verification(client, buyer_token):
     assert res_other.status_code == 401
 
 
-def test_seller_connect_and_payouts_alias_routes(client, seller_token):
+def test_seller_connect_and_payouts_alias_routes(client, seller_token, monkeypatch):
     """Verifies that /seller/connect/* and /seller/payouts alias routes work identically to /payments/seller/*."""
+    monkeypatch.setattr(stripe_client, "create_connect_account", lambda user_id, email: "acct_test_123")
+    monkeypatch.setattr(stripe_client, "create_account_link", lambda account_id, refresh_url, return_url: "https://connect.stripe.com/setup/s/mock123")
+
     headers = {"Authorization": f"Bearer {seller_token}"}
 
     # Connect status alias
