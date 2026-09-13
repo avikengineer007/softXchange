@@ -9,8 +9,14 @@ from sqlalchemy.pool import StaticPool
 
 # Ensure apps/auth-service is on sys.path
 SERVICE_ROOT = Path(__file__).resolve().parent.parent
-if str(SERVICE_ROOT) not in sys.path:
-    sys.path.insert(0, str(SERVICE_ROOT))
+if str(SERVICE_ROOT) in sys.path:
+    sys.path.remove(str(SERVICE_ROOT))
+sys.path.insert(0, str(SERVICE_ROOT))
+if "src" in sys.modules and not getattr(sys.modules["src"], "__file__", "").startswith(str(SERVICE_ROOT)):
+    sys.modules.pop("src", None)
+    for k in list(sys.modules.keys()):
+        if k.startswith("src."):
+            sys.modules.pop(k, None)
 
 from src.main import app
 from src.config import settings

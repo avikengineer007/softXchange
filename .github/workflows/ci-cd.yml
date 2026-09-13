@@ -47,34 +47,34 @@ jobs:
           done
 
       - name: Gate 2 — Zero Local Storage Rule Verification
-        run: pytest tests/test_storage_rule.py -v
+        run: python -m pytest tests/test_storage_rule.py -v
 
       - name: Gate 3 — Multi-Service Parity Integration Verification
-        run: pytest tests/test_shared_backend_parity.py -v
+        run: python -m pytest tests/test_shared_backend_parity.py -v
 
       - name: Gate 4 — Production Fail-Closed Security Gates
-        run: pytest tests/test_production_fail_closed.py -v
+        run: python -m pytest tests/test_production_fail_closed.py -v
 
       - name: Gate 5 — Database Migrations & Privacy Invariant Verification
-        run: pytest tests/test_database_migrations.py -v
+        run: python -m pytest tests/test_database_migrations.py -v
 
       - name: Gate 6 — ML Engine & Assist Services Battery
         run: |
-          pytest packages/ml-shared/tests -v
-          pytest apps/buyer-assist/tests -v
-          pytest apps/seller-assist/tests -v
-          pytest apps/broker/tests -v
+          PYTHONPATH=packages/ml-shared/src python -m pytest packages/ml-shared/tests -v
+          PYTHONPATH=apps/buyer-assist python -m pytest apps/buyer-assist/tests -v
+          PYTHONPATH=apps/seller-assist python -m pytest apps/seller-assist/tests -v
+          PYTHONPATH=apps/broker python -m pytest apps/broker/tests -v
 
       - name: Gate 7 — Microservices Pytest Battery
         run: |
-          pytest apps/auth-service/tests -v
-          pytest apps/listings-service/tests -v
-          pytest apps/payments-service/tests -v
-          pytest apps/scan-service/tests -v
-          pytest apps/web-unified/tests -v
+          PYTHONPATH=apps/auth-service python -m pytest apps/auth-service/tests -v
+          PYTHONPATH=apps/listings-service python -m pytest apps/listings-service/tests -v
+          PYTHONPATH=apps/payments-service python -m pytest apps/payments-service/tests -v
+          PYTHONPATH=apps/scan-service python -m pytest apps/scan-service/tests -v
+          PYTHONPATH=apps/web-unified python -m pytest apps/web-unified/tests -v
 
       - name: Gate 8 — Secret Scanner & Static Analysis Engine Battery
-        run: pytest "Secret Scanner engine/tests" -v
+        run: PYTHONPATH="Secret Scanner engine" python -m pytest "Secret Scanner engine/tests" -v
 
   # ── Job 2: Container Image Build ───────────────────────────────────────────
   build-containers:
