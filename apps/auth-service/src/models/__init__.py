@@ -19,6 +19,19 @@ from .user import (
     KYCStartResponse,
     KYCStatusResponse,
     KYCWebhookPayload,
+    SellerGitHubConnection,
+    SellerGitHubConnectionResponse,
+    SellerGitHubStatusResponse,
+    SellerPublicTrustBadge,
+)
+from .notification import (
+    Notification,
+    NotificationType,
+    ALL_NOTIFICATION_TYPES,
+    NotificationEmitRequest,
+    NotificationResponse,
+    NotificationListResponse,
+    UnreadCountResponse,
 )
 
 __all__ = [
@@ -42,4 +55,11 @@ __all__ = [
     "KYCStartResponse",
     "KYCStatusResponse",
     "KYCWebhookPayload",
+    "Notification",
+    "NotificationType",
+    "ALL_NOTIFICATION_TYPES",
+    "NotificationEmitRequest",
+    "NotificationResponse",
+    "NotificationListResponse",
+    "UnreadCountResponse",
 ]

@@ -102,31 +102,52 @@ async def submit_intake(request: Request):
     Supports both multipart form-data and application/json.
     """
     content_type = request.headers.get("content-type", "")
-    target_listing_id = None
-    target_version = None
-    target_source_type = "upload"
-    target_git_url = None
-    content_bytes = None
-    filename = "package.zip"
+    target_listing_id: Optional[str] = None
+    target_version: Optional[str] = None
+    target_source_type: str = "upload"
+    target_git_url: Optional[str] = None
+    content_bytes: Optional[bytes] = None
+    filename: str = "package.zip"
 
     if "application/json" in content_type:
         try:
             body = await request.json()
         except Exception:
             body = {}
-        target_listing_id = body.get("listing_id")
-        target_version = body.get("version")
-        target_source_type = body.get("source_type", "upload")
-        target_git_url = body.get("git_url")
+        if body.get("listing_id") is not None:
+            target_listing_id = str(body["listing_id"])
+        if body.get("version") is not None:
+            target_version = str(body["version"])
+        if body.get("source_type") is not None:
+            target_source_type = str(body["source_type"])
+        if body.get("git_url") is not None:
+            target_git_url = str(body["git_url"])
         if body.get("package_content"):
-            content_bytes = body.get("package_content").encode("utf-8")
+            val = body.get("package_content")
+            try:
+                import base64
+                decoded = base64.b64decode(val)
+                if decoded.startswith(b"PK") or decoded.startswith(b"\x1f\x8b") or len(decoded) > 0:
+                    content_bytes = decoded
+                else:
+                    content_bytes = val.encode("utf-8")
+            except Exception:
+                content_bytes = val.encode("utf-8")
     else:
         try:
             form = await request.form()
-            target_listing_id = form.get("listing_id")
-            target_version = form.get("version")
-            target_source_type = form.get("source_type", "upload")
-            target_git_url = form.get("git_url")
+            raw_listing = form.get("listing_id")
+            if raw_listing is not None and not isinstance(raw_listing, UploadFile):
+                target_listing_id = str(raw_listing)
+            raw_version = form.get("version")
+            if raw_version is not None and not isinstance(raw_version, UploadFile):
+                target_version = str(raw_version)
+            raw_source = form.get("source_type")
+            if raw_source is not None and not isinstance(raw_source, UploadFile):
+                target_source_type = str(raw_source)
+            raw_git = form.get("git_url")
+            if raw_git is not None and not isinstance(raw_git, UploadFile):
+                target_git_url = str(raw_git)
             file_obj = form.get("file")
             if file_obj and hasattr(file_obj, "read"):
                 content_bytes = await file_obj.read()

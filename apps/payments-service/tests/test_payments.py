@@ -888,3 +888,102 @@ def test_send_authenticated_kyc_callback_includes_timestamp_for_replay_defense(m
     assert sig == expected_sig
 
 
+def test_check_entitlement_access_control_and_verification(client, buyer_token):
+    """
+    Verifies hardened anti-enumeration and entitlement check:
+    1. Unauthenticated probing -> 401
+    2. Invalid X-Internal-Secret -> 401
+    3. Valid X-Internal-Secret -> 200 (True when paid, False when not)
+    4. Buyer checking own entitlement -> 200
+    5. Buyer probing different user's entitlement -> 401
+    """
+    db = TestingSessionLocal()
+    paid_order = Order(
+        id="order-entitled-test",
+        listing_id="listing-entitled-99",
+        listing_version_id="version-v1",
+        buyer_id="buyer-user-456",
+        seller_id="seller-user-123",
+        amount_cents=5000,
+        platform_fee_cents=400,
+        seller_payout_cents=4600,
+        status=OrderStatus.PAID.value,
+    )
+    db.add(paid_order)
+    db.commit()
+    db.close()
+
+    # 1. Unauthenticated probing fails closed (401)
+    res_probe = client.get("/orders/check-entitlement/buyer-user-456/listing-entitled-99")
+    assert res_probe.status_code == 401
+
+    # 2. Invalid internal secret fails closed (401)
+    res_bad_secret = client.get(
+        "/orders/check-entitlement/buyer-user-456/listing-entitled-99",
+        headers={"X-Internal-Secret": "wrong-secret"},
+    )
+    assert res_bad_secret.status_code == 401
+
+    # 3. Valid X-Internal-Secret succeeds with has_entitlement=True
+    res_internal = client.get(
+        "/orders/check-entitlement/buyer-user-456/listing-entitled-99",
+        headers={"X-Internal-Secret": settings.INTERNAL_SERVICE_SECRET},
+    )
+    assert res_internal.status_code == 200
+    data = res_internal.json()
+    assert data["has_entitlement"] is True
+    assert data["order_id"] == "order-entitled-test"
+    assert data["listing_version_id"] == "version-v1"
+
+    # 4. Valid X-Internal-Secret on unpurchased listing -> has_entitlement=False
+    res_unpurchased = client.get(
+        "/orders/check-entitlement/buyer-user-456/non-existent-listing",
+        headers={"X-Internal-Secret": settings.INTERNAL_SERVICE_SECRET},
+    )
+    assert res_unpurchased.status_code == 200
+    assert res_unpurchased.json()["has_entitlement"] is False
+
+    # 5. Buyer self-check via JWT succeeds
+    res_self = client.get(
+        "/orders/check-entitlement/buyer-user-456/listing-entitled-99",
+        headers={"Authorization": f"Bearer {buyer_token}"},
+    )
+    assert res_self.status_code == 200
+    assert res_self.json()["has_entitlement"] is True
+
+    # 6. Another buyer attempting to probe this buyer's purchase fails closed (401)
+    other_buyer_token = generate_test_token("another-unrelated-buyer", ["customer"])
+    res_other = client.get(
+        "/orders/check-entitlement/buyer-user-456/listing-entitled-99",
+        headers={"Authorization": f"Bearer {other_buyer_token}"},
+    )
+    assert res_other.status_code == 401
+
+
+def test_seller_connect_and_payouts_alias_routes(client, seller_token):
+    """Verifies that /seller/connect/* and /seller/payouts alias routes work identically to /payments/seller/*."""
+    headers = {"Authorization": f"Bearer {seller_token}"}
+
+    # Connect status alias
+    res_stat = client.get("/seller/connect/status", headers=headers)
+    assert res_stat.status_code == 200
+    assert "payout_enabled" in res_stat.json()
+
+    # Connect onboard alias
+    res_onboard = client.post("/seller/connect/onboard", headers=headers)
+    assert res_onboard.status_code == 200
+    assert "onboarding_url" in res_onboard.json()
+
+    # Seller dashboard / payouts alias
+    res_dash = client.get("/seller/dashboard", headers=headers)
+    assert res_dash.status_code == 200
+    data_dash = res_dash.json()
+    assert "available_payout_usd" in data_dash
+    assert "available_usd" in data_dash
+
+    res_payouts = client.get("/seller/payouts", headers=headers)
+    assert res_payouts.status_code == 200
+    assert res_payouts.json() == data_dash
+
+
+

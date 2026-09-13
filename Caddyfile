@@ -22,6 +22,9 @@
     handle /admin/* {
         reverse_proxy auth-service:8001
     }
+    handle /notifications/* {
+        reverse_proxy auth-service:8001
+    }
 
     # 2. Security Vetting & Scanner Service (Port 8002)
     handle /scan/* {
@@ -42,6 +45,18 @@
     }
     handle /connect/* {
         reverse_proxy payments-service:8004
+    }
+    handle /seller/connect/* {
+        reverse_proxy payments-service:8004
+    }
+    handle /seller/payouts* {
+        reverse_proxy payments-service:8004
+    }
+    handle /seller/dashboard* {
+        reverse_proxy payments-service:8004
+    }
+    handle /seller/listings* {
+        reverse_proxy listings-service:8003
     }
 
     # 5. Buyer Intelligence & Search Assist (Port 8005)

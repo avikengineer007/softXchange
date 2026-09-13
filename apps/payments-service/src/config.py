@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     # Inter-Service Communication
     AUTH_SERVICE_URL: str = "http://localhost:8001"
     LISTINGS_SERVICE_URL: str = "http://localhost:8003"
+    FRONTEND_URL: str = "http://localhost:8000"
     INTERNAL_SERVICE_SECRET: str = "softxchange-internal-hmac-secret-dev"
 
     # Economics & Fee Configuration

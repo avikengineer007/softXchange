@@ -12,6 +12,7 @@ Write-Host " [3D] Assets ready." -ForegroundColor Green
 Write-Host ""
 
 # Step 2: Launch services in separate windows
+$env:PYTHONPATH = "$PSScriptRoot\apps\listings-service;$PSScriptRoot\packages\ml-shared\src;$env:PYTHONPATH"
 $py = "$PSScriptRoot\.venv\Scripts\python.exe"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$host.ui.RawUI.WindowTitle = 'softXchange: Unified Web Frontend (8000)'; Write-Host 'Starting Unified Frontend on 8000...' -ForegroundColor Cyan; cd '$PSScriptRoot\apps\web-unified'; & '$py' run.py"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$host.ui.RawUI.WindowTitle = 'softXchange: Auth Service (8001)'; Write-Host 'Starting Auth Service on 8001...' -ForegroundColor Green; cd '$PSScriptRoot\apps\auth-service'; & '$py' run.py"

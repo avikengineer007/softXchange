@@ -63,8 +63,8 @@ def start_connect_onboarding(
         account_id = profile.stripe_account_id
 
     # Generate hosted onboarding link
-    refresh_url = f"http://localhost:8004/static/seller-payouts.html?reauth=1"
-    return_url = f"http://localhost:8004/static/seller-payouts.html?onboarded=1"
+    refresh_url = f"{settings.FRONTEND_URL}/seller-payouts.html?reauth=1"
+    return_url = f"{settings.FRONTEND_URL}/seller-payouts.html?onboarded=1"
 
     try:
         onboarding_url = stripe_client.create_account_link(
@@ -142,3 +142,10 @@ def get_connect_status(
         stripe_account_id=stripe_account_id,
         payout_enabled=payout_enabled,
     )
+
+
+# Additional router alias without /payments prefix
+alias_router = APIRouter(prefix="/seller/connect", tags=["Stripe Connect Onboarding Alias"])
+alias_router.add_api_route("/start", start_connect_onboarding, methods=["POST"], response_model=ConnectStartResponse)
+alias_router.add_api_route("/onboard", start_connect_onboarding, methods=["POST"], response_model=ConnectStartResponse)
+alias_router.add_api_route("/status", get_connect_status, methods=["GET"], response_model=ConnectStatusResponse)

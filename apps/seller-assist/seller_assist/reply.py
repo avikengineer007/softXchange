@@ -21,7 +21,7 @@ from ml_shared.guardrails import (
     format_guardrail_refusal,
     GuardrailViolationError,
 )
-from buyer_assist.rag import ListingQAService, AnswerResult
+from ml_shared.rag import ListingQAService, AnswerResult
 from src.models.listing import Listing, BuyerQuestion, utc_now
 
 

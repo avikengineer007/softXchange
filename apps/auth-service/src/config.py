@@ -68,6 +68,14 @@ class Settings(BaseSettings):
     ADMIN_PROVISION_WINDOW_HOURS: int = 1
     ADMIN_CODE_EXPLICITLY_ROTATED: bool = False
 
+    # -------------------------------------------------------------------------
+    # GitHub OAuth Settings (Seller Trust Signal)
+    # -------------------------------------------------------------------------
+    GITHUB_CLIENT_ID: Optional[str] = "dev-github-client-id"
+    GITHUB_CLIENT_SECRET: Optional[str] = "dev-github-client-secret"
+    GITHUB_OAUTH_REDIRECT_URI: Optional[str] = "http://localhost:8000/dashboard-seller.html"
+    GITHUB_OAUTH_SCOPES: str = "read:user public_repo"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

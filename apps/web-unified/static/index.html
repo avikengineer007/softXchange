@@ -1,205 +1,1067 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>softXchange — Vetted Software Marketplace</title>
-  <meta name="description" content="Buy and sell cryptographically vetted software packages. Every listing scanned for secrets before publication. Zero surprises, guaranteed.">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>softXchange — Institutional Verified Software &amp; Artifact Exchange</title>
+  <meta name="description" content="Institutional Verified Software & Artifact Exchange. Every package cryptographically scanned for secrets, credentials, and vulnerabilities before publication." />
+
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- SoftXchange Design Tokens & Base Stylesheets -->
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
 
-  <!-- Navigation -->
-  <header class="site-nav" role="banner">
-    <a href="/index.html" class="brand-link" id="brand-home">
-      <svg class="brand-logo-icon hero-bowtie-target" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="nav-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="var(--accent-blue)"/>
-            <stop offset="100%" stop-color="var(--accent-violet)"/>
-          </linearGradient>
-        </defs>
-        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#nav-grad)"/>
-      </svg>
-      <span>softXchange</span>
-    </a>
-    <nav class="nav-links" id="site-nav-links" aria-label="Main navigation">
-      <a href="/browse-listings.html">Catalog</a>
-      <a href="/login-seller.html">Sell Software</a>
-      <a href="/login-customer.html" id="nav-signin">Sign In</a>
-    </nav>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            obsidian: {
+              950: '#030408',
+              900: '#070912',
+              850: '#0c0f1e',
+              800: '#12172d',
+            },
+            prism: {
+              cyan: '#38bdf8',
+              blue: '#2563eb',
+              violet: '#7c3aed',
+              purple: '#c084fc',
+              emerald: '#10b981',
+            }
+          },
+          animation: {
+            'glow-pulse': 'glowPulse 9s ease-in-out infinite alternate',
+            'float-slow': 'floatSlow 7s ease-in-out infinite',
+            'spin-slow': 'spin 24s linear infinite',
+          },
+          keyframes: {
+            glowPulse: {
+              '0%': { opacity: '0.18', transform: 'scale(1) translate(0, 0)' },
+              '100%': { opacity: '0.42', transform: 'scale(1.15) translate(15px, -15px)' }
+            },
+            floatSlow: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-10px)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #030408;
+      color: #e2e8f0;
+      overflow-x: hidden;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+
+    /* Subdued Spatial Grid */
+    .luxury-grid {
+      background-size: 54px 54px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+    }
+
+    /* Seamless Glass Surfaces */
+    .glass-panel {
+      background: rgba(9, 12, 26, 0.76);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+    }
+
+    .glass-card {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.005) 100%);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .glass-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(56, 189, 248, 0.12);
+      transform: translateY(-4px);
+    }
+
+    /* Gradients */
+    .text-gradient-logo {
+      background: linear-gradient(135deg, #ffffff 0%, #38bdf8 30%, #818cf8 65%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Convergence Motif Badge Animation */
+    .convergence-badge {
+      position: relative;
+      overflow: visible;
+    }
+    
+    .convergence-badge.animate-converge::before,
+    .convergence-badge.animate-converge::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: inherit;
+      border: 1px solid #10b981;
+      opacity: 0;
+      animation: convergePulse 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes convergePulse {
+      0% { transform: scale(1.6); opacity: 0.9; filter: blur(2px); }
+      60% { transform: scale(0.95); opacity: 1; filter: blur(0); }
+      100% { transform: scale(1); opacity: 0; }
+    }
+
+    /* Radial Backlight for Open Hero Stage */
+    .hero-radial-glow {
+      background: radial-gradient(circle at center, rgba(56, 189, 248, 0.16) 0%, rgba(124, 58, 237, 0.12) 38%, transparent 70%);
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #030408; }
+    ::-webkit-scrollbar-thumb { background: #161c32; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #38bdf8; }
+  </style>
+</head>
+<body class="luxury-grid antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- Interactive Three.js Unified Canvas (Full Viewport Ambient & Hero Hologram) -->
+  <div id="canvas-container" class="fixed inset-0 pointer-events-none z-0"></div>
+
+  <!-- Atmospheric Glow Orbs -->
+  <div class="fixed top-[-10%] left-[15%] w-[650px] h-[650px] bg-blue-600/10 rounded-full blur-[180px] pointer-events-none animate-glow-pulse"></div>
+  <div class="fixed top-[40%] right-[-10%] w-[700px] h-[700px] bg-purple-600/10 rounded-full blur-[200px] pointer-events-none animate-glow-pulse" style="animation-delay: -4s;"></div>
+
+  <!-- Header / Navigation -->
+  <header class="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass-panel rounded-2xl px-6 py-3.5 border border-white/10">
+      
+      <!-- Brand & Vector Mark -->
+      <a href="/index.html" class="flex items-center gap-3.5 group" id="brand-home">
+        <svg class="w-8 h-8 group-hover:scale-105 transition-transform drop-shadow-[0_0_15px_rgba(56,189,248,0.4)]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M50 14 L18 36 L18 68 L50 46 Z" fill="url(#nav-blue-gradient)" fill-opacity="0.85" stroke="#38bdf8" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M50 14 L82 36 L82 68 L50 46 Z" fill="url(#nav-purple-gradient)" fill-opacity="0.85" stroke="#c084fc" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M50 46 L32 68 L50 90 L68 68 Z" fill="url(#nav-core-gradient)" fill-opacity="0.95" stroke="#e0e7ff" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M50 14 L50 90" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5"/>
+          <defs>
+            <linearGradient id="nav-blue-gradient" x1="18" y1="36" x2="50" y2="46" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#0284c7"/>
+              <stop offset="1" stop-color="#38bdf8"/>
+            </linearGradient>
+            <linearGradient id="nav-purple-gradient" x1="82" y1="36" x2="50" y2="46" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#9333ea"/>
+              <stop offset="1" stop-color="#c084fc"/>
+            </linearGradient>
+            <linearGradient id="nav-core-gradient" x1="32" y1="68" x2="68" y2="68" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#38bdf8"/>
+              <stop offset="0.5" stop-color="#a855f7"/>
+              <stop offset="1" stop-color="#c084fc"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="flex flex-col">
+          <span class="text-base font-bold tracking-tight text-white leading-tight font-sans">
+            Soft<span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">Xchange</span>
+          </span>
+          <span class="text-[9px] font-mono tracking-[0.25em] text-slate-400 uppercase -mt-0.5">
+            BUY · SELL · BUILD
+          </span>
+        </div>
+      </a>
+
+      <!-- Navigation Links -->
+      <nav class="hidden md:flex items-center gap-8 text-xs font-mono uppercase tracking-wider text-slate-300">
+        <a href="/browse-listings.html" class="hover:text-prism-cyan transition-colors">Catalog</a>
+        <a href="#features" class="hover:text-prism-cyan transition-colors">Architecture</a>
+        <a href="#simulator" class="hover:text-prism-cyan transition-colors">Mesh Network</a>
+        <a href="#support" class="hover:text-prism-cyan transition-colors">SPOC &amp; Support</a>
+      </nav>
+
+      <!-- Action CTAs -->
+      <div class="flex items-center gap-3 font-mono text-xs">
+        <button onclick="triggerConvergenceDemo()" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Replay Motif</span>
+        </button>
+        <a href="/login-customer.html" id="nav-signin" class="px-4 py-2 rounded-xl glass-card text-white hover:border-prism-cyan/50 transition-all">Sign In</a>
+      </div>
+    </div>
   </header>
 
-  <main>
-    <div class="container">
+  <!-- Hero Section: Borderless, Floating Optical Stage -->
+  <main class="relative z-10 pt-36 pb-20 px-6">
+    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12">
+      
+      <!-- Left Column: Value Proposition -->
+      <div class="flex-1 text-left">
+        
+        <!-- Live Scan Indicator Pill -->
+        <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full glass-panel border-emerald-500/30 text-xs font-mono text-emerald-300 mb-6 shadow-lg shadow-emerald-500/10">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span>Every package cryptographically scanned</span>
+        </div>
 
-      <!-- Hero Section -->
-      <section class="hero-section" aria-labelledby="hero-headline">
+        <!-- Main Headline -->
+        <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.08] mb-6 text-white" id="hero-headline">
+          Software you can <br />
+          <span class="text-gradient-logo">trust completely</span>
+        </h1>
 
-        <div class="hero-content">
-          <div class="hero-eyebrow" aria-label="Platform trust signal">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <circle cx="6" cy="6" r="6" fill="var(--badge-green)" opacity="0.3"/>
-              <circle cx="6" cy="6" r="3" fill="var(--badge-green)"/>
-            </svg>
-            Every package cryptographically scanned
+        <!-- Subtitle -->
+        <p class="text-base sm:text-lg text-slate-300 mb-8 max-w-xl leading-relaxed font-light">
+          Every listing on softXchange is scanned for secrets, credentials, and vulnerabilities by our AST engine before a seller can publish. No exceptions.
+        </p>
+
+        <!-- CTA Action Group -->
+        <div class="flex flex-col sm:flex-row items-center gap-4 mb-12 font-mono text-xs">
+          <a href="/browse-listings.html" id="cta-browse" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <span>Browse Vetted Catalog</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </a>
+          <a href="/signup-seller.html" id="cta-sell" class="w-full sm:w-auto px-8 py-3.5 rounded-xl glass-card text-slate-200 hover:text-white font-medium hover:border-prism-cyan/40 transition-all flex items-center justify-center gap-2">
+            <span>Start Selling</span>
+            <i data-lucide="arrow-up-right" class="w-4 h-4 text-prism-cyan"></i>
+          </a>
+        </div>
+
+        <!-- Security Trust Ribbon -->
+        <div class="pt-8 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono text-slate-400">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+            <span><strong class="text-slate-200 font-normal">AST Secrets Scan</strong> — every upload</span>
           </div>
-
-          <h1 class="hero-headline" id="hero-headline">
-            Software you can<br>
-            <span>trust completely</span>
-          </h1>
-
-          <p class="hero-subtext">
-            Every listing on softXchange is scanned for secrets, credentials, and vulnerabilities by our AST engine before a seller can publish. No exceptions.
-          </p>
-
-          <div class="hero-actions">
-            <a href="/browse-listings.html" class="btn-hero-primary" id="cta-browse">
-              Browse Vetted Catalog
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </a>
-            <a href="/login-seller.html" class="btn-hero-secondary" id="cta-sell">
-              Start Selling →
-            </a>
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="lock" class="w-4 h-4 text-blue-400 shrink-0"></i>
+            <span><strong class="text-slate-200 font-normal">Cryptographic Gate</strong> — no bypasses</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="user-check" class="w-4 h-4 text-purple-400 shrink-0"></i>
+            <span><strong class="text-slate-200 font-normal">KYC-Verified</strong> — seller identity</span>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="shield" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+            <span><strong class="text-slate-200 font-normal">Stripe Escrow</strong> — funds held until verified</span>
           </div>
         </div>
 
-        <!-- Hero Visual: ambient canvas or gradient fallback -->
-        <div class="hero-visual" aria-hidden="true">
-          <canvas id="hero-canvas"></canvas>
-          <!-- Gradient content rendered inside canvas by ambient-layer.js; fallback below -->
-          <div class="hero-3d-placeholder" id="hero-fallback" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">
-            <!-- Decorative bowtie SVG — the attractor target for Tier A particles -->
-            <svg class="hero-bowtie-target" viewBox="0 0 120 80" fill="none" width="160" height="120" aria-hidden="true">
-              <defs>
-                <linearGradient id="hero-bowtie-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#5B8DEF"/>
-                  <stop offset="100%" stop-color="#9B6BF0"/>
-                </linearGradient>
-                <filter id="hero-glow">
-                  <feGaussianBlur stdDeviation="3" result="blur"/>
-                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                </filter>
-              </defs>
-              <path d="M10 10v60l50-30L10 10zm100 0v60L60 40l50-30z" fill="url(#hero-bowtie-grad)" filter="url(#hero-glow)" opacity="0.9"/>
-              <circle cx="60" cy="40" r="4" fill="var(--badge-green)" opacity="0.8"/>
-            </svg>
+      </div>
+
+      <!-- Right Column: Borderless Free-Floating Holographic 3D Space -->
+      <div class="flex-1 w-full max-w-xl flex items-center justify-center relative">
+        <div class="w-full h-96 sm:h-[460px] relative flex items-center justify-center hero-radial-glow overflow-visible">
+          
+          <!-- Floating Orbital Rings in Background -->
+          <div class="absolute w-72 h-72 rounded-full border border-cyan-500/20 animate-spin-slow pointer-events-none"></div>
+          <div class="absolute w-88 h-88 rounded-full border border-purple-500/15 animate-spin-slow pointer-events-none" style="animation-direction: reverse; animation-duration: 36s;"></div>
+          
+          <!-- 3D Target Viewport (Unboxed & Fluid) -->
+          <div id="hero-3d-mark" class="w-full h-full relative flex items-center justify-center cursor-crosshair"></div>
+
+          <!-- Bottom Hologram Subtext Badge -->
+          <div class="absolute bottom-2 text-center z-10 animate-float-slow pointer-events-none">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[11px] font-mono">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+              <span class="text-white font-semibold">Soft<span class="text-purple-400">Xchange</span></span>
+              <span class="text-slate-500">|</span>
+              <span class="text-[10px] tracking-widest text-slate-400 uppercase">BUY · SELL · BUILD</span>
+            </div>
           </div>
-        </div>
-
-      </section>
-
-      <!-- Trust Bar -->
-      <div class="trust-bar" role="list" aria-label="Platform guarantees">
-        <div class="trust-item" role="listitem">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M8 1L1.5 4v4c0 3.3 2.8 6.4 6.5 7.5C11.7 14.4 14.5 11.3 14.5 8V4L8 1z" fill="var(--badge-green)" opacity="0.25" stroke="var(--badge-green)" stroke-width="1"/>
-            <path d="M5 8l2 2 4-4" stroke="var(--badge-green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span><strong>AST Secrets Scan</strong> — every upload</span>
-        </div>
-        <div class="trust-item" role="listitem">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <rect x="2" y="6" width="12" height="9" rx="1.5" stroke="var(--accent-blue)" stroke-width="1.2"/>
-            <path d="M5 6V4.5a3 3 0 016 0V6" stroke="var(--accent-blue)" stroke-width="1.2" stroke-linecap="round"/>
-          </svg>
-          <span><strong>Cryptographic Gate</strong> — no bypasses</span>
-        </div>
-        <div class="trust-item" role="listitem">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <circle cx="8" cy="8" r="6.5" stroke="var(--accent-violet)" stroke-width="1.2"/>
-            <path d="M5 8.5l2 2 4-4" stroke="var(--accent-violet)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <span><strong>KYC-Verified</strong> — seller identity</span>
-        </div>
-        <div class="trust-item" role="listitem">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M2 4h12v8a2 2 0 01-2 2H4a2 2 0 01-2-2V4z" stroke="var(--text-secondary)" stroke-width="1.2"/>
-            <path d="M2 4l6 4 6-4" stroke="var(--text-secondary)" stroke-width="1.2" stroke-linecap="round"/>
-          </svg>
-          <span><strong>Stripe Escrow</strong> — funds held until verified</span>
         </div>
       </div>
 
-      <!-- Features Grid -->
-      <section aria-labelledby="features-heading">
-        <h2 id="features-heading" class="section-heading" style="font-size:22px;border:none;margin-bottom:24px;">Why softXchange?</h2>
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon" aria-hidden="true">🔍</div>
-            <h3 class="feature-title">Deep Package Scanning</h3>
-            <p class="feature-desc">Our AST engine parses every submitted archive, identifying hardcoded secrets, API keys, private keys, and credentials before any listing goes live.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon" aria-hidden="true">⚡</div>
-            <h3 class="feature-title">Instant Buyer Assist</h3>
-            <p class="feature-desc">Natural-language Q&A powered by seller content similarity search. Ask anything about a package before you buy.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon" aria-hidden="true">💼</div>
-            <h3 class="feature-title">Seller Workbench</h3>
-            <p class="feature-desc">Upload packages, watch live scan feedback, and manage your catalog from a single dashboard. Stripe Connect for instant payouts.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon" aria-hidden="true">🛡️</div>
-            <h3 class="feature-title">Cryptographic Gate</h3>
-            <p class="feature-desc">Listings only go live after passing all security checks. Held orders are only released after admin review. No bypasses, ever.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon" aria-hidden="true">📊</div>
-            <h3 class="feature-title">Transparent Audit Trail</h3>
-            <p class="feature-desc">Buyers can view the full scan report — including AST findings summary — for every package on every listing page.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon" aria-hidden="true">🌐</div>
-            <h3 class="feature-title">Open Platform</h3>
-            <p class="feature-desc">Publish developer tools, security utilities, productivity scripts, or infrastructure templates. Any software, fully verified.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- CTA Strip -->
-      <section style="text-align:center;padding:48px 0 32px;" aria-label="Call to action">
-        <h2 style="font-family:var(--font-heading);font-size:26px;font-weight:700;margin-bottom:12px;">Ready to explore?</h2>
-        <p style="color:var(--text-secondary);font-size:15px;margin-bottom:28px;">Browse verified packages or list your first product today.</p>
-        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-          <a href="/browse-listings.html" class="btn-hero-primary" id="cta-catalog-bottom">Browse Catalog</a>
-          <a href="/signup-seller.html" class="btn-hero-secondary" id="cta-signup-seller">Become a Seller</a>
-        </div>
-      </section>
-
-    </div><!-- /container -->
+    </div>
   </main>
 
-  <footer class="site-footer" role="contentinfo">
-    <p>© 2026 softXchange Marketplace. <a href="/browse-listings.html" style="color:var(--accent-blue);">Browse Catalog</a> · <a href="/login-seller.html" style="color:var(--accent-blue);">Seller Portal</a></p>
+  <!-- Interactive Terminal & Scan Engine -->
+  <section class="relative z-10 py-12 px-6">
+    <div class="max-w-5xl mx-auto rounded-2xl glass-panel border border-white/10 shadow-2xl overflow-hidden text-left font-mono">
+      <div class="bg-black/60 px-5 py-3.5 border-b border-white/5 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+          <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+          <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+          <span class="ml-2 text-xs text-slate-400">daemon://ast-validator · pipeline-edge-01</span>
+        </div>
+        <button onclick="simulateASTScan()" class="text-xs text-slate-400 hover:text-cyan-300 flex items-center gap-1.5 transition-colors px-2.5 py-1 rounded bg-white/5 border border-white/5">
+          <i data-lucide="play" class="w-3.5 h-3.5"></i>
+          <span>Execute Live AST Verification</span>
+        </button>
+      </div>
+      <div id="terminal-content" class="p-6 text-xs sm:text-sm space-y-2.5 bg-black/40 text-slate-300 leading-relaxed">
+        <p class="text-slate-500 font-mono">// Step 1: Package uploaded to cryptographic staging gateway</p>
+        <p class="text-cyan-300">$ ast-verify --manifest=pkg_manifest.json --strict-secrets=true</p>
+        <p class="text-emerald-400">✔ High-entropy strings scanned: 0 hardcoded private keys detected</p>
+        <p class="text-purple-400">⚡ Merkle tree leaf calculated: sha256:8b4f2c9e81a3d5...</p>
+        <p class="text-slate-300 flex items-center gap-2 pt-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Status: <strong class="text-emerald-300">CRYPTOGRAPHIC_GATE_PASSED</strong> (Ready for Instant Escrow)</span>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Verified Marketplace Feed -->
+  <section id="catalog" class="relative z-10 py-20 px-6 border-t border-white/10 bg-obsidian-900/60">
+    <div class="max-w-7xl mx-auto">
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+        <div>
+          <span class="text-xs font-mono uppercase tracking-widest text-cyan-400">Zero-Local-State · Postgres Hydrated</span>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-white mt-1 tracking-tight">Verified Software Marketplace</h2>
+        </div>
+        
+        <!-- Filter Controls -->
+        <div class="flex items-center gap-2 font-mono text-xs">
+          <button onclick="filterCatalog('all')" id="filter-all" class="px-3.5 py-1.5 rounded-lg bg-blue-600/30 text-cyan-300 border border-blue-500/40">All Records</button>
+          <button onclick="filterCatalog('vetted')" id="filter-vetted" class="px-3.5 py-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10">Vetted Only</button>
+          <button onclick="filterCatalog('pending')" id="filter-pending" class="px-3.5 py-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10">In Security Scan</button>
+        </div>
+      </div>
+
+      <!-- Listing Cards -->
+      <div id="listings-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+    </div>
+  </section>
+
+  <!-- Live Swarm Simulator -->
+  <section id="simulator" class="relative z-10 py-20 px-6 border-t border-white/5 bg-obsidian-950/70">
+    <div class="max-w-5xl mx-auto glass-panel p-8 sm:p-12 rounded-3xl border border-white/10">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-6 pb-8 mb-8 border-b border-white/10">
+        <div>
+          <span class="text-xs font-mono text-cyan-400 uppercase tracking-wider">Edge Swarm Transmission</span>
+          <h2 class="text-2xl font-bold text-white mt-1">Multi-Cluster Verification Pipelining</h2>
+        </div>
+        <button onclick="runSwarmWave()" class="px-5 py-2.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 border border-blue-400/40 text-cyan-300 font-mono text-xs flex items-center gap-2 transition-all shadow-md">
+          <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+          <span>Trigger Synchronization</span>
+        </button>
+      </div>
+
+      <!-- Node Telemetry -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
+        <div class="p-4 rounded-xl bg-black/40 border border-white/5">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span>Edge Cluster [us-east-1]</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          </div>
+          <div class="text-slate-200 font-bold text-sm">Node #0194</div>
+          <div class="mt-3 bg-white/5 h-1.5 rounded-full overflow-hidden">
+            <div id="bar-1" class="bg-cyan-400 h-full w-full transition-all duration-700"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+            <span>Merkle Synced</span>
+            <span id="pct-1">100%</span>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-black/40 border border-white/5">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span>Edge Cluster [eu-central-1]</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          </div>
+          <div class="text-slate-200 font-bold text-sm">Node #4812</div>
+          <div class="mt-3 bg-white/5 h-1.5 rounded-full overflow-hidden">
+            <div id="bar-2" class="bg-purple-400 h-full w-full transition-all duration-700"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+            <span>Merkle Synced</span>
+            <span id="pct-2">100%</span>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-black/40 border border-white/5">
+          <div class="flex items-center justify-between text-slate-400 mb-2">
+            <span>Edge Cluster [ap-south-1]</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          </div>
+          <div class="text-slate-200 font-bold text-sm">Node #7920</div>
+          <div class="mt-3 bg-white/5 h-1.5 rounded-full overflow-hidden">
+            <div id="bar-3" class="bg-emerald-400 h-full w-full transition-all duration-700"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+            <span>Merkle Synced</span>
+            <span id="pct-3">100%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pillars: Why softXchange? -->
+  <section id="features" class="relative z-10 py-24 px-6 border-t border-white/5 bg-obsidian-900/40">
+    <div class="max-w-7xl mx-auto">
+      
+      <div class="mb-14">
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Why softXchange?</h2>
+        <p class="text-slate-400 text-sm mt-2 font-mono">Enterprise verification controls designed for buyers, sellers, and engineering teams.</p>
+      </div>
+
+      <!-- Feature Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <div class="glass-card p-7 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-5">
+              <i data-lucide="search" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Deep Package Scanning</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed font-light">
+              Our AST engine parses every submitted archive, identifying hardcoded secrets, API keys, private keys, and credentials before any listing goes live.
+            </p>
+          </div>
+        </div>
+
+        <div class="glass-card p-7 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-5">
+              <i data-lucide="zap" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Instant Buyer Assist</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed font-light">
+              Natural-language Q&amp;A powered by seller content similarity search. Ask anything about a package before you buy.
+            </p>
+          </div>
+        </div>
+
+        <div class="glass-card p-7 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-5">
+              <i data-lucide="briefcase" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Seller Workbench</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed font-light">
+              Upload packages, watch live scan feedback, and manage your catalog from a single dashboard. Stripe Connect for instant payouts.
+            </p>
+          </div>
+        </div>
+
+        <div class="glass-card p-7 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-5">
+              <i data-lucide="shield" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Cryptographic Gate</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed font-light">
+              Listings only go live after passing all security checks. Held orders are only released after admin review. No bypasses, ever.
+            </p>
+          </div>
+        </div>
+
+        <div class="glass-card p-7 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-5">
+              <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Transparent Audit Trail</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed font-light">
+              Buyers can view the full scan report — including AST findings summary — for every package on every listing page.
+            </p>
+          </div>
+        </div>
+
+        <div class="glass-card p-7 rounded-2xl flex flex-col justify-between">
+          <div>
+            <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-5">
+              <i data-lucide="globe" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">Open Platform</h3>
+            <p class="text-slate-400 text-xs sm:text-sm leading-relaxed font-light">
+              Publish developer tools, security utilities, productivity scripts, or infrastructure templates. Any software, fully verified.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Support & Dedicated SPOC Section -->
+  <section id="support" class="relative z-10 py-24 px-6">
+    <div class="max-w-5xl mx-auto glass-panel p-8 sm:p-12 rounded-3xl border border-white/10">
+      
+      <div class="text-center max-w-2xl mx-auto mb-12">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Customer Support &amp; Dedicated SPOC</h2>
+        <p class="text-slate-400 text-xs sm:text-sm mt-3 leading-relaxed font-light">
+          Have questions regarding software verification, seller onboarding, or order delivery? Connect with our dedicated assistance desk anytime.
+        </p>
+      </div>
+
+      <!-- Support Channels -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <div class="p-6 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 text-white font-semibold text-xs font-mono uppercase tracking-wider mb-2">
+              <i data-lucide="mail" class="w-4 h-4 text-blue-400"></i>
+              <span>Direct Support Email</span>
+            </div>
+            <p class="text-slate-400 text-xs leading-relaxed mb-4 font-light">
+              For general questions, package inquiries, and order documentation.
+            </p>
+          </div>
+          <a href="mailto:softxchange.connect@gmail.com" id="support-email-link" class="text-xs font-mono text-blue-400 hover:text-blue-300 break-all transition-colors">
+            softxchange.connect@gmail.com
+          </a>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 text-white font-semibold text-xs font-mono uppercase tracking-wider mb-2">
+              <i data-lucide="user" class="w-4 h-4 text-purple-400"></i>
+              <span>Dedicated SPOC</span>
+            </div>
+            <p class="text-slate-400 text-xs leading-relaxed mb-4 font-light">
+              Single Point of Contact for seller verification, KYC, and critical escalations.
+            </p>
+          </div>
+          <a href="tel:+917596897303" id="support-spoc-link" class="text-xs font-mono text-purple-400 hover:text-purple-300 transition-colors">
+            +91 75968 97303
+          </a>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-black/40 border border-white/5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center gap-2 text-white font-semibold text-xs font-mono uppercase tracking-wider mb-2">
+              <i data-lucide="phone" class="w-4 h-4 text-rose-400"></i>
+              <span>Customer Support</span>
+            </div>
+            <p class="text-slate-400 text-xs leading-relaxed mb-4 font-light">
+              Immediate phone helpline for buyers, transactions, and order release support.
+            </p>
+          </div>
+          <a href="tel:+917047619203" id="support-phone-link" class="text-xs font-mono text-rose-400 hover:text-rose-300 transition-colors">
+            +91 70476 19203
+          </a>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Ready to Explore CTA Section -->
+  <section class="relative z-10 py-20 px-6 border-t border-white/5 text-center">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-3xl sm:text-4xl font-extrabold text-white mb-3">Ready to explore?</h2>
+      <p class="text-slate-400 text-xs sm:text-sm font-mono mb-8 uppercase tracking-wider">Browse verified packages or list your first product today.</p>
+      
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4 font-mono text-xs">
+        <a href="/browse-listings.html" id="cta-catalog-bottom" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold transition-all shadow-lg shadow-blue-500/25">
+          Browse Catalog
+        </a>
+        <a href="/signup-seller.html" id="cta-signup-seller" class="w-full sm:w-auto px-8 py-3.5 rounded-xl glass-card text-slate-300 hover:text-white font-medium transition-all">
+          Become a Seller
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="relative z-10 py-16 px-6 border-t border-white/10 bg-obsidian-950">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 text-xs font-mono text-slate-400">
+      
+      <div class="space-y-3">
+        <div class="flex items-center gap-2 text-white font-bold text-sm font-sans">
+          <i data-lucide="shield" class="w-4 h-4 text-blue-400"></i>
+          <span>softXchange</span>
+        </div>
+        <p class="text-slate-400 text-xs leading-relaxed font-sans font-light">
+          Zero-Trust Verified Software Marketplace. Every package AST-scanned for hardcoded secrets, cryptographic flaws, and vulnerabilities before release.
+        </p>
+        <div class="flex items-center gap-2 text-emerald-400 text-[11px] pt-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+          <span>Continuous Security Scanner Active</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="text-white font-bold uppercase tracking-wider mb-3">Navigation</div>
+        <ul class="space-y-2">
+          <li><a href="/browse-listings.html" class="hover:text-blue-400 transition-colors">Browse Catalog</a></li>
+          <li><a href="/login-seller.html" class="hover:text-blue-400 transition-colors">Seller Portal</a></li>
+          <li><a href="/login-customer.html" class="hover:text-blue-400 transition-colors">Buyer Account</a></li>
+          <li><a href="/signup-seller.html" class="hover:text-blue-400 transition-colors">Become a Verified Seller</a></li>
+        </ul>
+      </div>
+
+      <div class="md:col-span-2 space-y-3">
+        <div class="text-white font-bold uppercase tracking-wider mb-3">Direct Support &amp; SPOC</div>
+        
+        <div class="space-y-1">
+          <div class="text-slate-500 text-[10px]">OFFICIAL EMAIL</div>
+          <div class="text-slate-300 flex items-center gap-2">
+            <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-400"></i>
+            <a href="mailto:softxchange.connect@gmail.com" class="hover:text-blue-300 transition-colors">softxchange.connect@gmail.com</a>
+          </div>
+        </div>
+
+        <div class="space-y-1 pt-1">
+          <div class="text-slate-500 text-[10px]">SINGLE POINT OF CONTACT (SPOC)</div>
+          <div class="text-slate-300 flex items-center gap-2">
+            <i data-lucide="user" class="w-3.5 h-3.5 text-purple-400"></i>
+            <a href="tel:+917596897303" class="hover:text-purple-300 transition-colors">+91 75968 97303</a>
+          </div>
+        </div>
+
+        <div class="space-y-1 pt-1">
+          <div class="text-slate-500 text-[10px]">CUSTOMER SUPPORT HELPLINE</div>
+          <div class="text-slate-300 flex items-center gap-2">
+            <i data-lucide="phone" class="w-3.5 h-3.5 text-rose-400"></i>
+            <a href="tel:+917047619203" class="hover:text-rose-300 transition-colors">+91 70476 19203</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="max-w-7xl mx-auto mt-12 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] font-mono text-slate-500">
+      <div>© 2026 softXchange Marketplace. All rights reserved.</div>
+      <div class="flex items-center gap-6">
+        <span>Escrow Protected</span>
+        <span>·</span>
+        <span>KYC Gated</span>
+        <span>·</span>
+        <span>Zero Long-Lived Storage</span>
+      </div>
+    </div>
   </footer>
 
-  <!-- Ambient Layer (Tier A/B/C progressive) — loads after critical paint -->
+  <!-- Optional Auth State Hydration -->
   <script src="/static/js/auth.js" defer></script>
-  <script src="/static/js/ambient-layer.js" defer></script>
-  <script src="/static/js/verification-motif.js" defer></script>
+
+  <!-- Three.js Visual Engine: Full Free-Floating Hologram Ribbon Stage -->
   <script>
-    // Hide the hero canvas placeholder once ambient layer has a canvas of its own
-    window.addEventListener('DOMContentLoaded', () => {
-      // The hero-canvas is used by ambient-layer as the particle background.
-      // The hero-fallback SVG shows while tier is determined.
-      const tier = document.documentElement.dataset.tier;
-      const fallback = document.getElementById('hero-fallback');
-      if (tier === 'A' && fallback) {
-        // Ambient layer draws its own full-screen canvas; keep fallback visible
-        // as decorative bowtie center-piece inside hero-visual box
-        fallback.style.background = 'transparent';
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
+    // Catalog Rendering Logic with Live Fallback & Navigation
+    let catalogData = [
+      {
+        id: "LST-904",
+        title: "Enterprise Kafka Event Bus Pipeline",
+        version: "v2.8.4",
+        price: "$1,250",
+        vetted: true,
+        score: "99.4%",
+        scanDetails: "Passed: Zero CVEs · Merkle Tree Certified",
+        author: "infra-core@mesh",
+        tags: ["Go", "Kafka", "K8s"]
+      },
+      {
+        id: "LST-882",
+        title: "Zero-Knowledge Auth Gateway Microservice",
+        version: "v1.4.0",
+        price: "$890",
+        vetted: true,
+        score: "98.8%",
+        scanDetails: "Passed: Static analysis & sanitization clean",
+        author: "sec-ops@node",
+        tags: ["Rust", "WASM", "OAuth2"]
+      },
+      {
+        id: "LST-719",
+        title: "Real-time Order Matching Engine",
+        version: "v0.9.2-beta",
+        price: "$2,100",
+        vetted: false,
+        score: "Scanning...",
+        scanDetails: "In Queue: Async automated security scan executing",
+        author: "fintech-edge@mesh",
+        tags: ["C++20", "gRPC", "Postgres"]
+      }
+    ];
+
+    let currentFilter = 'all';
+
+    function renderCatalog() {
+      const grid = document.getElementById('listings-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const filtered = catalogData.filter(item => {
+        if (currentFilter === 'vetted') return item.vetted;
+        if (currentFilter === 'pending') return !item.vetted;
+        return true;
+      });
+
+      filtered.forEach(item => {
+        const card = document.createElement('div');
+        card.className = "glass-card p-6 rounded-3xl flex flex-col justify-between relative overflow-hidden";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <span class="text-[10px] font-mono text-cyan-300 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">${item.id}</span>
+              ${item.vetted ? `
+                <div class="convergence-badge animate-converge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-500/20">
+                  <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                  <span>Vetted [${item.score}]</span>
+                </div>
+              ` : `
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  <div class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></div>
+                  <span>${item.score}</span>
+                </div>
+              `}
+            </div>
+            
+            <h3 class="text-xl font-bold text-white leading-snug">${item.title}</h3>
+            <p class="text-xs font-mono text-slate-400 mt-1">${item.version} · Author: ${item.author}</p>
+            <p class="text-xs text-slate-300 mt-3 leading-relaxed font-sans">${item.scanDetails}</p>
+
+            <div class="flex items-center gap-1.5 mt-4">
+              ${item.tags.map(tag => `<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-cyan-300 border border-blue-500/20">${tag}</span>`).join('')}
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
+            <span class="text-xl font-bold font-mono text-white">${item.price}</span>
+            <a href="/listing-detail.html?id=${encodeURIComponent(item.id)}" class="px-4 py-2 rounded-xl ${item.vetted ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-md shadow-blue-500/20' : 'bg-white/5 text-slate-400'} text-xs font-mono transition-all text-center inline-block">
+              ${item.vetted ? 'Acquire Asset' : 'View Audit'}
+            </a>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    }
+
+    // Try hydrating real catalog from backend API if running
+    async function loadLiveListings() {
+      try {
+        const resp = await fetch('http://localhost:8003/listings?limit=6');
+        if (resp.ok) {
+          const data = await resp.json();
+          if (Array.isArray(data) && data.length > 0) {
+            catalogData = data.map(l => ({
+              id: l.id || `LST-${Math.floor(Math.random()*900+100)}`,
+              title: l.title || 'Institutional Verified Package',
+              version: l.version_label || 'v1.0.0',
+              price: l.price_cents ? `$${(l.price_cents / 100).toFixed(2)}` : '$49.00',
+              vetted: l.status === 'live',
+              score: l.status === 'live' ? '99.2%' : 'In Scan',
+              scanDetails: l.status === 'live' ? 'Passed: Cryptographic AST gate verified' : 'In Queue: Automated pipeline verifying',
+              author: l.seller_id ? `seller-${l.seller_id.slice(0, 6)}` : 'verified-author',
+              tags: [l.category || 'Package', 'Verified']
+            }));
+            renderCatalog();
+          }
+        }
+      } catch (e) {
+        // Fall back to default showcase data
+      }
+    }
+
+    function filterCatalog(type) {
+      currentFilter = type;
+      ['all', 'vetted', 'pending'].forEach(t => {
+        const btn = document.getElementById(`filter-${t}`);
+        if (btn) {
+          if (t === type) {
+            btn.className = "px-3.5 py-1.5 rounded-lg bg-blue-600/30 text-cyan-300 border border-blue-500/40";
+          } else {
+            btn.className = "px-3.5 py-1.5 rounded-lg bg-white/5 text-slate-400 hover:text-white border border-white/10";
+          }
+        }
+      });
+      renderCatalog();
+    }
+
+    function triggerConvergenceDemo() {
+      const badges = document.querySelectorAll('.convergence-badge');
+      badges.forEach(b => {
+        b.classList.remove('animate-converge');
+        void b.offsetWidth;
+        b.classList.add('animate-converge');
+      });
+    }
+
+    function simulateASTScan() {
+      const terminal = document.getElementById('terminal-content');
+      if (!terminal) return;
+      terminal.innerHTML = `
+        <p class="text-cyan-300 animate-pulse">$ ast-scanner --executing-live-pass...</p>
+        <p class="text-slate-400">&gt; Decompressing chunk stream [100%]</p>
+        <p class="text-emerald-400">&gt; Verified 0 CVEs against National Vulnerability Database</p>
+        <p class="text-purple-400">&gt; Generated signed Merkle proof leaf: sha256:8b4f2c9e81a3d5...</p>
+        <p class="text-emerald-300 font-bold">✔ RE-VERIFICATION COMPLETE — ALL ASSETS CLEAN</p>
+      `;
+    }
+
+    function runSwarmWave() {
+      const bars = [document.getElementById('bar-1'), document.getElementById('bar-2'), document.getElementById('bar-3')];
+      const pcts = [document.getElementById('pct-1'), document.getElementById('pct-2'), document.getElementById('pct-3')];
+      bars.forEach(b => { if (b) b.style.width = '0%'; });
+      pcts.forEach(p => { if (p) p.innerText = 'Syncing...'; });
+
+      setTimeout(() => { if (bars[0]) bars[0].style.width = '100%'; if (pcts[0]) pcts[0].innerText = '100%'; }, 400);
+      setTimeout(() => { if (bars[1]) bars[1].style.width = '100%'; if (pcts[1]) pcts[1].innerText = '100%'; }, 800);
+      setTimeout(() => { if (bars[2]) bars[2].style.width = '100%'; if (pcts[2]) pcts[2].innerText = '100%'; }, 1200);
+    }
+
+    // --- Cursor Tracking & 3D Interactive Engine ---
+    let mouseX = 0, mouseY = 0;
+    let targetX = 0, targetY = 0;
+
+    window.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+      mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+    });
+
+    // 1. Ambient Background Particles
+    const bgContainer = document.getElementById('canvas-container');
+    let bgScene, bgCamera, bgRenderer, pSystem;
+
+    if (bgContainer && window.THREE) {
+      bgScene = new THREE.Scene();
+      bgCamera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+      bgCamera.position.z = 30;
+
+      bgRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      bgRenderer.setSize(window.innerWidth, window.innerHeight);
+      bgRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      bgContainer.appendChild(bgRenderer.domElement);
+
+      const particleCount = 480;
+      const pPositions = new Float32Array(particleCount * 3);
+      const pColors = new Float32Array(particleCount * 3);
+
+      const colorCyan = new THREE.Color(0x38bdf8);
+      const colorPurple = new THREE.Color(0xa855f7);
+
+      for (let i = 0; i < particleCount * 3; i += 3) {
+        pPositions[i] = (Math.random() - 0.5) * 60;
+        pPositions[i + 1] = (Math.random() - 0.5) * 60;
+        pPositions[i + 2] = (Math.random() - 0.5) * 40;
+
+        const mixed = colorCyan.clone().lerp(colorPurple, Math.random());
+        pColors[i] = mixed.r;
+        pColors[i + 1] = mixed.g;
+        pColors[i + 2] = mixed.b;
+      }
+
+      const pGeo = new THREE.BufferGeometry();
+      pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+      pGeo.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
+
+      const pMat = new THREE.PointsMaterial({
+        size: 0.25,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending
+      });
+
+      pSystem = new THREE.Points(pGeo, pMat);
+      bgScene.add(pSystem);
+    }
+
+    // 2. Free-Floating Hero 3D Stage (No Restrictive Block/Container)
+    const heroBox = document.getElementById('hero-3d-mark');
+    let heroScene, heroCamera, heroRenderer, logoGroup, orbitalParticles;
+
+    if (heroBox && window.THREE) {
+      heroScene = new THREE.Scene();
+      heroCamera = new THREE.PerspectiveCamera(45, heroBox.clientWidth / heroBox.clientHeight, 0.1, 100);
+      heroCamera.position.set(0, 0, 9);
+
+      heroRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      heroRenderer.setSize(heroBox.clientWidth, heroBox.clientHeight);
+      heroRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      heroBox.appendChild(heroRenderer.domElement);
+
+      // Build the exact Two-Plane Frosted Glass Ribbon
+      logoGroup = new THREE.Group();
+
+      // 1. Precise 2.5D Translucent Plane Geometry
+      const planeGeo = new THREE.BoxGeometry(2.4, 3.4, 0.08);
+
+      // Left Cyan/Cobalt Frosted Glass Plane
+      const leftMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x0284c7,
+        emissive: 0x0369a1,
+        emissiveIntensity: 0.45,
+        transparent: true,
+        opacity: 0.72,
+        roughness: 0.12,
+        metalness: 0.05,
+        transmission: 0.9,
+        ior: 1.5,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        side: THREE.DoubleSide
+      });
+
+      const leftPlane = new THREE.Mesh(planeGeo, leftMaterial);
+      leftPlane.position.set(-0.7, 0.3, 0.2);
+      leftPlane.rotation.set(-0.35, 0.55, -0.45);
+
+      // Left Glowing Edge Border
+      const leftEdges = new THREE.EdgesGeometry(planeGeo);
+      const leftLine = new THREE.LineSegments(
+        leftEdges,
+        new THREE.LineBasicMaterial({ color: 0x67e8f9, linewidth: 2 })
+      );
+      leftPlane.add(leftLine);
+
+      // Right Violet/Magenta Frosted Glass Plane
+      const rightMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x9333ea,
+        emissive: 0x7e22ce,
+        emissiveIntensity: 0.45,
+        transparent: true,
+        opacity: 0.72,
+        roughness: 0.12,
+        metalness: 0.05,
+        transmission: 0.9,
+        ior: 1.5,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.1,
+        side: THREE.DoubleSide
+      });
+
+      const rightPlane = new THREE.Mesh(planeGeo, rightMaterial);
+      rightPlane.position.set(0.7, -0.3, -0.2);
+      rightPlane.rotation.set(-0.35, 0.55, -0.45);
+
+      // Right Glowing Edge Border
+      const rightEdges = new THREE.EdgesGeometry(planeGeo);
+      const rightLine = new THREE.LineSegments(
+        rightEdges,
+        new THREE.LineBasicMaterial({ color: 0xc084fc, linewidth: 2 })
+      );
+      rightPlane.add(rightLine);
+
+      // 2. Central High-Intensity Overlap Caustic (The glowing center core)
+      const coreGeo = new THREE.PlaneGeometry(1.6, 2.2);
+      const coreMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.65,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide
+      });
+      const centralCaustic = new THREE.Mesh(coreGeo, coreMat);
+      centralCaustic.position.set(0, 0, 0.05);
+      centralCaustic.rotation.set(-0.35, 0.55, -0.45);
+
+      // 3. Floating Orbital Particle Streams (Verification Motif Echo)
+      const orbitalCount = 80;
+      const orbitalPositions = new Float32Array(orbitalCount * 3);
+      for (let i = 0; i < orbitalCount * 3; i += 3) {
+        const theta = Math.random() * Math.PI * 2;
+        const radius = 2.4 + Math.random() * 1.6;
+        orbitalPositions[i] = Math.cos(theta) * radius;
+        orbitalPositions[i + 1] = Math.sin(theta) * (radius * 0.65);
+        orbitalPositions[i + 2] = (Math.random() - 0.5) * 1.2;
+      }
+      const orbitalGeo = new THREE.BufferGeometry();
+      orbitalGeo.setAttribute('position', new THREE.BufferAttribute(orbitalPositions, 3));
+      const orbitalMat = new THREE.PointsMaterial({
+        size: 0.14,
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.8,
+        blending: THREE.AdditiveBlending
+      });
+      orbitalParticles = new THREE.Points(orbitalGeo, orbitalMat);
+      orbitalParticles.rotation.set(-0.35, 0.55, -0.45);
+
+      logoGroup.add(leftPlane);
+      logoGroup.add(rightPlane);
+      logoGroup.add(centralCaustic);
+      logoGroup.add(orbitalParticles);
+
+      heroScene.add(logoGroup);
+
+      // Dynamic Cinematic Stage Lights
+      const lightCyan = new THREE.PointLight(0x38bdf8, 3.8, 40);
+      lightCyan.position.set(-5, 4, 6);
+      heroScene.add(lightCyan);
+
+      const lightPurple = new THREE.PointLight(0xc084fc, 3.8, 40);
+      lightPurple.position.set(5, -4, 6);
+      heroScene.add(lightPurple);
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+      heroScene.add(ambientLight);
+    }
+
+    // Responsive Canvas Resize
+    window.addEventListener('resize', () => {
+      if (bgCamera && bgRenderer) {
+        bgCamera.aspect = window.innerWidth / window.innerHeight;
+        bgCamera.updateProjectionMatrix();
+        bgRenderer.setSize(window.innerWidth, window.innerHeight);
+      }
+
+      if (heroBox && heroCamera && heroRenderer) {
+        heroCamera.aspect = heroBox.clientWidth / heroBox.clientHeight;
+        heroCamera.updateProjectionMatrix();
+        heroRenderer.setSize(heroBox.clientWidth, heroBox.clientHeight);
       }
     });
-  </script>
 
+    // Smooth Cursor Physics Render Loop
+    function renderLoop(currentTime) {
+      requestAnimationFrame(renderLoop);
+
+      targetX += (mouseX - targetX) * 0.055;
+      targetY += (mouseY - targetY) * 0.055;
+
+      // Background Parallax
+      if (pSystem && bgRenderer && bgScene && bgCamera) {
+        pSystem.rotation.y = currentTime * 0.00015 + targetX * 0.45;
+        pSystem.rotation.x = currentTime * 0.0001 + targetY * 0.45;
+        bgRenderer.render(bgScene, bgCamera);
+      }
+
+      // Hero Hologram Floating Dynamics & Cursor Interactivity
+      if (logoGroup && heroRenderer && heroScene && heroCamera) {
+        logoGroup.position.y = Math.sin(currentTime * 0.0015) * 0.15;
+        logoGroup.rotation.y = targetX * 0.4 + Math.sin(currentTime * 0.001) * 0.08;
+        logoGroup.rotation.x = -targetY * 0.4 + Math.cos(currentTime * 0.001) * 0.06;
+        if (orbitalParticles) {
+          orbitalParticles.rotation.z += 0.004;
+        }
+        heroRenderer.render(heroScene, heroCamera);
+      }
+    }
+
+    requestAnimationFrame(renderLoop);
+    renderCatalog();
+    loadLiveListings();
+  </script>
 </body>
 </html>

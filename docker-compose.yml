@@ -23,7 +23,7 @@ services:
 
   # ── Infrastructure: MinIO S3 Object Storage ────────────────────────────────
   minio:
-    image: minio/minio:RELEASE.2024-01-16T16-07-38Z
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: softxchange-minio
     restart: unless-stopped
     environment:
@@ -44,7 +44,7 @@ services:
       - softxchange-network
 
   minio-init:
-    image: minio/mc:RELEASE.2024-01-16T16-06-34Z
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
     container_name: softxchange-minio-init
     depends_on:
       minio:
@@ -176,6 +176,7 @@ services:
         condition: service_healthy
     environment:
       ENVIRONMENT: development
+      DATABASE_URL: postgresql://softxchange:softxchange_dev_pass@postgres:5432/softxchange_listings
       LISTINGS_SERVICE_URL: http://listings-service:8003
     ports:
       - "8006:8006"
@@ -228,7 +229,9 @@ services:
 
   # ── Reverse Proxy & Edge TLS: Caddy (Ports 80, 443) ────────────────────────
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
     container_name: softxchange-caddy
     restart: unless-stopped
     depends_on:
@@ -246,7 +249,6 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-localhost}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:

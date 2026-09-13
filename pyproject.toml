@@ -10,31 +10,46 @@ dependencies = []
 venvPath = "."
 venv = ".venv"
 extraPaths = [
+    "./apps/web-unified",
     "./apps/auth-service",
     "./apps/listings-service",
+    "./apps/payments-service",
+    "./apps/scan-service",
     "./apps/buyer-assist",
     "./apps/seller-assist",
-    "./packages/ml-shared/src"
+    "./apps/broker",
+    "./packages/ml-shared/src",
+    "./Secret Scanner engine"
 ]
 
 [tool.pyrefly]
 python-interpreter-path = "d:/Projects/softXchange/.venv/Scripts/python.exe"
 search-path = [
+    "apps/web-unified",
     "apps/auth-service",
     "apps/listings-service",
+    "apps/payments-service",
+    "apps/scan-service",
     "apps/buyer-assist",
     "apps/seller-assist",
-    "packages/ml-shared/src"
+    "apps/broker",
+    "packages/ml-shared/src",
+    "Secret Scanner engine"
 ]
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
 pythonpath = [
+    "apps/web-unified",
     "apps/auth-service",
     "apps/listings-service",
+    "apps/payments-service",
+    "apps/scan-service",
     "apps/buyer-assist",
     "apps/seller-assist",
-    "packages/ml-shared/src"
+    "apps/broker",
+    "packages/ml-shared/src",
+    "Secret Scanner engine"
 ]
 testpaths = [
     "packages/ml-shared/tests",

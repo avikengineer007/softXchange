@@ -1,9 +1,11 @@
 import logging
+import uuid
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 
 from src.database import SessionLocal
 from src.models.user import User, UserRole, KYCStatus, SellerProfile, utc_now
+from src.models.notification import Notification, NotificationType
 from src.kyc.provider import get_kyc_provider, KYCProvider
 
 logger = logging.getLogger("auth-service.kyc.service")
@@ -117,9 +119,25 @@ def update_seller_kyc_status(
     if target_status == KYCStatus.VERIFIED.value:
         profile.kyc_status = KYCStatus.VERIFIED.value
         profile.payout_enabled = True
+        notif = Notification(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            type=NotificationType.KYC_VERIFIED.value,
+            payload={"message": "Identity verification approved. Payouts enabled.", "status": "verified"},
+            created_at=utc_now(),
+        )
+        db.add(notif)
     elif target_status == KYCStatus.REJECTED.value:
         profile.kyc_status = KYCStatus.REJECTED.value
         profile.payout_enabled = False
+        notif = Notification(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            type=NotificationType.KYC_REJECTED.value,
+            payload={"message": "Identity verification was rejected. Please review submission guidelines.", "status": "rejected"},
+            created_at=utc_now(),
+        )
+        db.add(notif)
     else:
         # Any unexpected value or error fails closed
         profile.kyc_status = KYCStatus.PENDING.value

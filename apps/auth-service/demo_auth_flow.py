@@ -40,6 +40,11 @@ def print_success(detail: str):
 
 def run_demo():
     init_db()
+    from src.models.user import User
+    with SessionLocal() as db:
+        demo_emails = ["customer.demo@softxchange.com", "developer.studio@marketplace.com"]
+        db.query(User).filter(User.email.in_(demo_emails)).delete(synchronize_session=False)
+        db.commit()
     print(f"\n{BOLD}softXchange — Auth Service End-to-End Milestone Verification{RESET}")
     print("=" * 65)
 
@@ -168,10 +173,11 @@ def run_demo():
     client.post("/auth/password-reset/request", json={"email": "developer.studio@marketplace.com"})
 
     # Emulate reset token verification
+    import uuid
     from datetime import timedelta
     from src.models.user import VerificationToken, utc_now
     from src.security import hash_token
-    reset_token_raw = "demo-reset-token-2026"
+    reset_token_raw = f"demo-reset-token-{uuid.uuid4().hex}"
     with SessionLocal() as db:
         db.add(VerificationToken(
             token_hash=hash_token(reset_token_raw),
@@ -201,12 +207,15 @@ def run_demo():
     assert relogin_resp.status_code == 200
     print_success("Login with updated password succeeded")
 
-    # 9. Prompt 5: Static Pages Verification
-    print_step("Prompt 5: Static Pages in Paper/Seal-Green Design System")
+    # 9. Prompt 5: Pure Headless API Verification
+    print_step("Prompt 5: Pure Headless API (Static Unmounted, Redirects to Unified Web)")
     for page in ["/static/login-customer.html", "/static/login-seller.html", "/static/signup-customer.html", "/static/signup-seller.html"]:
         resp = client.get(page)
-        assert resp.status_code == 200
-        print_success(f"Serving {page} (200 OK)")
+        assert resp.status_code == 404
+        print_success(f"Confirmed headless: {page} returns 404")
+    root_resp = client.get("/", follow_redirects=False)
+    assert root_resp.status_code == 307
+    print_success("Root redirect points to unified frontend")
 
     print("\n" + "=" * 65)
     print(f"{GREEN}{BOLD}ALL 5 PROMPTS SUCCESSFULLY VALIDATED END-TO-END!{RESET}\n")

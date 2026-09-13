@@ -78,6 +78,8 @@ def test_auth_service_migrations():
         "verification_tokens",
         "admin_provision_audit_logs",
         "admin_provisioning_state",
+        "notifications",
+        "seller_github_connections",
     ]
     _run_migration_lifecycle("auth-service", expected)
 
@@ -89,6 +91,8 @@ def test_listings_service_migrations_and_privacy_invariant():
         "buyer_questions",
         "buyer_search_events",
         "listing_embeddings",
+        "listing_reviews",
+        "saved_listings",
     ]
     service_dir = REPO_ROOT / "apps" / "listings-service"
     ini_path = service_dir / "alembic.ini"

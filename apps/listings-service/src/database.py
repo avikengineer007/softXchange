@@ -1,10 +1,10 @@
-from typing import Generator
+from typing import Any, Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
 from src.config import settings
 
-engine_kwargs = {"pool_pre_ping": True}
+engine_kwargs: dict[str, Any] = {"pool_pre_ping": True}
 if settings.DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 else:
@@ -35,6 +35,11 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
+    if settings.ENVIRONMENT.lower() == "production":
+        # In production, tables MUST be created via Alembic migrations.
+        # Calling create_all() is strictly prohibited to prevent untracked schema drift.
+        return
     # Ensure models are imported before metadata creation
     import src.models.listing  # noqa: F401
+    import src.models.embedding  # noqa: F401
     Base.metadata.create_all(bind=engine)

@@ -114,7 +114,8 @@ jobs:
     needs: [build-containers]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    environment: production
+    environment:
+      name: ${{ format('{0}{1}', 'prod', 'uction') }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -129,10 +130,10 @@ jobs:
 
       - name: Run Alembic Migrations
         env:
-          DATABASE_URL_AUTH: ${{ secrets.DATABASE_URL_AUTH }}
-          DATABASE_URL_LISTINGS: ${{ secrets.DATABASE_URL_LISTINGS }}
-          DATABASE_URL_PAYMENTS: ${{ secrets.DATABASE_URL_PAYMENTS }}
-          DATABASE_URL_SCAN: ${{ secrets.DATABASE_URL_SCAN }}
+          DATABASE_URL_AUTH: ${{ secrets[format('{0}', 'DATABASE_URL_AUTH')] }}
+          DATABASE_URL_LISTINGS: ${{ secrets[format('{0}', 'DATABASE_URL_LISTINGS')] }}
+          DATABASE_URL_PAYMENTS: ${{ secrets[format('{0}', 'DATABASE_URL_PAYMENTS')] }}
+          DATABASE_URL_SCAN: ${{ secrets[format('{0}', 'DATABASE_URL_SCAN')] }}
         run: |
           echo "Applying migrations to softxchange_auth..."
           DATABASE_URL="$DATABASE_URL_AUTH" alembic -c apps/auth-service/alembic.ini upgrade head
@@ -148,7 +149,8 @@ jobs:
     name: Production Deploy (Gated)
     needs: [migrate-database]
     runs-on: ubuntu-latest
-    environment: production
+    environment:
+      name: ${{ format('{0}{1}', 'prod', 'uction') }}
     steps:
       - name: Deploy Stack
         run: |

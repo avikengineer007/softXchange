@@ -12,15 +12,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-# Ensure apps/listings-service is on sys.path and prior src is cleared
+# Ensure apps/listings-service is on sys.path
 SERVICE_ROOT = Path(__file__).resolve().parent.parent
 if str(SERVICE_ROOT) in sys.path:
     sys.path.remove(str(SERVICE_ROOT))
 sys.path.insert(0, str(SERVICE_ROOT))
-sys.modules.pop("src", None)
-for k in list(sys.modules.keys()):
-    if k.startswith("src."):
-        sys.modules.pop(k, None)
+if "src" in sys.modules and not getattr(sys.modules["src"], "__file__", "").startswith(str(SERVICE_ROOT)):
+    sys.modules.pop("src", None)
+    for k in list(sys.modules.keys()):
+        if k.startswith("src."):
+            sys.modules.pop(k, None)
 
 from src.main import app
 from src.database import Base, get_db
@@ -80,7 +81,9 @@ app.dependency_overrides[get_db] = override_get_db
 @pytest.fixture(autouse=True)
 def setup_db():
     Base.metadata.create_all(bind=test_engine)
+    app.dependency_overrides[get_db] = override_get_db
     yield
+    app.dependency_overrides.pop(get_db, None)
     Base.metadata.drop_all(bind=test_engine)
 
 
@@ -276,6 +279,53 @@ def test_submit_version_calls_scan_service(client, seller_token, monkeypatch):
     assert data["version_label"] == "1.1.0"
     assert data["scan_status"] == "pending_scan"
     assert data["scan_job_id"] == "job-scan-999"
+
+
+def test_submit_version_with_github_url_and_version_alias(client, seller_token, monkeypatch):
+    """Verifies that version submission accepts 'version' alias and auto-detects GitHub URLs in package_path."""
+    create_res = client.post(
+        "/listings",
+        headers={"Authorization": f"Bearer {seller_token}"},
+        json={
+            "title": "GitHub Repo Tool",
+            "description": "Submitting GitHub repo for scanning",
+            "price_cents": 1500,
+            "category": "developer-tools",
+        }
+    )
+    listing_id = create_res.json()["id"]
+
+    captured_call = {}
+    def mock_submit_version(listing_id, version, source_type, git_url, package_content):
+        captured_call.update({
+            "listing_id": listing_id,
+            "version": version,
+            "source_type": source_type,
+            "git_url": git_url,
+            "package_content": package_content,
+        })
+        return {"status": "enqueued", "scan_job_id": "job-scan-gh-001"}
+
+    from src.routes.listings import scanner_client
+    monkeypatch.setattr(scanner_client, "submit_version", mock_submit_version)
+
+    # Submitting with payload matching frontend form format
+    res = client.post(
+        f"/listings/{listing_id}/versions",
+        headers={"Authorization": f"Bearer {seller_token}"},
+        json={
+            "version": "1.0.0",
+            "package_path": "https://github.com/avikengineer007/Aegis-AI-powered-SOC-Analyst.git",
+            "changelog": "Initial public intake",
+        }
+    )
+    assert res.status_code == 202
+    data = res.json()
+    assert data["version_label"] == "1.0.0"
+    assert data["scan_job_id"] == "job-scan-gh-001"
+    assert captured_call["source_type"] == "github"
+    assert captured_call["git_url"] == "https://github.com/avikengineer007/Aegis-AI-powered-SOC-Analyst.git"
+    assert captured_call["version"] == "1.0.0"
 
 
 def test_poll_version_status_triggers_gate(client, seller_token, monkeypatch):
@@ -672,3 +722,51 @@ def test_public_detail_view_permissions(client, seller_token):
     assert res_draft_owner.status_code == 200
     assert res_draft_owner.json()["vetted"] is False
     assert res_draft_owner.json()["badge"] == "Unvetted Draft"
+
+
+def test_listing_detail_github_badge_and_resilient_fallback(client, monkeypatch):
+    """
+    Tests that ListingDetailResponse includes seller_github when auth-service provides it,
+    and falls back cleanly to None without blocking when auth-service is unreachable.
+    """
+    db = TestingSessionLocal()
+    listing = Listing(
+        id="l-gh-test",
+        seller_id="seller-gh-user",
+        title="GitHub Powered Package",
+        description="A great developer tool",
+        price_cents=2500,
+        category="developer-tools",
+        status=ListingStatus.LIVE.value,
+    )
+    db.add(listing)
+    db.commit()
+    db.close()
+
+    # 1. Successful upstream trust fetch
+    from src.models.listing import SellerGitHubBadgeResponse
+
+    def mock_fetch_trust(seller_id):
+        return SellerGitHubBadgeResponse(
+            github_username="dev-octo",
+            github_user_id="998877",
+            public_repo_count=42,
+            account_age_years=3.5,
+        )
+
+    monkeypatch.setattr("src.routes.listings.fetch_seller_public_trust", mock_fetch_trust)
+    res = client.get("/listings/l-gh-test")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["seller_github"] is not None
+    assert data["seller_github"]["github_username"] == "dev-octo"
+    assert data["seller_github"]["public_repo_count"] == 42
+    assert data["seller_github"]["account_age_years"] == 3.5
+
+    # 2. Resilient fallback when auth-service returns None or fails
+    monkeypatch.setattr("src.routes.listings.fetch_seller_public_trust", lambda sid: None)
+    res_fallback = client.get("/listings/l-gh-test")
+    assert res_fallback.status_code == 200
+    data_fallback = res_fallback.json()
+    assert data_fallback["seller_github"] is None
+

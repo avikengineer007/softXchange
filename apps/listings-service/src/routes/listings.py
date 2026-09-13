@@ -1,3 +1,5 @@
+import uuid
+import httpx
 from typing import Optional, List
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -5,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 
 from src.database import get_db
+from src.config import settings
 from src.models.listing import (
     Listing,
     ListingVersion,
@@ -14,6 +17,7 @@ from src.models.listing import (
     ListingUpdate,
     ListingResponse,
     ListingDetailResponse,
+    SellerGitHubBadgeResponse,
     ListingVersionResponse,
     SellerListingItemResponse,
     VersionSubmitRequest,
@@ -22,6 +26,11 @@ from src.models.listing import (
     QuestionCreate,
     QuestionReply,
     QuestionResponse,
+    Review,
+    SavedListing,
+    ReviewCreate,
+    ReviewResponse,
+    ReviewListResponse,
     utc_now,
 )
 from src.auth import require_auth, require_seller, require_admin, get_optional_auth, AuthContext
@@ -29,6 +38,7 @@ from src.auth import require_auth, require_seller, require_admin, get_optional_a
 from src.scanner_client import scanner_client
 from src.gate import evaluate_publish_gate, sync_seller_kyc
 from src.indexer import remove_listing_embedding
+from src.notifications_client import emit_notification
 
 logger = logging.getLogger("listings-service.routes.listings")
 
@@ -203,6 +213,14 @@ def get_my_listings(
             .order_by(ListingVersion.created_at.desc())
             .first()
         )
+        avg_rating = None
+        rev_count = 0
+        if hasattr(l, "reviews") and l.reviews:
+            ratings = [r.rating for r in l.reviews]
+            if ratings:
+                avg_rating = round(sum(ratings) / len(ratings), 2)
+                rev_count = len(ratings)
+
         items.append(
             SellerListingItemResponse(
                 id=l.id,
@@ -214,6 +232,8 @@ def get_my_listings(
                 status_message=l.status_message,
                 version_label=latest_ver.version_label if latest_ver else None,
                 severity_summary=latest_ver.findings_summary if latest_ver else {},
+                average_rating=avg_rating,
+                review_count=rev_count,
                 next_action=_compute_next_action(l.status),
                 created_at=l.created_at,
                 updated_at=l.updated_at,
@@ -287,6 +307,63 @@ def browse_public_listings(
     return [ListingResponse.from_orm_listing(l) for l in listings]
 
 
+# ============================================================================
+# Wishlist / Saved Listings: Fetch Saved
+# ============================================================================
+
+@router.get(
+    "/saved",
+    response_model=List[ListingResponse],
+    summary="Get authenticated buyer's saved wishlist listings",
+)
+def get_saved_listings(
+    auth_ctx: AuthContext = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    """
+    Returns saved wishlist listings for the authenticated buyer.
+    Preserves withdrawn/suspended items with honest status.
+    """
+    saved_entries = (
+        db.query(SavedListing)
+        .filter(SavedListing.buyer_id == auth_ctx.user_id)
+        .order_by(SavedListing.created_at.desc())
+        .all()
+    )
+    result = []
+    for entry in saved_entries:
+        listing = db.query(Listing).filter(Listing.id == entry.listing_id).first()
+        if listing:
+            result.append(ListingResponse.from_orm_listing(listing))
+    return result
+
+
+def fetch_seller_public_trust(seller_id: str, timeout: float = 2.0) -> Optional[SellerGitHubBadgeResponse]:
+    """
+    Fetches seller's public trust signals from auth-service with resilient fallback.
+    If auth-service is slow or unavailable, returns None without blocking the listing query.
+    """
+    url = f"{settings.AUTH_SERVICE_URL}/auth/seller/{seller_id}/public-trust"
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            resp = client.get(url)
+            if resp.status_code == 200:
+                data = resp.json()
+                gh_data = data.get("github")
+                if gh_data:
+                    return SellerGitHubBadgeResponse(
+                        github_username=gh_data.get("github_username", ""),
+                        github_user_id=gh_data.get("github_user_id"),
+                        account_created_at=gh_data.get("account_created_at"),
+                        public_repo_count=gh_data.get("public_repo_count", 0),
+                        connected_at=gh_data.get("connected_at"),
+                        account_age_years=float(gh_data.get("account_age_years", 0.0)),
+                    )
+    except Exception as exc:
+        logger.debug(f"Could not fetch public trust for seller {seller_id}: {exc}")
+    return None
+
+
 @router.get(
     "/{listing_id}",
     response_model=ListingDetailResponse,
@@ -324,6 +401,16 @@ def get_listing_detail(
     is_live = listing.status == ListingStatus.LIVE.value
     badge = "Scanned — 0 critical findings" if is_live else "Unvetted Draft"
 
+    avg_rating = None
+    rev_count = 0
+    if hasattr(listing, "reviews") and listing.reviews:
+        ratings = [r.rating for r in listing.reviews]
+        if ratings:
+            avg_rating = round(sum(ratings) / len(ratings), 2)
+            rev_count = len(ratings)
+
+    seller_github = fetch_seller_public_trust(listing.seller_id)
+
     return ListingDetailResponse(
         id=listing.id,
         seller_id=listing.seller_id,
@@ -337,6 +424,9 @@ def get_listing_detail(
         vetted=is_live,
         badge=badge,
         current_version=current_ver,
+        average_rating=avg_rating,
+        review_count=rev_count,
+        seller_github=seller_github,
         created_at=listing.created_at,
         updated_at=listing.updated_at,
     )
@@ -369,13 +459,41 @@ def submit_version(
     if listing.seller_id != auth_ctx.user_id and not auth_ctx.has_role("admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot submit version for another seller's listing")
 
+    v_label = data.version_label or data.version or "1.0.0"
+    source_type = data.source_type
+    git_url = data.git_url
+    package_content = data.package_content
+
+    # Auto-detect git vs upload from package_path or git_url
+    raw_path = str(data.package_path or git_url or "").strip()
+    if raw_path:
+        path_lower = raw_path.lower()
+        is_git = (
+            path_lower.startswith("http://")
+            or path_lower.startswith("https://")
+            or path_lower.startswith("git@")
+            or "github.com" in path_lower
+            or path_lower.endswith(".git")
+        )
+        if is_git:
+            source_type = "github"
+            git_url = raw_path
+        elif not package_content:
+            import os, base64
+            if os.path.exists(raw_path) and os.path.isfile(raw_path):
+                try:
+                    with open(raw_path, "rb") as f:
+                        package_content = base64.b64encode(f.read()).decode("utf-8")
+                except Exception as exc:
+                    logger.debug(f"Could not read local package {raw_path}: {exc}")
+
     try:
         scan_res = scanner_client.submit_version(
             listing_id=listing.id,
-            version=data.version_label,
-            source_type=data.source_type,
-            git_url=data.git_url,
-            package_content=data.package_content,
+            version=v_label,
+            source_type=source_type,
+            git_url=git_url,
+            package_content=package_content,
         )
         job_id = scan_res.get("scan_job_id")
     except Exception as exc:
@@ -388,7 +506,7 @@ def submit_version(
     # Persist ListingVersion
     new_version = ListingVersion(
         listing_id=listing.id,
-        version_label=data.version_label,
+        version_label=v_label,
         scan_status=ScanStatus.PENDING_SCAN.value,
         scan_job_id=job_id,
     )
@@ -562,6 +680,18 @@ def create_buyer_question(
     db.add(question)
     db.commit()
     db.refresh(question)
+
+    emit_notification(
+        user_id=listing.seller_id,
+        notification_type="question_asked",
+        payload={
+            "listing_id": listing.id,
+            "listing_title": listing.title,
+            "question_id": question.id,
+            "buyer_id": auth_ctx.user_id,
+        },
+    )
+
     return QuestionResponse.model_validate(question)
 
 
@@ -614,7 +744,285 @@ def reply_buyer_question(
     question.responded_at = utc_now()
     db.commit()
     db.refresh(question)
+
+    emit_notification(
+        user_id=question.buyer_id,
+        notification_type="question_answered",
+        payload={
+            "listing_id": listing.id,
+            "listing_title": listing.title,
+            "question_id": question.id,
+            "seller_id": auth_ctx.user_id,
+        },
+    )
+
     return QuestionResponse.model_validate(question)
+
+
+# ============================================================================
+# Wishlist / Saved Listings Endpoints
+# ============================================================================
+
+@router.post(
+    "/{listing_id}/save",
+    summary="Save listing to buyer's wishlist (Idempotent)",
+)
+def save_listing(
+    listing_id: str,
+    auth_ctx: AuthContext = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+
+    existing = (
+        db.query(SavedListing)
+        .filter(SavedListing.buyer_id == auth_ctx.user_id, SavedListing.listing_id == listing_id)
+        .first()
+    )
+    if not existing:
+        saved = SavedListing(
+            id=str(uuid.uuid4()),
+            buyer_id=auth_ctx.user_id,
+            listing_id=listing_id,
+            created_at=utc_now(),
+        )
+        db.add(saved)
+        db.commit()
+
+    return {"saved": True, "listing_id": listing_id}
+
+
+@router.delete(
+    "/{listing_id}/save",
+    summary="Remove listing from buyer's wishlist (Idempotent)",
+)
+def unsave_listing(
+    listing_id: str,
+    auth_ctx: AuthContext = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+
+    existing = (
+        db.query(SavedListing)
+        .filter(SavedListing.buyer_id == auth_ctx.user_id, SavedListing.listing_id == listing_id)
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        db.commit()
+
+    return {"saved": False, "listing_id": listing_id}
+
+
+@router.post(
+    "/{listing_id}/toggle-save",
+    summary="Toggle listing saved status in wishlist",
+)
+def toggle_save_listing(
+    listing_id: str,
+    auth_ctx: AuthContext = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+
+    existing = (
+        db.query(SavedListing)
+        .filter(SavedListing.buyer_id == auth_ctx.user_id, SavedListing.listing_id == listing_id)
+        .first()
+    )
+    if existing:
+        db.delete(existing)
+        db.commit()
+        return {"saved": False, "listing_id": listing_id}
+    else:
+        saved = SavedListing(
+            id=str(uuid.uuid4()),
+            buyer_id=auth_ctx.user_id,
+            listing_id=listing_id,
+            created_at=utc_now(),
+        )
+        db.add(saved)
+        db.commit()
+        return {"saved": True, "listing_id": listing_id}
+
+
+@router.get(
+    "/{listing_id}/saved-status",
+    summary="Check if listing is saved by authenticated user",
+)
+def check_saved_status(
+    listing_id: str,
+    auth_ctx: AuthContext = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    existing = (
+        db.query(SavedListing)
+        .filter(SavedListing.buyer_id == auth_ctx.user_id, SavedListing.listing_id == listing_id)
+        .first()
+    )
+    return {"saved": existing is not None, "listing_id": listing_id}
+
+
+# ============================================================================
+# Reviews & Ratings Endpoints
+# ============================================================================
+
+def check_buyer_purchase_entitlement(buyer_id: str, listing_id: str) -> bool:
+    """
+    Calls payments-service to verify that the buyer purchased this listing.
+    Requires X-Internal-Secret for inter-service authentication.
+    """
+    url = f"{settings.PAYMENTS_SERVICE_URL}/orders/check-entitlement/{buyer_id}/{listing_id}"
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            resp = client.get(
+                url,
+                headers={
+                    "X-Internal-Secret": settings.INTERNAL_SERVICE_SECRET,
+                },
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return bool(data.get("has_purchased"))
+            elif resp.status_code in [401, 403, 404]:
+                return False
+            else:
+                logger.warning(f"Payments service returned {resp.status_code} for entitlement check")
+                return False
+    except Exception as exc:
+        logger.error(f"Failed to check buyer entitlement against payments-service: {exc}")
+        return False
+
+
+@router.post(
+    "/{listing_id}/reviews",
+    response_model=ReviewResponse,
+    summary="Submit or update a review for a purchased listing (Buyer only)",
+)
+def submit_or_update_review(
+    listing_id: str,
+    data: ReviewCreate,
+    auth_ctx: AuthContext = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    """
+    Authenticated buyer only, gated by real entitlement check against payments-service.
+    One review per (buyer_id, listing_id) — resubmission updates, never duplicates.
+    Bumps updated_at on edit, reflecting is_edited: True.
+    Negative constraint: NEVER calls ml_shared.enforce_guardrails().
+    """
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+
+    # Gate: verified purchase check against payments-service
+    if not check_buyer_purchase_entitlement(auth_ctx.user_id, listing_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Verified purchase required to leave a review",
+        )
+
+    # Check for existing review
+    existing = (
+        db.query(Review)
+        .filter(Review.listing_id == listing_id, Review.buyer_id == auth_ctx.user_id)
+        .first()
+    )
+
+    ver_id = listing.current_version_id
+    if not ver_id and listing.versions:
+        ver_id = listing.versions[0].id
+
+    clean_text = data.review_text.strip() if data.review_text else None
+
+    # Negative constraint: No ml_shared.enforce_guardrails()
+    if existing:
+        existing.rating = data.rating
+        existing.review_text = clean_text
+        if ver_id:
+            existing.listing_version_id = ver_id
+        existing.is_edited = True
+        existing.updated_at = utc_now()
+        review = existing
+    else:
+        now = utc_now()
+        review = Review(
+            id=str(uuid.uuid4()),
+            listing_id=listing_id,
+            listing_version_id=ver_id or "unknown",
+            buyer_id=auth_ctx.user_id,
+            rating=data.rating,
+            review_text=clean_text,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(review)
+
+    db.commit()
+    db.refresh(review)
+
+    # Emit notification to seller
+    emit_notification(
+        user_id=listing.seller_id,
+        notification_type="listing_review_received",
+        payload={
+            "listing_id": listing.id,
+            "listing_title": listing.title,
+            "review_id": review.id,
+            "rating": review.rating,
+            "buyer_id": review.buyer_id,
+        },
+    )
+
+    return ReviewResponse.model_validate(review)
+
+
+@router.get(
+    "/{listing_id}/reviews",
+    response_model=ReviewListResponse,
+    summary="Get paginated reviews for a listing (Public, newest first)",
+)
+def get_listing_reviews(
+    listing_id: str,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
+
+    total = db.query(Review).filter(Review.listing_id == listing_id).count()
+    reviews = (
+        db.query(Review)
+        .filter(Review.listing_id == listing_id)
+        .order_by(Review.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    ratings = [r.rating for r in db.query(Review.rating).filter(Review.listing_id == listing_id).all()]
+    avg_rating = round(sum(ratings) / len(ratings), 2) if ratings else None
+
+    rev_list = [ReviewResponse.model_validate(r) for r in reviews]
+    page = (offset // limit) + 1 if limit > 0 else 1
+    return ReviewListResponse(
+        items=rev_list,
+        reviews=rev_list,
+        total=total,
+        page=page,
+        limit=limit,
+        average_rating=avg_rating,
+        review_count=total,
+    )
 
 
 # ============================================================================

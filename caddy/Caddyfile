@@ -1,0 +1,76 @@
+# softXchange Production Caddy Configuration
+# Automates TLS (Let's Encrypt / ZeroSSL), HTTP -> HTTPS redirect, and internal API routing.
+
+{$DOMAIN:localhost} {
+    # ── Security & Hardening Headers ───────────────────────────────────────────
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+
+    # ── Microservice API Routing (Strict Service Boundaries) ──────────────────
+    # 1. Auth & Identity Service (Port 8001)
+    handle /auth/* {
+        reverse_proxy auth-service:8001
+    }
+    handle /kyc/* {
+        reverse_proxy auth-service:8001
+    }
+    handle /admin/* {
+        reverse_proxy auth-service:8001
+    }
+    handle /notifications/* {
+        reverse_proxy auth-service:8001
+    }
+
+    # 2. Security Vetting & Scanner Service (Port 8002)
+    handle /scan/* {
+        reverse_proxy scan-service:8002
+    }
+
+    # 3. Software Listings & Catalog Service (Port 8003)
+    handle /listings/* {
+        reverse_proxy listings-service:8003
+    }
+
+    # 4. Payments, Orders & Stripe Connect Service (Port 8004)
+    handle /orders/* {
+        reverse_proxy payments-service:8004
+    }
+    handle /payments/* {
+        reverse_proxy payments-service:8004
+    }
+    handle /connect/* {
+        reverse_proxy payments-service:8004
+    }
+
+    # 5. Buyer Intelligence & Search Assist (Port 8005)
+    handle /assist/* {
+        reverse_proxy buyer-assist:8005
+    }
+
+    # 6. Seller Intelligence Assist (Port 8006)
+    handle /suggest/* {
+        reverse_proxy seller-assist:8006
+    }
+    handle /explain/* {
+        reverse_proxy seller-assist:8006
+    }
+    handle /reply/* {
+        reverse_proxy seller-assist:8006
+    }
+
+    # 7. Broker Service (Port 8007)
+    handle /broker/* {
+        reverse_proxy broker:8007
+    }
+
+    # ── Marketplace Frontend (Port 8000) ───────────────────────────────────────
+    # Serves all HTML pages, CSS tokens, JS clients, and 3D glTF models
+    handle /* {
+        reverse_proxy web-unified:8000
+    }
+}

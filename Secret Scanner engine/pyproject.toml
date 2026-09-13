@@ -16,3 +16,11 @@ static-scan = "static_analysis.cli:main"
 scan-package = "static_analysis.cli:main_combined"
 cve-scan = "cve_check.cli:main"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["secrets_scanner*", "static_analysis*", "cve_check*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json"]
+
+

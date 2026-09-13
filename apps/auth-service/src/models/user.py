@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional, Any, Dict, List
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
-from sqlalchemy import String, Boolean, DateTime, JSON, ForeignKey
+from sqlalchemy import String, Integer, Boolean, DateTime, JSON, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database import Base
@@ -51,6 +51,7 @@ class User(Base):
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     verification_tokens: Mapped[List["VerificationToken"]] = relationship("VerificationToken", back_populates="user", cascade="all, delete-orphan")
     seller_profile: Mapped[Optional["SellerProfile"]] = relationship("SellerProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    github_connection: Mapped[Optional["SellerGitHubConnection"]] = relationship("SellerGitHubConnection", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     @property
     def role(self) -> str:
@@ -94,6 +95,25 @@ class SellerProfile(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="seller_profile")
+
+
+class SellerGitHubConnection(Base):
+    """
+    Seller GitHub OAuth connection for complementary developer trust signal.
+    Optionally connected by sellers. Does NOT affect KYC status or payout_enabled.
+    """
+    __tablename__ = "seller_github_connections"
+
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    github_username: Mapped[str] = mapped_column(String(255), nullable=False)
+    github_user_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    account_created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    public_repo_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    connected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    user: Mapped["User"] = relationship("User", back_populates="github_connection")
 
 
 class VerificationToken(Base):
@@ -299,4 +319,31 @@ class SellerPendingKYCItem(BaseModel):
     kyc_status: str
     created_at: datetime
     details: Optional[Dict[str, Any]] = None
+
+
+class SellerGitHubConnectionResponse(BaseModel):
+    user_id: str
+    github_username: str
+    github_user_id: str
+    account_created_at: datetime
+    public_repo_count: int
+    connected_at: datetime
+    account_age_years: float = Field(default=0.0)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SellerGitHubStatusResponse(BaseModel):
+    user_id: str
+    is_connected: bool
+    connection: Optional[SellerGitHubConnectionResponse] = None
+
+
+class SellerPublicTrustBadge(BaseModel):
+    seller_id: str
+    kyc_verified: bool
+    payout_enabled: bool
+    github_connected: bool
+    github: Optional[SellerGitHubConnectionResponse] = None
+
 

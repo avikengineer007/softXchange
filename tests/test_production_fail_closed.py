@@ -200,3 +200,80 @@ def test_stripe_webhook_rejects_missing_or_invalid_signature(monkeypatch):
         )
         assert resp_bad_sig.status_code == 400
         assert "signature verification failed" in resp_bad_sig.json()["detail"].lower()
+
+
+def test_production_boot_without_migrations_fails_closed(monkeypatch, tmp_path):
+    """
+    In production (ENVIRONMENT=production), init_db() strictly prohibits auto-creating tables.
+    If booted against an unmigrated database, tables are absent and requests fail closed.
+    Tables exist only after an explicit migration step.
+    """
+    _clean_src_modules()
+    sys.path = [p for p in sys.path if "apps" not in p]
+    sys.path.insert(0, str(AUTH_ROOT))
+
+    db_path = tmp_path / "prod_unmigrated.db"
+    db_url = f"sqlite:///{db_path}"
+
+    from src.config import settings
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(settings, "DATABASE_URL", db_url)
+    _provide_valid_rsa_keys(monkeypatch, settings)
+    monkeypatch.setattr(settings, "ADMIN_PROVISIONING_CODE", "sx_prod_sec_0123456789abcdef0123456789abcdef")
+    monkeypatch.setattr(settings, "ADMIN_CODE_EXPLICITLY_ROTATED", True)
+
+    import src.database as db_mod
+    monkeypatch.setattr(db_mod.settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(db_mod.settings, "DATABASE_URL", db_url)
+
+    from sqlalchemy import create_engine, inspect
+    from sqlalchemy.orm import sessionmaker
+    test_engine = create_engine(db_url)
+    monkeypatch.setattr(db_mod, "engine", test_engine)
+    monkeypatch.setattr(db_mod, "SessionLocal", sessionmaker(bind=test_engine))
+
+    from src.main import app
+
+    # 1. Boot service in production mode without running migrations
+    with TestClient(app) as client:
+        inspector = inspect(test_engine)
+        assert len(inspector.get_table_names()) == 0, "Security violation: init_db() auto-created tables in production!"
+
+        # Query fails closed with 500 (table does not exist)
+        resp = client.post("/auth/login", json={"email": "nobody@example.com", "password": "Password123!"})
+        assert resp.status_code == 500
+
+    # 2. Explicitly apply migrations (migrate-then-boot)
+    monkeypatch.setenv("DATABASE_URL", db_url)
+    from alembic import command
+    from alembic.config import Config
+    cfg = Config(str(AUTH_ROOT / "alembic.ini"))
+    cfg.set_main_option("script_location", str(AUTH_ROOT / "alembic"))
+    cfg.set_main_option("sqlalchemy.url", db_url)
+    command.upgrade(cfg, "head")
+
+    inspector_after = inspect(test_engine)
+    assert "users" in inspector_after.get_table_names()
+    assert "notifications" in inspector_after.get_table_names()
+    assert "seller_github_connections" in inspector_after.get_table_names()
+
+    # 3. Boot service after migration: now queries execute properly (401 for unknown user)
+    with TestClient(app) as client:
+        resp = client.post("/auth/login", json={"email": "nobody@example.com", "password": "Password123!"})
+        assert resp.status_code == 401
+
+
+def test_seed_marketplace_fails_closed_in_production(monkeypatch):
+    """seed_marketplace.py must refuse to inject synthetic unscanned listings in production."""
+    _clean_src_modules()
+    sys.path = [p for p in sys.path if "apps" not in p]
+    sys.path.insert(0, str(REPO_ROOT / "apps" / "listings-service"))
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    if "seed_marketplace" in sys.modules:
+        del sys.modules["seed_marketplace"]
+    import seed_marketplace
+
+    with pytest.raises(RuntimeError, match="SECURITY FATAL: seed_marketplace.py injects synthetic mock listings"):
+        seed_marketplace.seed()
+
+

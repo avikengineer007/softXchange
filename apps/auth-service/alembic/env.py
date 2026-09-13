@@ -18,6 +18,7 @@ for mod in list(sys.modules.keys()):
 from src.config import settings
 from src.database import Base
 import src.models.user
+import src.models.notification
 
 config = context.config
 
@@ -28,7 +29,7 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    return settings.DATABASE_URL
+    return os.environ.get("DATABASE_URL") or settings.DATABASE_URL
 
 
 def run_migrations_offline() -> None:

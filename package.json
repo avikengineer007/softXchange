@@ -10,7 +10,8 @@
     "3d:copy": "powershell -ExecutionPolicy Bypass -File scripts/copy-assets.ps1",
     "3d:build": "npm run 3d:generate && npm run 3d:copy",
     "check:assets": "node packages/3d-assets/check-asset-budget.js",
-    "precheck": "npm run check:assets"
+    "test:tier": "node packages/3d/test_tier_detection.js",
+    "precheck": "npm run check:assets && npm run test:tier"
   },
   "workspaces": [
     "apps/*",

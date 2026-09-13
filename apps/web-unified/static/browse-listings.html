@@ -74,7 +74,81 @@
     </div>
   </main>
 
+  <footer class="site-footer" role="contentinfo">
+    <div class="footer-container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h3>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="ft-grad-bl" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="var(--accent-blue)"/>
+                  <stop offset="100%" stop-color="var(--accent-violet)"/>
+                </linearGradient>
+              </defs>
+              <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#ft-grad-bl)"/>
+            </svg>
+            softXchange
+          </h3>
+          <p>Zero-Trust Verified Software Marketplace. Every package AST-scanned for hardcoded secrets, cryptographic flaws, and vulnerabilities before release.</p>
+          <div class="footer-status-pill">
+            <span style="color:var(--badge-green);font-size:10px;" aria-hidden="true">●</span> Continuous Security Scanner Active
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navigation</h4>
+          <ul class="footer-links">
+            <li><a href="/browse-listings.html">Browse Catalog</a></li>
+            <li><a href="/login-seller.html">Seller Portal</a></li>
+            <li><a href="/login-customer.html">Buyer Account</a></li>
+            <li><a href="/signup-seller.html">Become a Verified Seller</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Direct Support &amp; SPOC</h4>
+          <ul class="footer-contacts">
+            <li class="footer-contact-item">
+              <span class="footer-contact-label">Official Email</span>
+              <a href="mailto:softxchange.connect@gmail.com" class="footer-contact-link" id="footer-email-link">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                softxchange.connect@gmail.com
+              </a>
+            </li>
+            <li class="footer-contact-item">
+              <span class="footer-contact-label">Single Point of Contact (SPOC)</span>
+              <a href="tel:+917596897303" class="footer-contact-link" id="footer-spoc-link">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><circle cx="12" cy="11" r="3"></circle></svg>
+                +91 75968 97303
+              </a>
+            </li>
+            <li class="footer-contact-item">
+              <span class="footer-contact-label">Customer Support Helpline</span>
+              <a href="tel:+917047619203" class="footer-contact-link" id="footer-phone-link">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                +91 70476 19203
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 softXchange Marketplace. All rights reserved.</div>
+        <div class="footer-bottom-links">
+          <span>Escrow Protected</span>
+          <span aria-hidden="true">·</span>
+          <span>KYC Gated</span>
+          <span aria-hidden="true">·</span>
+          <span>Zero Long-Lived Storage</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
   <script src="/static/js/auth.js" defer></script>
+  <script src="/static/js/api-client.js" defer></script>
   <script src="/static/js/ambient-layer.js" defer></script>
   <script src="/static/js/verification-motif.js" defer></script>
   <script>
@@ -130,15 +204,26 @@
           card.setAttribute('aria-label', `${item.title} — ${item.price_cents === 0 ? 'Free' : '$' + (item.price_cents / 100).toFixed(2)}`);
 
           const formattedPrice = item.price_cents === 0 ? 'Free' : `$${(item.price_cents / 100).toFixed(2)}`;
+          const ratingHtml = (item.review_count > 0 && item.average_rating !== null)
+            ? `<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#f59e0b;font-weight:600;"><span aria-hidden="true">★</span> ${Number(item.average_rating).toFixed(1)} <span style="color:var(--text-muted);font-weight:400;">(${item.review_count})</span></span>`
+            : `<span style="font-size:12px;color:var(--text-muted);">No reviews yet</span>`;
 
           card.innerHTML = `
             <div>
-              <div class="listing-card-header">
-                <span class="card-category">${escapeHtml(item.category || 'Software')}</span>
-                <span class="card-price">${formattedPrice}</span>
+              <div class="listing-card-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+                <div>
+                  <span class="card-category">${escapeHtml(item.category || 'Software')}</span>
+                  <span class="card-price">${formattedPrice}</span>
+                </div>
+                <button type="button" class="btn-wishlist-toggle" data-listing-id="${escapeHtml(item.id)}" aria-label="Save to Wishlist" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-muted);transition:all 0.2s ease;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="heart-icon">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                  </svg>
+                </button>
               </div>
               <h3 class="card-title">${escapeHtml(item.title)}</h3>
               <p class="card-description">${escapeHtml(item.description || 'No description provided.')}</p>
+              <div style="margin-top:8px;">${ratingHtml}</div>
             </div>
             <div>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid var(--color-border);">
@@ -152,6 +237,31 @@
           `;
           container.appendChild(card);
         });
+
+        // Attach wishlist toggle listeners
+        container.querySelectorAll('.btn-wishlist-toggle').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!window.SoftXchangeAuth || !window.SoftXchangeAuth.getAccessToken()) {
+              window.location.href = `/login-customer.html?next=${encodeURIComponent(window.location.href)}`;
+              return;
+            }
+            const lid = btn.getAttribute('data-listing-id');
+            try {
+              const toggleRes = await window.SoftXchangeAuth.fetchWithAuth(`${LISTINGS_API}/listings/${lid}/toggle-save`, { method: 'POST' });
+              if (toggleRes.ok) {
+                const data = await toggleRes.json();
+                applyWishlistState(btn, data.saved);
+              }
+            } catch (err) {
+              console.error('Failed to toggle wishlist save', err);
+            }
+          });
+        });
+
+        // Hydrate wishlist states if authenticated
+        syncWishlistStates();
 
         // Trigger badge convergence for newly rendered cards
         if (window.VerificationMotif) {
@@ -167,6 +277,46 @@
       }
     }
 
+    function applyWishlistState(btn, isSaved) {
+      const svg = btn.querySelector('svg');
+      if (isSaved) {
+        btn.setAttribute('aria-label', 'Remove from Wishlist');
+        btn.style.color = '#ef4444';
+        btn.style.background = 'rgba(239, 68, 68, 0.15)';
+        btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+        if (svg) {
+          svg.setAttribute('fill', '#ef4444');
+          svg.setAttribute('stroke', '#ef4444');
+        }
+      } else {
+        btn.setAttribute('aria-label', 'Save to Wishlist');
+        btn.style.color = 'var(--text-muted)';
+        btn.style.background = 'rgba(255, 255, 255, 0.06)';
+        btn.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+        if (svg) {
+          svg.setAttribute('fill', 'none');
+          svg.setAttribute('stroke', 'currentColor');
+        }
+      }
+    }
+
+    async function syncWishlistStates() {
+      if (!window.SoftXchangeAuth || !window.SoftXchangeAuth.getAccessToken()) return;
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${LISTINGS_API}/listings/saved`);
+        if (res.ok) {
+          const savedListings = await res.json();
+          const savedIds = new Set(savedListings.map(s => s.id));
+          document.querySelectorAll('.btn-wishlist-toggle').forEach(btn => {
+            const lid = btn.getAttribute('data-listing-id');
+            if (savedIds.has(lid)) {
+              applyWishlistState(btn, true);
+            }
+          });
+        }
+      } catch (_) {}
+    }
+
     document.getElementById('btn-search').addEventListener('click', loadCatalog);
     document.getElementById('search-query').addEventListener('keyup', (e) => {
       if (e.key === 'Enter') loadCatalog();
@@ -176,10 +326,11 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       loadCatalog();
-
-      // Admin nav link — reads from in-memory SoftXchangeAuth, no localStorage
-      // The persistent admin bar is injected by auth.js if user is admin
     });
+  </script>
+  <script type="module">
+    import { initCardTilt } from '/static/js/card-tilt.js';
+    initCardTilt();
   </script>
 </body>
 </html>

@@ -7,9 +7,14 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.view.SurfaceHolder
 import android.view.SurfaceView
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -119,6 +124,7 @@ fun LandingScreen(
             .fillMaxSize()
             .background(BgApp)
             .systemBarsPadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
     ) {
         // ── Critical UI: renders immediately, no Filament dependency ──────────
@@ -253,7 +259,111 @@ fun LandingScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(36.dp))
+
+        // ── Customer Support & Dedicated SPOC Section ───────────────────────────
+        Text(
+            text = "Customer Support & SPOC",
+            style = MaterialTheme.typography.titleMedium,
+            color = TextPrimary,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Direct hotline and assistance for verified buyers and sellers.",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+        )
+
+        // Email Support Card
+        Surface(
+            color = BgSurfaceElevated,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:softxchange.connect@gmail.com"))
+                    context.startActivity(intent)
+                }
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "OFFICIAL SUPPORT EMAIL",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AccentBlue,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "softxchange.connect@gmail.com",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Dedicated SPOC Card
+        Surface(
+            color = BgSurfaceElevated,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+917596897303"))
+                    context.startActivity(intent)
+                }
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "DEDICATED SPOC (KYC & ESCALATIONS)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = AccentViolet,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "+91 75968 97303",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Customer Support Helpline Card
+        Surface(
+            color = BgSurfaceElevated,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+917047619203"))
+                    context.startActivity(intent)
+                }
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "CUSTOMER SUPPORT HELPLINE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ColorDanger,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "+91 70476 19203",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(36.dp))
     }
 }
 

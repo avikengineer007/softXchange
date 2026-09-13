@@ -1,6 +1,7 @@
+import hmac
 import logging
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import JSONResponse, Response
 from sqlalchemy.orm import Session
 
@@ -13,6 +14,7 @@ from src.models.entitlement import Entitlement, EntitlementStatus
 from src.fraud import evaluate_fraud_rules
 from src.stripe_client import stripe_client
 from src.storage import generate_signed_download_url, verify_download_token
+from src.notifications_client import emit_notification
 
 logger = logging.getLogger("payments-service.routes.orders")
 
@@ -275,6 +277,82 @@ def download_package(token: str = Query(..., description="Signed ephemeral downl
     }
 
 
+@router.get(
+    "/check-entitlement/{buyer_id}/{listing_id}",
+    summary="Inter-service & buyer entitlement verification",
+)
+def check_entitlement(
+    buyer_id: str,
+    listing_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Checks if a buyer has purchased and is entitled to a listing.
+
+    HARDENED ANTI-ENUMERATION ACCESS CONTROL:
+    Restricted to prevent purchase enumeration:
+    1. Internal service holding X-Internal-Secret matching settings.INTERNAL_SERVICE_SECRET.
+    2. Authenticated buyer checking their own entitlement (JWT sub == buyer_id).
+    3. Authenticated admin.
+    4. Development-mode internal caller (X-Internal-Caller == 'listings-service').
+    All unauthenticated or probing external requests fail closed (401).
+    """
+    internal_secret = request.headers.get("X-Internal-Secret")
+    is_internal_service = bool(
+        internal_secret and hmac.compare_digest(internal_secret, settings.INTERNAL_SERVICE_SECRET)
+    )
+
+    is_authorized_user = False
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:].strip()
+        try:
+            from src.auth import decode_access_token
+            claims = decode_access_token(token)
+            if claims.get("sub") == buyer_id or "admin" in claims.get("roles", []):
+                is_authorized_user = True
+        except Exception:
+            pass
+
+    is_dev_caller = (
+        settings.ENVIRONMENT.lower() == "development"
+        and request.headers.get("X-Internal-Caller") == "listings-service"
+    )
+
+    if not (is_internal_service or is_authorized_user or is_dev_caller):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Access denied: valid internal service secret or authorized buyer session required",
+        )
+
+    order = (
+        db.query(Order)
+        .filter(
+            Order.buyer_id == buyer_id,
+            Order.listing_id == listing_id,
+            Order.status == OrderStatus.PAID.value,
+        )
+        .order_by(Order.created_at.desc())
+        .first()
+    )
+
+    if order:
+        return {
+            "has_entitlement": True,
+            "order_id": order.id,
+            "listing_version_id": order.listing_version_id,
+            "purchased_at": order.created_at.isoformat() if order.created_at else None,
+        }
+
+    return {
+        "has_entitlement": False,
+        "order_id": None,
+        "listing_version_id": None,
+        "purchased_at": None,
+    }
+
+
 # FAIL-CLOSED PRODUCTION GUARDRAIL:
 # The /test-confirm route is strictly registered in non-production environments.
 # In production, this route does not exist at all, preventing unauthorized payment bypass.
@@ -329,6 +407,31 @@ if settings.ENVIRONMENT.lower() != "production":
 
         db.commit()
         db.refresh(order)
+
+        # Emit order_paid notification to seller
+        emit_notification(
+            user_id=order.seller_id,
+            notification_type="order_paid",
+            payload={
+                "order_id": order.id,
+                "listing_id": order.listing_id,
+                "amount_cents": order.amount_cents,
+                "buyer_id": order.buyer_id,
+                "role": "seller",
+            },
+        )
+        # Emit order_paid notification to buyer
+        emit_notification(
+            user_id=order.buyer_id,
+            notification_type="order_paid",
+            payload={
+                "order_id": order.id,
+                "listing_id": order.listing_id,
+                "amount_cents": order.amount_cents,
+                "role": "buyer",
+            },
+        )
+
         return OrderResponse.from_orm_order(order)
 
 

@@ -34,6 +34,16 @@ def main():
     print("==========================================================\n")
 
     py_exe = sys.executable
+    try:
+        import pytest  # noqa: F401
+    except ImportError:
+        venv_py_win = REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+        venv_py_nix = REPO_ROOT / ".venv" / "bin" / "python"
+        if venv_py_win.exists():
+            py_exe = str(venv_py_win)
+        elif venv_py_nix.exists():
+            py_exe = str(venv_py_nix)
+
     total_passed = 0
     failures = []
     start_all = time.perf_counter()

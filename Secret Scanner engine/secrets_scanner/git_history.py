@@ -102,7 +102,7 @@ def stream_git_diff_entries(
     try:
         while True:
             # Enforce active wall-clock timeout
-            if timeout_seconds is not None and (time.monotonic() - start_time) > timeout_seconds:
+            if timeout_seconds is not None and (time.monotonic() - start_time) >= timeout_seconds:
                 proc.kill()
                 proc.wait()
                 raise GitHistoryScanError(

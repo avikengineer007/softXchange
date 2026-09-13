@@ -1,17 +1,16 @@
 /**
  * softXchange — Unified API Client
- * Centralized HTTP client configuration for all platform microservices.
+ * Centralized HTTP client singleton for all platform microservices.
  *
  * Enforces:
  *   - Config-driven service URLs with sensible localhost defaults
- *   - Automatic JWT Authorization header injection
- *   - Standardized error handling & response parsing
+ *   - Automated JWKS-backed token validation
+ *   - Unified exponential backoff retry policies (transient 5xx/network errors)
+ *   - Structured error boundaries and ApiError class
  *   - ZERO local application data caching (pure API client)
  */
 
 // ── Service Endpoints Configuration ──────────────────────────────────────────
-// When served over HTTPS or via standard reverse proxy (port 80/443), route to
-// relative paths on the same origin. When running bare-metal dev, use port defaults.
 const isReverseProxy = typeof window !== 'undefined' && 
   (window.location.protocol === 'https:' || window.location.port === '' || window.location.port === '80' || window.location.port === '443');
 
@@ -39,8 +38,120 @@ export const API_CONFIG = {
   ...(typeof window !== 'undefined' && window.__CONFIG__ ? window.__CONFIG__ : {}),
 };
 
-// ── Base Fetch Wrapper ────────────────────────────────────────────────────────
-async function request(url, options = {}) {
+// ── Structured API Error Class ───────────────────────────────────────────────
+export class ApiError extends Error {
+  constructor(status, code, message, details = null, raw = null) {
+    super(message || `Request failed with status ${status}`);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code || `HTTP_${status}`;
+    this.details = details;
+    this.raw = raw;
+  }
+}
+
+// ── JWKS Cache & Client Token Validation ──────────────────────────────────────
+let _cachedJwks = null;
+let _jwksFetchPromise = null;
+
+export async function fetchJwks() {
+  if (_cachedJwks) return _cachedJwks;
+  if (_jwksFetchPromise) return _jwksFetchPromise;
+
+  _jwksFetchPromise = (async () => {
+    try {
+      const res = await fetch(`${API_CONFIG.authServiceUrl}/auth/.well-known/jwks.json`);
+      if (res.ok) {
+        _cachedJwks = await res.json();
+        return _cachedJwks;
+      }
+    } catch (_) {
+      // Fail soft if offline or auth-service not responding
+    } finally {
+      _jwksFetchPromise = null;
+    }
+    return null;
+  })();
+
+  return _jwksFetchPromise;
+}
+
+/**
+ * Validates JWT token structure and expiration against current time.
+ * Verifies matching 'kid' if JWKS is cached.
+ */
+export async function validateTokenWithJwks(token) {
+  if (!token || typeof token !== 'string') return { valid: false, reason: 'missing_token' };
+  const parts = token.split('.');
+  if (parts.length !== 3) return { valid: false, reason: 'malformed_jwt' };
+
+  try {
+    const header = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')));
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+
+    // Check expiration with 5-second leeway
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now - 5) {
+      return { valid: false, reason: 'expired', payload };
+    }
+
+    // Optional JWKS kid check
+    const jwks = await fetchJwks();
+    if (jwks && Array.isArray(jwks.keys) && header.kid) {
+      const match = jwks.keys.some(k => k.kid === header.kid);
+      if (!match) {
+        return { valid: false, reason: 'unrecognized_key_id', header };
+      }
+    }
+
+    return { valid: true, payload, header };
+  } catch (err) {
+    return { valid: false, reason: 'parse_error', error: err.message };
+  }
+}
+
+// ── In-Memory Token Resolver ──────────────────────────────────────────────────
+function getActiveToken() {
+  if (typeof window === 'undefined') return null;
+  if (typeof window.SoftXchangeAuth !== 'undefined' && window.SoftXchangeAuth.getAccessToken) {
+    return window.SoftXchangeAuth.getAccessToken();
+  }
+  return null;
+}
+
+// ── Exponential Backoff Fetch ─────────────────────────────────────────────────
+async function fetchWithRetry(url, options = {}, maxRetries = 2, baseDelayMs = 250) {
+  let attempt = 0;
+  while (true) {
+    try {
+      const response = await fetch(url, options);
+
+      // Retry on transient gateway / server errors: 502, 503, 504
+      if ([502, 503, 504].includes(response.status) && attempt < maxRetries) {
+        attempt++;
+        const jitter = Math.random() * 80;
+        const delay = (baseDelayMs * Math.pow(2, attempt - 1)) + jitter;
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+
+      return response;
+    } catch (networkErr) {
+      // Retry on connection drop / DNS blip
+      if (attempt < maxRetries) {
+        attempt++;
+        const jitter = Math.random() * 80;
+        const delay = (baseDelayMs * Math.pow(2, attempt - 1)) + jitter;
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      throw new ApiError(0, 'NETWORK_ERROR', `Network connection failed: ${networkErr.message}`, null, networkErr);
+    }
+  }
+}
+
+// ── Base Request Wrapper ──────────────────────────────────────────────────────
+export async function request(url, options = {}) {
   const headers = new Headers(options.headers || {});
 
   // If body is JSON object, stringify and set Content-Type
@@ -58,13 +169,13 @@ async function request(url, options = {}) {
     }
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     ...options,
     headers,
     body,
   });
 
-  // Parse JSON response if available
+  // Parse response
   const contentType = response.headers.get('content-type') || '';
   let data = null;
   if (contentType.includes('application/json')) {
@@ -78,33 +189,54 @@ async function request(url, options = {}) {
   }
 
   if (!response.ok) {
-    const errorMsg = (data && typeof data === 'object' && (data.detail || data.message || data.error)) || response.statusText;
-    const error = new Error(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
-    error.status = response.status;
-    error.data = data;
-    throw error;
+    let errorCode = `HTTP_${response.status}`;
+    let errorMsg = response.statusText;
+    let errorDetails = null;
+
+    if (data && typeof data === 'object') {
+      errorMsg = data.detail || data.message || data.error || errorMsg;
+      errorCode = data.code || errorCode;
+      errorDetails = data.details || data;
+    }
+
+    throw new ApiError(response.status, errorCode, typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg), errorDetails, data);
   }
 
   return data;
 }
 
-// Helper to get active access token from the in-memory SoftXchangeAuth singleton.
-// ZERO browser storage APIs (localStorage/sessionStorage/indexedDB) are touched here.
-// auth.js is the sole token authority — it stores the token in a JS closure variable.
-function getActiveToken() {
-  if (typeof window === 'undefined') return null;
-  // Delegate to auth.js in-memory singleton (set by auth.js IIFE on window)
-  if (typeof window.SoftXchangeAuth !== 'undefined' && window.SoftXchangeAuth.getAccessToken) {
-    return window.SoftXchangeAuth.getAccessToken();
+// ── UI Error Boundary Renderer ────────────────────────────────────────────────
+export function renderErrorBoundary(container, error, retryFn = null) {
+  if (!container) return;
+  const target = typeof container === 'string' ? document.querySelector(container) : container;
+  if (!target) return;
+
+  const isNetwork = error.status === 0 || error.code === 'NETWORK_ERROR';
+  const title = isNetwork ? 'Connection Lost' : (error.status === 403 ? 'Action Restricted' : 'Request Failed');
+  const message = error.message || 'An unexpected error occurred while communicating with the service.';
+
+  target.innerHTML = `
+    <div class="glass-surface" style="padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--color-danger, #F87171); margin: 1rem 0;">
+      <div style="display: flex; align-items: flex-start; gap: 0.875rem;">
+        <div style="color: var(--color-danger, #F87171); font-size: 1.25rem;">⚠️</div>
+        <div style="flex: 1;">
+          <h4 style="margin: 0 0 0.25rem 0; color: var(--text-primary); font-size: 1rem;">${title}</h4>
+          <p style="margin: 0 0 0.75rem 0; color: var(--text-secondary); font-size: 0.875rem;">${message}</p>
+          ${retryFn ? `<button type="button" class="action-btn retry-action-btn" style="padding: 0.375rem 0.75rem; font-size: 0.8125rem;">Retry Request</button>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (retryFn) {
+    const btn = target.querySelector('.retry-action-btn');
+    if (btn) btn.addEventListener('click', () => retryFn(), { once: true });
   }
-  return null;
 }
 
 // ── Service API Namespaces ────────────────────────────────────────────────────
 
 export const AuthAPI = {
-  // Unified login — both customer and seller hit the same endpoint.
-  // The legacy /auth/customer/login and /auth/seller/login aliases also work.
   loginCustomer: (email, password) =>
     request(`${API_CONFIG.authServiceUrl}/auth/login`, {
       method: 'POST',
@@ -119,7 +251,6 @@ export const AuthAPI = {
       body: { email, password },
     }),
 
-  // Signup routes: /auth/customer/signup and /auth/seller/signup
   signupCustomer: (email, password, displayName) =>
     request(`${API_CONFIG.authServiceUrl}/auth/customer/signup`, {
       method: 'POST',
@@ -195,6 +326,56 @@ export const ListingsAPI = {
       method: 'POST',
       body: { approved },
     }),
+
+  // Reviews & Ratings
+  getListingReviews: (id, limit = 50, offset = 0) =>
+    request(`${API_CONFIG.listingsServiceUrl}/listings/${id}/reviews?limit=${limit}&offset=${offset}`),
+
+  submitReview: (id, rating, reviewText = '') =>
+    request(`${API_CONFIG.listingsServiceUrl}/listings/${id}/reviews`, {
+      method: 'POST',
+      body: { rating, review_text: reviewText },
+    }),
+
+  // Wishlist / Saved Listings
+  getSavedListings: () =>
+    request(`${API_CONFIG.listingsServiceUrl}/listings/saved`),
+
+  saveListing: (id) =>
+    request(`${API_CONFIG.listingsServiceUrl}/listings/${id}/save`, {
+      method: 'POST',
+    }),
+
+  unsaveListing: (id) =>
+    request(`${API_CONFIG.listingsServiceUrl}/listings/${id}/save`, {
+      method: 'DELETE',
+    }),
+
+  toggleSaveListing: (id) =>
+    request(`${API_CONFIG.listingsServiceUrl}/listings/${id}/toggle-save`, {
+      method: 'POST',
+    }),
+
+  getSavedStatus: (id) =>
+    request(`${API_CONFIG.listingsServiceUrl}/listings/${id}/saved-status`),
+};
+
+export const NotificationsAPI = {
+  getNotifications: (limit = 50, offset = 0, unreadOnly = false) =>
+    request(`${API_CONFIG.authServiceUrl}/notifications?limit=${limit}&offset=${offset}&unread_only=${unreadOnly}`),
+
+  getUnreadCount: () =>
+    request(`${API_CONFIG.authServiceUrl}/notifications/unread-count`),
+
+  markRead: (id) =>
+    request(`${API_CONFIG.authServiceUrl}/notifications/${id}/read`, {
+      method: 'POST',
+    }),
+
+  markAllRead: () =>
+    request(`${API_CONFIG.authServiceUrl}/notifications/read-all`, {
+      method: 'POST',
+    }),
 };
 
 export const ScanAPI = {
@@ -256,6 +437,12 @@ export const BuyerAssistAPI = {
       body: { query, limit },
     }),
 
+  askQuestion: (listingId, question) =>
+    request(`${API_CONFIG.buyerAssistUrl}/assist/listings/${listingId}/ask`, {
+      method: 'POST',
+      body: { question },
+    }),
+
   draftQuestion: (listingId, topic) =>
     request(`${API_CONFIG.buyerAssistUrl}/assist/draft-question`, {
       method: 'POST',
@@ -275,4 +462,44 @@ export const SellerAssistAPI = {
       method: 'POST',
       body: { question_id: questionId, context },
     }),
+
+  explainScan: (scanId) =>
+    request(`${API_CONFIG.sellerAssistUrl}/assist/explain/${scanId}`),
 };
+
+export const BrokerAPI = {
+  routeQuestion: (listingId, questionText, buyerId = null) =>
+    request(`${API_CONFIG.brokerUrl}/broker/listings/${listingId}/route-question`, {
+      method: 'POST',
+      body: { question_text: questionText, buyer_id: buyerId },
+    }),
+
+  getDemandSignals: (sellerId) =>
+    request(`${API_CONFIG.brokerUrl}/broker/sellers/${sellerId}/demand-signals`),
+
+  recordSearchEvent: (queryText, matchedCategory = null) =>
+    request(`${API_CONFIG.brokerUrl}/broker/events/search`, {
+      method: 'POST',
+      body: { query_text: queryText, matched_category: matchedCategory },
+    }),
+};
+
+// Global attach for non-module script tag usage
+if (typeof window !== 'undefined') {
+  window.SoftXchangeAPI = {
+    API_CONFIG,
+    ApiError,
+    fetchJwks,
+    validateTokenWithJwks,
+    request,
+    renderErrorBoundary,
+    AuthAPI,
+    ListingsAPI,
+    ScanAPI,
+    PaymentsAPI,
+    BuyerAssistAPI,
+    SellerAssistAPI,
+    BrokerAPI,
+    NotificationsAPI,
+  };
+}

@@ -209,16 +209,19 @@
           <input type="text" id="version-semver" class="form-control" required placeholder="1.0.0">
         </div>
         <div class="form-group">
-          <label for="version-package-path">Package Source Path</label>
-          <input type="text" id="version-package-path" class="form-control" required placeholder="e.g. /packages/myapp-v1.0.0.zip">
+          <label for="version-package-path">Package Source (GitHub URL or Local Path)</label>
+          <input type="text" id="version-package-path" class="form-control" required placeholder="e.g. https://github.com/owner/repo.git or /packages/app.zip">
+          <small style="color:var(--text-muted);font-size:11px;margin-top:4px;display:block;">
+            Enter a public GitHub repository clone URL (HTTPS/SSH) or server package archive path.
+          </small>
         </div>
         <div class="form-group">
-          <label for="version-changelog">Changelog / Notes</label>
+          <label for="version-changelog">Changelog / Notes (Optional)</label>
           <textarea id="version-changelog" class="form-control" rows="2" placeholder="Initial release…"></textarea>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
           <button type="button" class="btn-secondary" id="cancel-version">Cancel</button>
-          <button type="submit" class="btn-filter">Submit for Intake &amp; Scan</button>
+          <button type="submit" class="btn-filter" id="submit-version-btn">Submit for Intake &amp; Scan</button>
         </div>
       </form>
     </div>
@@ -653,20 +656,60 @@
     document.getElementById('form-version').addEventListener('submit', async (e) => {
       e.preventDefault();
       const listingId = document.getElementById('version-listing-id').value;
+      const semver = document.getElementById('version-semver').value.trim() || '1.0.0';
+      const rawPath = document.getElementById('version-package-path').value.trim();
+      const changelog = document.getElementById('version-changelog').value.trim();
+
+      if (!rawPath) {
+        alert('Please provide a package source path or GitHub repository URL.');
+        return;
+      }
+
+      const isGit = /^(https?:\/\/|git@|.*github\.com).*/i.test(rawPath) || rawPath.endsWith('.git');
       const payload = {
-        version: document.getElementById('version-semver').value.trim(),
-        package_path: document.getElementById('version-package-path').value.trim(),
-        changelog: document.getElementById('version-changelog').value.trim(),
+        version_label: semver,
+        version: semver,
+        source_type: isGit ? 'github' : 'upload',
+        git_url: isGit ? rawPath : null,
+        package_path: rawPath,
+        changelog: changelog,
       };
+
+      const submitBtn = document.getElementById('submit-version-btn') || e.target.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting for Scan…';
+      }
+
       try {
         const res = await window.SoftXchangeAuth.fetchWithAuth(`${LISTINGS_API}/listings/${listingId}/versions`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          let errDetail = await res.text();
+          try {
+            const parsed = JSON.parse(errDetail);
+            if (parsed.detail) {
+              if (Array.isArray(parsed.detail)) {
+                errDetail = parsed.detail.map(d => `${d.loc ? d.loc.join('.') : ''}: ${d.msg}`).join('\n');
+              } else {
+                errDetail = typeof parsed.detail === 'string' ? parsed.detail : JSON.stringify(parsed.detail);
+              }
+            }
+          } catch (_) {}
+          throw new Error(errDetail);
+        }
         closeModal('modal-version');
         loadSellerListings();
       } catch (err) {
         alert('Error submitting version: ' + err.message);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit for Intake & Scan';
+        }
       }
     });
 

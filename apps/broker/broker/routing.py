@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ml_shared.context import ListingContextBundle
-from buyer_assist.rag import ListingQAService, AnswerResult
+from ml_shared.rag import ListingQAService, AnswerResult
 from src.models.listing import Listing, ListingStatus, ListingVersion, BuyerQuestion
 from broker.seller_client import seller_client
 

@@ -1,3 +1,4 @@
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -70,6 +71,13 @@ SEED_PACKAGES = [
 
 
 def seed():
+    if os.getenv("ENVIRONMENT", "").lower() == "production":
+        raise RuntimeError(
+            "SECURITY FATAL: seed_marketplace.py injects synthetic mock listings directly without "
+            "passing the scan gate or uploading real package archives to storage. "
+            "Direct mock seeding is prohibited in production. Onboard founding sellers via the verified "
+            "seller upload and security scan pipeline."
+        )
     init_db()
     db = SessionLocal()
     try:

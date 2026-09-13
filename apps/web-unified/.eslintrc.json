@@ -1,0 +1,28 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-restricted-globals": [
+      "error",
+      {
+        "name": "localStorage",
+        "message": "ZERO-STORAGE VIOLATION: localStorage is forbidden as a state container. Use in-memory SoftXchangeAuth or live PostgreSQL API hydration."
+      },
+      {
+        "name": "sessionStorage",
+        "message": "ZERO-STORAGE VIOLATION: sessionStorage is forbidden as a state container. Use in-memory SoftXchangeAuth or live PostgreSQL API hydration."
+      },
+      {
+        "name": "indexedDB",
+        "message": "ZERO-STORAGE VIOLATION: indexedDB is forbidden as a state container. Use live PostgreSQL API hydration."
+      }
+    ]
+  }
+}

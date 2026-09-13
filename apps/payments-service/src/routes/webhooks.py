@@ -14,6 +14,7 @@ from src.models.seller_payment_profile import SellerPaymentProfile
 from src.models.order import Order, OrderStatus, HoldStatus, utc_now
 from src.models.entitlement import Entitlement, EntitlementStatus
 from src.fraud import evaluate_fraud_rules
+from src.notifications_client import emit_notification
 
 logger = logging.getLogger("payments-service.routes.webhooks")
 
@@ -160,5 +161,29 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             order.hold_status = HoldStatus.NONE.value
 
         db.commit()
+
+        # Emit order_paid notification to seller
+        emit_notification(
+            user_id=order.seller_id,
+            notification_type="order_paid",
+            payload={
+                "order_id": order.id,
+                "listing_id": order.listing_id,
+                "amount_cents": order.amount_cents,
+                "buyer_id": order.buyer_id,
+                "role": "seller",
+            },
+        )
+        # Emit order_paid notification to buyer
+        emit_notification(
+            user_id=order.buyer_id,
+            notification_type="order_paid",
+            payload={
+                "order_id": order.id,
+                "listing_id": order.listing_id,
+                "amount_cents": order.amount_cents,
+                "role": "buyer",
+            },
+        )
 
     return {"received": True, "event_type": event_type}

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from src.config import settings
 from src.models.listing import Listing, ListingVersion, ListingStatus, ScanStatus, utc_now
 from src.indexer import sync_live_listing_embedding
+from src.notifications_client import emit_notification
 
 logger = logging.getLogger("listings-service.gate")
 
@@ -86,6 +87,16 @@ def evaluate_publish_gate(
         listing.status_message = "Security scan detected secrets or vulnerabilities. Review findings to resolve."
         listing.updated_at = utc_now()
         db.commit()
+        emit_notification(
+            user_id=listing.seller_id,
+            notification_type="scan_failed",
+            payload={
+                "listing_id": listing.id,
+                "listing_title": listing.title,
+                "version_id": version.id,
+                "version_label": version.version_label,
+            },
+        )
         return listing
 
     if version.scan_status == ScanStatus.PENDING_SCAN.value:
@@ -112,6 +123,18 @@ def evaluate_publish_gate(
 
         listing.updated_at = utc_now()
         db.commit()
+
+        emit_notification(
+            user_id=listing.seller_id,
+            notification_type="scan_passed",
+            payload={
+                "listing_id": listing.id,
+                "listing_title": listing.title,
+                "version_id": version.id,
+                "version_label": version.version_label,
+                "listing_status": listing.status,
+            },
+        )
 
         if listing.status == ListingStatus.LIVE.value:
             sync_live_listing_embedding(listing, version, db)

@@ -27,10 +27,15 @@
   --gradient-accent-hover: linear-gradient(135deg, #6B9BFF 0%, #AA7BFF 100%);
   --gradient-accent-border: linear-gradient(135deg, #5B8DEF, #9B6BF0);
 
-  /* Reserved Trust Signal: Non-gradient green strictly for vetted badge */
+  /* Reserved Trust Signal: Verified Emerald strictly for vetted badge & convergence motif */
   --badge-green: #4ADE80;
+  --color-emerald-verified: #10B981;
   --badge-green-bg: rgba(74, 222, 128, 0.12);
   --badge-green-border: rgba(74, 222, 128, 0.32);
+
+  /* Deep Space: Tier C Obsidian Depth Gradient & Motion Easing */
+  --bg-depth-gradient: radial-gradient(circle at 50% 30%, #171926 0%, #0d0e15 70%, #08090d 100%);
+  --easing-convergence: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Semantic Alerts */
   --color-danger: #F87171;
@@ -186,7 +191,7 @@ main.container {
 .ambient-bg-tier-b {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   background: radial-gradient(ellipse at 20% 60%, rgba(91, 141, 239, 0.12) 0%, transparent 60%),
               radial-gradient(ellipse at 80% 30%, rgba(155, 107, 240, 0.10) 0%, transparent 55%),
@@ -217,15 +222,93 @@ main.container {
   animation: neutralFade 200ms var(--easing-standard) forwards;
 }
 
-/* ── Vetted badge convergence — browse grid card entrance ──────────────────── */
-@keyframes badgeConverge {
-  0%   { transform: scale(0.7) translateY(4px); opacity: 0; filter: blur(2px); }
-  60%  { transform: scale(1.08) translateY(-1px); opacity: 1; filter: blur(0); }
-  100% { transform: scale(1) translateY(0); opacity: 1; filter: blur(0); }
+/* ── Trust Engine: The Convergence Primitive (Prompt 3 Specification) ───── */
+/* Micro-particles pull inward from orbital coordinates toward central anchor,
+   locking cleanly into place with radiant pulse before settling into verified emerald (#10B981).
+   Strictly prohibited on financial checkout loops and generic submit buttons. */
+
+.convergence-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
-.vetted-badge.badge-animate {
-  animation: badgeConverge 360ms var(--easing-spring) both;
+.convergence-particle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-emerald-verified, #10B981);
+  box-shadow: 0 0 8px var(--color-emerald-verified, #10B981);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 2;
+  will-change: transform, opacity;
+}
+
+.convergence-particle.p-tl { top: 50%; left: 50%; transform: translate(-22px, -22px); }
+.convergence-particle.p-tr { top: 50%; left: 50%; transform: translate(22px, -22px); }
+.convergence-particle.p-bl { top: 50%; left: 50%; transform: translate(-22px, 22px); }
+.convergence-particle.p-br { top: 50%; left: 50%; transform: translate(22px, 22px); }
+
+@keyframes particlePullInTL {
+  0%   { transform: translate(-24px, -24px) scale(1.6); opacity: 0; }
+  25%  { opacity: 1; }
+  85%  { transform: translate(-2px, -2px) scale(1); opacity: 0.9; }
+  100% { transform: translate(0, 0) scale(0); opacity: 0; }
+}
+
+@keyframes particlePullInTR {
+  0%   { transform: translate(24px, -24px) scale(1.6); opacity: 0; }
+  25%  { opacity: 1; }
+  85%  { transform: translate(2px, -2px) scale(1); opacity: 0.9; }
+  100% { transform: translate(0, 0) scale(0); opacity: 0; }
+}
+
+@keyframes particlePullInBL {
+  0%   { transform: translate(-24px, 24px) scale(1.6); opacity: 0; }
+  25%  { opacity: 1; }
+  85%  { transform: translate(-2px, 2px) scale(1); opacity: 0.9; }
+  100% { transform: translate(0, 0) scale(0); opacity: 0; }
+}
+
+@keyframes particlePullInBR {
+  0%   { transform: translate(24px, 24px) scale(1.6); opacity: 0; }
+  25%  { opacity: 1; }
+  85%  { transform: translate(2px, 2px) scale(1); opacity: 0.9; }
+  100% { transform: translate(0, 0) scale(0); opacity: 0; }
+}
+
+.animating-convergence .convergence-particle.p-tl { animation: particlePullInTL 360ms var(--easing-convergence) forwards; }
+.animating-convergence .convergence-particle.p-tr { animation: particlePullInTR 360ms var(--easing-convergence) forwards; }
+.animating-convergence .convergence-particle.p-bl { animation: particlePullInBL 360ms var(--easing-convergence) forwards; }
+.animating-convergence .convergence-particle.p-br { animation: particlePullInBR 360ms var(--easing-convergence) forwards; }
+
+@keyframes badgeConverge {
+  0%   { transform: scale(0.85) translateY(3px); opacity: 0.6; box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+  60%  { transform: scale(1.06) translateY(-1px); opacity: 1; box-shadow: 0 0 16px rgba(16, 185, 129, 0.45); border-color: rgba(16, 185, 129, 0.6); }
+  100% { transform: scale(1) translateY(0); opacity: 1; box-shadow: 0 0 6px rgba(16, 185, 129, 0.25); border-color: rgba(16, 185, 129, 0.35); }
+}
+
+.vetted-badge.badge-animate,
+.animating-convergence .vetted-badge {
+  animation: badgeConverge 360ms var(--easing-convergence) both;
+}
+
+/* Neutral calming indeterminate spinner for checkout/financial operations (Strict exclusion rule) */
+.calming-loading,
+.calming-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(91, 141, 239, 0.25);
+  border-top-color: var(--accent-blue, #5B8DEF);
+  border-radius: 50%;
+  animation: calmingSpin 0.9s linear infinite;
+}
+
+@keyframes calmingSpin {
+  to { transform: rotate(360deg); }
 }
 
 /* ── Micro-interaction Utility Classes ─────────────────────────────────────── */
@@ -253,6 +336,15 @@ main.container {
   box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.22);
 }
 
+/* ── Glassmorphic Layering System (Prompt 2 Token Spec) ──────────────────── */
+.glass-surface {
+  background: rgba(15, 20, 32, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
 /* ── Glass Panel — layered depth over ambient background ───────────────────── */
 /* Applied to: browse grid container, filter bars, dashboard cards, admin tables */
 .glass-panel {
@@ -269,6 +361,42 @@ main.container {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.09);
   box-shadow: var(--shadow-elevated);
+}
+
+/* ── Deep Space Tier B (Hardware-accelerated CSS mesh) & Tier C (Static) ── */
+@keyframes ambientDrift3D {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate3d(25px, -35px, 0) scale(1.08);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.65;
+  }
+}
+
+.ambient-bg-tier-b {
+  position: fixed;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(91, 141, 239, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 80% 70%, rgba(155, 107, 240, 0.10) 0%, transparent 70%),
+    var(--bg-depth-gradient);
+  animation: ambientDrift3D 24s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+[data-tier="C"] body,
+.tier-c-bg {
+  background: var(--bg-depth-gradient) !important;
 }
 
 /* Vetted Green Badge */

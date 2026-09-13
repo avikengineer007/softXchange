@@ -8,10 +8,12 @@ from src.config import settings
 from src.database import init_db
 from src.routes import (
     connect_router,
+    connect_alias_router,
     orders_router,
     webhooks_router,
     admin_router,
     seller_router,
+    seller_alias_router,
 )
 
 logger = logging.getLogger("payments-service.main")
@@ -49,10 +51,12 @@ app.add_middleware(
 
 # Include all route controllers
 app.include_router(connect_router)
+app.include_router(connect_alias_router)
 app.include_router(orders_router)
 app.include_router(webhooks_router)
 app.include_router(admin_router)
 app.include_router(seller_router)
+app.include_router(seller_alias_router)
 
 
 @app.get("/", include_in_schema=False)

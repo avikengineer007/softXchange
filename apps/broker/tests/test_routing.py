@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from src.models.listing import BuyerQuestion, Listing
-from buyer_assist.rag import ListingQAService
+from ml_shared.rag import ListingQAService
 from ml_shared.context import ListingContextBundle
 
 

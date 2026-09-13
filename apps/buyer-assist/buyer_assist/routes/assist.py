@@ -20,7 +20,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from src.models.listing import Listing, ListingStatus, ListingVersion, SearchEvent
 from ml_shared.context import ListingContextBundle, SellerDocument
-from buyer_assist.rag import ListingQAService, AnswerResult
+from ml_shared.rag import ListingQAService, AnswerResult
 
 logger = logging.getLogger("buyer-assist.routes.assist")
 

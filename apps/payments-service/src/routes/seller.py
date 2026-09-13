@@ -9,6 +9,7 @@ from src.auth import require_seller, AuthContext
 from src.models.order import Order, OrderStatus, HoldStatus
 
 router = APIRouter(prefix="/payments/seller", tags=["Seller Payouts"])
+alias_router = APIRouter(prefix="/seller", tags=["Seller Payouts Alias"])
 
 
 class SellerOrderItem(BaseModel):
@@ -22,6 +23,9 @@ class SellerOrderItem(BaseModel):
     display_status: str
     status_message: str
     created_at: datetime
+    seller_net_cents: Optional[int] = None
+    hold_status: Optional[str] = None
+    hold_reason: Optional[str] = None
 
 
 class SellerDashboardResponse(BaseModel):
@@ -32,12 +36,19 @@ class SellerDashboardResponse(BaseModel):
     under_review_payout_usd: float
     total_sales_count: int
     orders: List[SellerOrderItem]
+    available_usd: Optional[float] = None
+    held_usd: Optional[float] = None
 
 
 @router.get(
     "/dashboard",
     response_model=SellerDashboardResponse,
     summary="Get seller payout metrics and orders with honest, non-accusatory review messaging",
+)
+@router.get(
+    "/payouts",
+    response_model=SellerDashboardResponse,
+    summary="Get seller payout metrics (alias for /dashboard)",
 )
 def get_seller_payout_dashboard(
     auth_ctx: AuthContext = Depends(require_seller),
@@ -92,6 +103,9 @@ def get_seller_payout_dashboard(
                 display_status=display_status,
                 status_message=status_message,
                 created_at=o.created_at,
+                seller_net_cents=o.seller_payout_cents,
+                hold_status=o.hold_status or ("held" if display_status == "under_review" else "cleared"),
+                hold_reason=status_message,
             )
         )
 
@@ -103,4 +117,10 @@ def get_seller_payout_dashboard(
         under_review_payout_usd=round(under_review_cents / 100.0, 2),
         total_sales_count=len([o for o in orders if o.status == OrderStatus.PAID.value]),
         orders=order_items,
+        available_usd=round(available_cents / 100.0, 2),
+        held_usd=round(under_review_cents / 100.0, 2),
     )
+
+
+alias_router.add_api_route("/dashboard", get_seller_payout_dashboard, methods=["GET"], response_model=SellerDashboardResponse)
+alias_router.add_api_route("/payouts", get_seller_payout_dashboard, methods=["GET"], response_model=SellerDashboardResponse)

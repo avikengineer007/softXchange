@@ -31,12 +31,15 @@ class StripeClient:
             },
             "metadata": {"user_id": user_id},
         }
-        if email:
-            params["email"] = email
-
-        account = stripe.Account.create(**params)
-        logger.info(f"Created Stripe Connect account {account.id} for seller {user_id}")
-        return account.id
+        try:
+            account = stripe.Account.create(**params)
+            logger.info(f"Created Stripe Connect account {account.id} for seller {user_id}")
+            return account.id
+        except Exception as e:
+            if settings.ENVIRONMENT != "production" and ("signed up for Connect" in str(e) or "Connect" in str(e)):
+                logger.warning(f"Stripe Connect not enabled on test key, using dev mock account for {user_id}: {e}")
+                return f"acct_dev_mock_{user_id.replace('-', '')[:16]}"
+            raise
 
     def create_account_link(
         self,
@@ -47,6 +50,9 @@ class StripeClient:
         """
         Creates a Stripe Account Link for hosted seller identity & bank onboarding.
         """
+        if account_id.startswith("acct_dev_mock"):
+            return return_url
+
         link = stripe.AccountLink.create(
             account=account_id,
             refresh_url=refresh_url,
@@ -66,6 +72,14 @@ class StripeClient:
         Creates a Stripe PaymentIntent using Connect's destination charge model.
         Automatically transfers net payout to destination seller upon charge success.
         """
+        if destination_account_id.startswith("acct_dev_mock"):
+            import time
+            return {
+                "id": f"pi_dev_mock_{int(time.time())}",
+                "client_secret": f"pi_dev_mock_secret_{int(time.time())}",
+                "status": "requires_payment_method",
+            }
+
         intent = stripe.PaymentIntent.create(
             amount=amount_cents,
             currency="usd",

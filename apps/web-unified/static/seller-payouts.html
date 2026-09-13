@@ -133,7 +133,10 @@
 
     async function checkConnectStatus() {
       try {
-        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/seller/connect/status`);
+        let res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/payments/seller/connect/status`);
+        if (!res.ok) {
+          res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/seller/connect/status`);
+        }
         if (!res.ok) return;
         const status = await res.json();
         const btn = document.getElementById('btn-connect');
@@ -158,32 +161,57 @@
         window.location.href = '/login-seller.html';
         return;
       }
+      const btn = document.getElementById('btn-connect');
+      btn.disabled = true;
+      btn.textContent = 'Opening Stripe Portal…';
       try {
-        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/seller/connect/onboard`, {
+        let res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/payments/seller/connect/start`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         });
         if (!res.ok) {
-          const err = await res.json();
-          alert('Onboarding failed: ' + (err.detail || res.statusText));
+          res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/seller/connect/onboard`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        if (!res.ok) {
+          let errDetail = await res.text();
+          try {
+            const parsed = JSON.parse(errDetail);
+            if (parsed.detail) errDetail = typeof parsed.detail === 'string' ? parsed.detail : JSON.stringify(parsed.detail);
+          } catch (_) {}
+          alert('Onboarding failed: ' + errDetail);
           return;
         }
         const data = await res.json();
-        if (data.onboarding_url) window.open(data.onboarding_url, '_blank');
+        if (data.onboarding_url) {
+          window.location.href = data.onboarding_url;
+        }
       } catch (err) {
         alert('Network error: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Connect Stripe Account';
       }
     }
 
     async function loadDashboard() {
       try {
-        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/seller/payouts`);
+        let res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/payments/seller/dashboard`);
+        if (!res.ok) {
+          res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/seller/payouts`);
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
-        document.getElementById('stat-available').textContent = `$${Number(data.available_usd || 0).toFixed(2)}`;
-        document.getElementById('stat-review').textContent = `$${Number(data.held_usd || 0).toFixed(2)}`;
-        document.getElementById('stat-count').textContent = (data.orders || []).length;
+        const avail = Number(data.available_payout_usd ?? data.available_usd ?? (data.available_payout_cents ? data.available_payout_cents / 100 : 0));
+        const review = Number(data.under_review_payout_usd ?? data.held_usd ?? (data.under_review_payout_cents ? data.under_review_payout_cents / 100 : 0));
+        const count = data.total_sales_count !== undefined ? data.total_sales_count : (data.orders || []).length;
+
+        document.getElementById('stat-available').textContent = `$${avail.toFixed(2)}`;
+        document.getElementById('stat-review').textContent = `$${review.toFixed(2)}`;
+        document.getElementById('stat-count').textContent = count;
 
         const tbody = document.getElementById('orders-tbody');
         tbody.innerHTML = '';
@@ -195,21 +223,23 @@
 
         orders.forEach(order => {
           const tr = document.createElement('tr');
-          const gross = `$${Number(order.amount_usd || 0).toFixed(2)}`;
+          const gross = `$${Number(order.amount_usd ?? (order.amount_cents ? order.amount_cents / 100 : 0)).toFixed(2)}`;
           const fee   = `$${Number((order.platform_fee_cents || 0) / 100).toFixed(2)}`;
-          const net   = `$${Number((order.seller_net_cents || 0) / 100).toFixed(2)}`;
+          const netVal = order.seller_payout_usd ?? (order.seller_payout_cents ? order.seller_payout_cents / 100 : (order.seller_net_cents ? order.seller_net_cents / 100 : 0));
+          const net   = `$${Number(netVal).toFixed(2)}`;
 
+          const dStatus = (order.display_status || order.hold_status || 'cleared').toLowerCase();
           let statusClass = 'status-cleared';
-          let statusLabel = (order.hold_status || 'cleared').toUpperCase();
-          let note = 'Cleared for payout transfer';
+          let statusLabel = dStatus.toUpperCase();
+          let note = order.status_message || order.notes || 'Cleared for payout transfer';
 
-          if (order.hold_status === 'held') {
+          if (dStatus === 'under_review' || dStatus === 'held') {
             statusClass = 'status-under_review';
             statusLabel = 'HELD (REVIEW)';
-            note = order.hold_reason || 'Under fraud review SLA';
-          } else if (order.hold_status === 'refunded') {
+            note = order.status_message || order.hold_reason || 'Under fraud review SLA';
+          } else if (dStatus === 'refunded') {
             statusClass = 'status-refunded';
-            note = 'Order refunded to buyer';
+            note = order.status_message || 'Order refunded to buyer';
           }
 
           tr.innerHTML = `
@@ -217,7 +247,7 @@
             <td>${gross}</td>
             <td style="color:var(--text-muted);">${fee}</td>
             <td><strong>${net}</strong></td>
-            <td><span class="status-pill ${statusClass}">${statusLabel}</span></td>
+            <td><span class="status-pill ${statusClass}">${escapeHtml(statusLabel)}</span></td>
             <td style="color:var(--text-secondary);font-size:12px;">${escapeHtml(note)}</td>
           `;
           tbody.appendChild(tr);

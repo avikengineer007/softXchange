@@ -35,6 +35,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PORT=8005
 
 COPY apps/buyer-assist /app
+COPY apps/listings-service/src /app/src
 
 RUN chown -R appuser:appuser /app
 
@@ -42,7 +43,7 @@ USER appuser
 
 EXPOSE 8005
 
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8005/healthz')" || exit 1
 
 CMD ["python", "run.py"]

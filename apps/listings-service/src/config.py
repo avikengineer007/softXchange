@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     # Upstream Services
     AUTH_SERVICE_URL: str = "http://localhost:8001"
     SCAN_SERVICE_URL: str = "http://localhost:8002"
+    PAYMENTS_SERVICE_URL: str = "http://localhost:8004"
     INTERNAL_SERVICE_SECRET: str = "softxchange-internal-hmac-secret-dev"
 
     # JWKS Key Cache Lifespan (seconds)

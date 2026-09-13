@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 
 from src.config import settings
 from src.database import init_db
-from src.routes import auth_router, kyc_router, interservice_kyc_router, admin_router
+from src.routes import auth_router, kyc_router, interservice_kyc_router, admin_router, notifications_router, seller_github_router, seller_trust_router
 
 
 @asynccontextmanager
@@ -62,6 +62,9 @@ app.include_router(auth_router)
 app.include_router(kyc_router)
 app.include_router(interservice_kyc_router)
 app.include_router(admin_router)
+app.include_router(notifications_router)
+app.include_router(seller_github_router)
+app.include_router(seller_trust_router)
 
 
 @app.get("/", include_in_schema=False)

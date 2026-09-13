@@ -50,31 +50,31 @@ Write-Host " -----------------------------------------------------"
 $AssetsDir = Join-Path $Root "packages\3d-assets"
 $VendorDir = Join-Path $Root "packages\vendor"
 
-# ── Target: listings-service (canonical 3D host) ──────────────────────────────
-$ListingsJs = Join-Path $Root "apps\listings-service\static\js"
-$ListingsVendor = Join-Path $ListingsJs "vendor"
+# ── Target: web-unified (canonical unified frontend host) ────────────────────
+$WebUnifiedJs = Join-Path $Root "apps\web-unified\static\js"
+$WebUnifiedVendor = Join-Path $WebUnifiedJs "vendor"
 
-New-Item -ItemType Directory -Force -Path $ListingsVendor | Out-Null
+New-Item -ItemType Directory -Force -Path $WebUnifiedVendor | Out-Null
 
 Write-Host ""
-Write-Host " → listings-service/static/js/"
+Write-Host " → web-unified/static/js/"
 
 # 3D model assets
 foreach ($glb in Get-ChildItem -Path $AssetsDir -Filter "*.glb") {
-    Copy-IfNewer -Src $glb.FullName -Dst (Join-Path $ListingsJs $glb.Name)
+    Copy-IfNewer -Src $glb.FullName -Dst (Join-Path $WebUnifiedJs $glb.Name)
 }
 
-# tier-detection.js (shared module)
-$tierSrc = Join-Path $Root "packages\3d\tier-detection.js"
-if (Test-Path $tierSrc) {
-    Copy-IfNewer -Src $tierSrc -Dst (Join-Path $ListingsJs "tier-detection.js")
+# 3D modules (tier-detection.js, hero-3d.js, card-tilt.js)
+$ThreeDDir = Join-Path $Root "packages\3d"
+foreach ($js in Get-ChildItem -Path $ThreeDDir -Filter "*.js") {
+    Copy-IfNewer -Src $js.FullName -Dst (Join-Path $WebUnifiedJs $js.Name)
 }
 
 # Vendor: Three.js and GLTFLoader
 Write-Host ""
-Write-Host " → listings-service/static/js/vendor/"
+Write-Host " → web-unified/static/js/vendor/"
 foreach ($vendor in Get-ChildItem -Path $VendorDir -Filter "*.js") {
-    Copy-IfNewer -Src $vendor.FullName -Dst (Join-Path $ListingsVendor $vendor.Name)
+    Copy-IfNewer -Src $vendor.FullName -Dst (Join-Path $WebUnifiedVendor $vendor.Name)
 }
 
 # ── Target: Android (app/src/main/res/raw) ────────────────────────────────────
@@ -96,8 +96,8 @@ if (Test-Path $AndroidRaw) {
 # ── Summary ───────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host " [OK] Asset distribution complete."
-$glbCount = (Get-ChildItem $ListingsJs -Filter "*.glb").Count
-$jsCount  = (Get-ChildItem $ListingsVendor -Filter "*.js").Count
+$glbCount = (Get-ChildItem $WebUnifiedJs -Filter "*.glb").Count
+$jsCount  = (Get-ChildItem $WebUnifiedVendor -Filter "*.js").Count
 $androidCount = if (Test-Path $AndroidRaw) { (Get-ChildItem $AndroidRaw -Filter "*.glb").Count } else { 0 }
 Write-Host "   3D assets (web):     $glbCount .glb files"
 Write-Host "   3D assets (Android): $androidCount .glb files"

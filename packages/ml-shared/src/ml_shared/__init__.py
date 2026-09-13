@@ -49,7 +49,15 @@ from ml_shared.currency import (
     calculate_price_guidance,
 )
 
+from ml_shared.rag import (
+    ListingQAService,
+    AnswerResult,
+)
+
 __all__ = [
+    # RAG QA
+    "ListingQAService",
+    "AnswerResult",
     # Context
     "ListingContextBundle",
     "ListingMetadata",

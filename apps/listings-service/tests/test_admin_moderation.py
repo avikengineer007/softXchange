@@ -14,10 +14,11 @@ SERVICE_ROOT = Path(__file__).resolve().parent.parent
 if str(SERVICE_ROOT) in sys.path:
     sys.path.remove(str(SERVICE_ROOT))
 sys.path.insert(0, str(SERVICE_ROOT))
-sys.modules.pop("src", None)
-for k in list(sys.modules.keys()):
-    if k.startswith("src."):
-        sys.modules.pop(k, None)
+if "src" in sys.modules and not getattr(sys.modules["src"], "__file__", "").startswith(str(SERVICE_ROOT)):
+    sys.modules.pop("src", None)
+    for k in list(sys.modules.keys()):
+        if k.startswith("src."):
+            sys.modules.pop(k, None)
 
 from src.main import app
 from src.database import Base, get_db
@@ -66,13 +67,12 @@ def override_get_db():
         db.close()
 
 
-app.dependency_overrides[get_db] = override_get_db
-
-
 @pytest.fixture(autouse=True)
 def setup_db():
     Base.metadata.create_all(bind=test_engine)
+    app.dependency_overrides[get_db] = override_get_db
     yield
+    app.dependency_overrides.pop(get_db, None)
     Base.metadata.drop_all(bind=test_engine)
 
 
