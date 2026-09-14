@@ -84,8 +84,8 @@
         respond "OK" 200
     }
 
-    # 404 fallback
-    handle {
-        respond "Not Found" 404
+    # Marketplace Frontend (Port 8000)
+    handle /* {
+        reverse_proxy localhost:8000
     }
 }
