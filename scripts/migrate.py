@@ -57,6 +57,7 @@ SERVICES = [
 ]
 
 
+# pyrefly: ignore [bad-function-definition]
 def get_db_url(svc: dict, target_service: str = None) -> str:
     # 1. Check specific svc env var
     url = os.environ.get(svc["db_env"])
@@ -71,6 +72,7 @@ def get_db_url(svc: dict, target_service: str = None) -> str:
     return svc["default_db"]
 
 
+# pyrefly: ignore [bad-function-definition]
 def run_command(action: str, target_service: str = None, revision: str = None):
     print("==========================================================")
     print(f"  softXchange Database Migrations: {action.upper()}")
@@ -102,10 +104,12 @@ def run_command(action: str, target_service: str = None, revision: str = None):
                 engine = create_engine(db_url)
                 inspector = inspect(engine)
                 present = set(inspector.get_table_names())
+                # pyrefly: ignore [not-iterable]
                 missing = [t for t in svc["tables"] if t not in present]
                 if missing:
                     print(f"  [WARNING] Expected tables missing: {missing}")
                 else:
+                    # pyrefly: ignore [bad-argument-type]
                     print(f"  [VERIFIED] All {len(svc['tables'])} expected tables present.")
 
             elif action == "downgrade":
@@ -155,6 +159,7 @@ def main():
     stat_p.add_argument("--service", "-s", help="Specific service name (e.g. auth-service)")
 
     args = parser.parse_args()
+    # pyrefly: ignore [bad-argument-type]
     run_command(args.action, target_service=getattr(args, "service", None), revision=getattr(args, "revision", None))
 
 

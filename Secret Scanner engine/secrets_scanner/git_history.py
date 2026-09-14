@@ -109,6 +109,7 @@ def stream_git_diff_entries(
                     f"Git history scan exceeded wall-clock timeout ({timeout_seconds:.1f}s)"
                 )
 
+            # pyrefly: ignore [missing-attribute]
             line = proc.stdout.readline()
             if not line:
                 break

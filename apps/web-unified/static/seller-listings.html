@@ -57,6 +57,109 @@
     .question-card { border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px; background: var(--bg-surface-elevated); }
     .draft-badge { background: var(--color-warning-bg); color: var(--color-warning); padding: 2px 8px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600; }
     .notice-box { padding: 12px; border-radius: var(--radius-sm); font-size: 13px; background: var(--bg-surface-elevated); border: 1px solid var(--color-border); }
+
+    /* Action Button Bar & Action Buttons (Obsidian Glass Treatment) */
+    .action-btn-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 6px 12px;
+      font-family: var(--font-heading);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.4;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--color-border);
+      color: var(--text-primary);
+      transition: all var(--transition-fast) var(--easing-standard);
+      white-space: nowrap;
+    }
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+    .action-btn:active {
+      transform: translateY(0);
+    }
+    .action-btn-qa {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      color: var(--accent-blue);
+    }
+    .action-btn-qa:hover {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: var(--accent-blue);
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    }
+    .action-btn-view {
+      background: rgba(192, 132, 252, 0.08);
+      border: 1px solid rgba(192, 132, 252, 0.28);
+      color: var(--accent-violet);
+    }
+    .action-btn-view:hover {
+      background: rgba(192, 132, 252, 0.18);
+      border-color: var(--accent-violet);
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(192, 132, 252, 0.25);
+    }
+    .action-btn-withdraw {
+      background: rgba(248, 113, 113, 0.08);
+      border: 1px solid rgba(248, 113, 113, 0.28);
+      color: var(--color-danger);
+    }
+    .action-btn-withdraw:hover {
+      background: rgba(248, 113, 113, 0.2);
+      border-color: var(--color-danger);
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(248, 113, 113, 0.25);
+    }
+    .status-withdrawn {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      border: 1px solid var(--color-border);
+    }
+    .toast-banner {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 12px 18px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: var(--shadow-subtle);
+    }
+    .toast-banner.toast-warning {
+      border-color: var(--color-warning-border);
+      background: rgba(251, 191, 36, 0.08);
+      color: var(--color-warning);
+    }
+    .toast-banner.toast-danger {
+      border-color: var(--color-danger-border);
+      background: rgba(248, 113, 113, 0.08);
+      color: var(--color-danger);
+    }
+    .toast-banner.toast-success {
+      border-color: var(--badge-green-border);
+      background: var(--badge-green-bg);
+      color: var(--badge-green);
+    }
   </style>
 </head>
 <body>
@@ -83,6 +186,9 @@
   </header>
 
   <main class="container page-transition" role="main">
+    <!-- Feedback / Notification Bar (Obsidian Glass Treatment) -->
+    <div id="toast-banner" class="toast-banner" style="display:none;" role="status"></div>
+
     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
       <div>
         <h1 style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--text-primary);">Seller Package Manager</h1>
@@ -245,13 +351,38 @@
   </div>
 
   <!-- Buyer Questions Modal -->
-  <div id="modal-questions" class="modal" role="dialog" aria-modal="true">
+  <div id="modal-questions" class="modal" role="dialog" aria-modal="true" aria-labelledby="questions-modal-title">
     <div class="modal-card" style="max-width:760px;">
-      <h2 style="font-family:var(--font-heading);font-size:22px;font-weight:700;margin-bottom:6px;">Buyer Inquiries &amp; Q&amp;A</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <h2 id="questions-modal-title" style="font-family:var(--font-heading);font-size:22px;font-weight:700;margin:0;">Buyer Inquiries &amp; Q&amp;A</h2>
+        <button type="button" class="btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="closeModal('modal-questions')">✕</button>
+      </div>
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">Respond to prospective buyers. AI drafts suggestions that you review, edit, and manually send.</p>
       <div id="questions-list">Loading inquiries…</div>
       <div style="display:flex;justify-content:flex-end;margin-top:20px;">
-        <button type="button" class="btn-filter" id="close-questions">Close</button>
+        <button type="button" class="btn-secondary" id="close-questions">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Withdraw Confirmation Modal (Obsidian Theme) -->
+  <div id="modal-withdraw" class="modal" role="dialog" aria-modal="true" aria-labelledby="withdraw-modal-title">
+    <div class="modal-card" style="max-width:490px;">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+        <div style="width:40px;height:40px;border-radius:var(--radius-sm);background:var(--color-danger-bg);border:1px solid var(--color-danger-border);display:flex;align-items:center;justify-content:center;color:var(--color-danger);font-size:18px;flex-shrink:0;">
+          ⚠️
+        </div>
+        <div>
+          <h2 id="withdraw-modal-title" style="font-family:var(--font-heading);font-size:18px;font-weight:700;color:var(--text-primary);margin:0;">Withdraw Listing from Catalog</h2>
+          <p style="font-size:12px;color:var(--text-secondary);margin:2px 0 0 0;">Public marketplace catalog removal</p>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:22px;">
+        Are you sure you want to withdraw <strong id="withdraw-modal-title-text" style="color:var(--text-primary);">this listing</strong>? Once withdrawn, this software package will immediately be hidden from buyers and removed from catalog search.
+      </p>
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button type="button" class="btn-secondary" onclick="closeModal('modal-withdraw')">Cancel</button>
+        <button type="button" class="action-btn action-btn-withdraw" style="padding:8px 16px;font-size:13px;" id="btn-confirm-withdraw" onclick="confirmWithdrawal()">Confirm Withdrawal</button>
       </div>
     </div>
   </div>
@@ -345,28 +476,38 @@
 
         let actionBtn = '';
         if (item.status === 'draft') {
-          actionBtn = `<button class="action-btn" onclick="openVersionModal('${lid}','${ver}')">Submit for Scan</button>`;
+          actionBtn = `<button class="action-btn action-btn-qa" onclick="openVersionModal('${lid}','${ver}')">Submit for Scan</button>`;
         } else if (item.status === 'pending_scan') {
-          actionBtn = `<span style="font-size:12px;color:var(--accent-violet);">Scanning…</span>`;
+          actionBtn = `<span class="action-btn" style="color:var(--accent-violet);background:rgba(192,132,252,0.08);border-color:rgba(192,132,252,0.25);cursor:default;">Scanning…</span>`;
         } else if (item.status === 'scan_passed_awaiting_kyc') {
-          actionBtn = `<a href="/dashboard-seller.html" class="action-btn" style="border-color:var(--accent-blue);color:var(--accent-blue);">Complete KYC →</a>`;
+          actionBtn = `<a href="/dashboard-seller.html" class="action-btn action-btn-qa">Complete KYC →</a>`;
         } else if (item.status === 'scan_passed_verification_unavailable') {
           actionBtn = `<button class="action-btn" onclick="loadSellerListings()">Retry KYC Check</button>`;
         } else if (item.status === 'scan_failed') {
           actionBtn = `
-            <button class="action-btn" style="color:var(--color-danger);" onclick="viewFindings('${lid}','${ver}','${lid}')">View Findings</button>
-            <button class="action-btn" onclick="openVersionModal('${lid}','1.0.1')">Resubmit</button>
+            <div class="action-btn-group">
+              <button class="action-btn action-btn-withdraw" onclick="viewFindings('${lid}','${ver}','${lid}')">View Findings</button>
+              <button class="action-btn" onclick="openVersionModal('${lid}','1.0.1')">Resubmit</button>
+            </div>
           `;
         } else if (item.status === 'live') {
           actionBtn = `
-            <button class="action-btn" style="color:var(--accent-blue);" onclick="openQuestionsModal('${lid}','${escapeHtml(item.title)}')">Buyer Q&amp;A</button>
-            <a href="/listing-detail.html?id=${encodeURIComponent(item.id)}" target="_blank" class="action-btn">View Live</a>
-            <button class="action-btn" style="color:var(--text-muted);" onclick="withdrawListing('${lid}')">Withdraw</button>
+            <div class="action-btn-group">
+              <button class="action-btn action-btn-qa" onclick="openQuestionsModal('${lid}','${escapeHtml(item.title)}')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:4px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>Buyer Q&amp;A
+              </button>
+              <a href="/listing-detail.html?id=${encodeURIComponent(item.id)}" target="_blank" class="action-btn action-btn-view">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:4px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>View Live
+              </a>
+              <button class="action-btn action-btn-withdraw" onclick="openWithdrawModal('${lid}','${escapeHtml(item.title)}')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>Withdraw
+              </button>
+            </div>
           `;
         } else if (item.status === 'withdrawn') {
-          actionBtn = `<span style="font-size:12px;color:var(--text-muted);">Withdrawn</span>`;
+          actionBtn = `<span class="action-btn" style="color:var(--text-muted);background:rgba(255,255,255,0.02);border-color:var(--color-border);cursor:default;">Withdrawn</span>`;
         } else if (item.status === 'suspended') {
-          actionBtn = `<span style="font-size:12px;color:var(--color-danger);">Suspended by Admin</span>`;
+          actionBtn = `<span class="action-btn" style="color:var(--color-danger);background:rgba(248,113,113,0.06);border-color:var(--color-danger-border);cursor:default;">Suspended by Admin</span>`;
         }
 
         const sev = item.severity_summary || {};
@@ -718,15 +859,61 @@
       }
     });
 
-    async function withdrawListing(listingId) {
-      if (!confirm('Withdraw this listing from the catalog?')) return;
+    // ── Withdraw & Notifications (Obsidian Theme) ───────────────────────────
+    let pendingWithdrawListingId = null;
+
+    function showToast(msg, type = 'info') {
+      const toast = document.getElementById('toast-banner');
+      if (!toast) return;
+      toast.className = `toast-banner toast-${type}`;
+      toast.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span>${type === 'danger' ? '✕' : type === 'warning' ? '⚠️' : '✓'}</span>
+          <span>${escapeHtml(msg)}</span>
+        </div>
+        <button type="button" class="btn-secondary" style="padding:2px 8px;font-size:11px;" onclick="document.getElementById('toast-banner').style.display='none'">Dismiss</button>
+      `;
+      toast.style.display = 'flex';
+      setTimeout(() => {
+        if (toast && toast.style.display === 'flex') toast.style.display = 'none';
+      }, 6000);
+    }
+
+    function openWithdrawModal(listingId, listingTitle) {
+      pendingWithdrawListingId = listingId;
+      const titleElem = document.getElementById('withdraw-modal-title-text');
+      if (titleElem) titleElem.textContent = listingTitle ? `"${listingTitle}"` : 'this listing';
+      document.getElementById('modal-withdraw').classList.add('active');
+    }
+
+    async function confirmWithdrawal() {
+      if (!pendingWithdrawListingId) return;
+      const listingId = pendingWithdrawListingId;
+      const confirmBtn = document.getElementById('btn-confirm-withdraw');
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Withdrawing…';
+      }
+
       try {
         const res = await window.SoftXchangeAuth.fetchWithAuth(`${LISTINGS_API}/listings/${listingId}`, { method: 'DELETE' });
         if (!res.ok) throw new Error(await res.text());
+        closeModal('modal-withdraw');
+        showToast('Listing successfully withdrawn from marketplace catalog.', 'warning');
         loadSellerListings();
       } catch (err) {
-        alert('Error withdrawing listing: ' + err.message);
+        showToast('Error withdrawing listing: ' + err.message, 'danger');
+      } finally {
+        pendingWithdrawListingId = null;
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Confirm Withdrawal';
+        }
       }
+    }
+
+    async function withdrawListing(listingId) {
+      openWithdrawModal(listingId, '');
     }
 
     // ── Init ──────────────────────────────────────────────────────────────────

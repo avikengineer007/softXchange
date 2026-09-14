@@ -372,6 +372,122 @@ body {
   background: rgba(248, 113, 113, 0.22);
 }
 
+/* ── Table Action Button Bar & Buttons (Obsidian Glass Treatment) ────────── */
+.action-btn-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  color: var(--text-primary);
+  transition: all var(--transition-fast) var(--easing-standard);
+  white-space: nowrap;
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.action-btn:active {
+  transform: translateY(0);
+}
+
+/* Buyer Q&A Action: Obsidian Cyan Glass */
+.action-btn-qa {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: var(--accent-blue);
+}
+
+.action-btn-qa:hover {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: var(--accent-blue);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+/* View Live Action: Obsidian Violet Glass */
+.action-btn-view {
+  background: rgba(192, 132, 252, 0.08);
+  border: 1px solid rgba(192, 132, 252, 0.28);
+  color: var(--accent-violet);
+}
+
+.action-btn-view:hover {
+  background: rgba(192, 132, 252, 0.18);
+  border-color: var(--accent-violet);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.25);
+}
+
+/* Withdraw Action: Obsidian Crimson Glass */
+.action-btn-withdraw {
+  background: rgba(248, 113, 113, 0.08);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: var(--color-danger);
+}
+
+.action-btn-withdraw:hover {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: var(--color-danger);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(248, 113, 113, 0.25);
+}
+
+/* Toast / Alert Banner */
+.toast-banner {
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: var(--shadow-subtle);
+  animation: fadeIn 0.2s var(--easing-standard);
+}
+
+.toast-banner.toast-warning {
+  border-color: var(--color-warning-border);
+  background: rgba(251, 191, 36, 0.08);
+  color: var(--color-warning);
+}
+
+.toast-banner.toast-danger {
+  border-color: var(--color-danger-border);
+  background: rgba(248, 113, 113, 0.08);
+  color: var(--color-danger);
+}
+
+.toast-banner.toast-success {
+  border-color: var(--badge-green-border);
+  background: var(--badge-green-bg);
+  color: var(--badge-green);
+}
+
 /* Spinner */
 .spinner {
   display: none;
@@ -638,6 +754,26 @@ body {
   background: var(--color-danger-bg);
   color: var(--color-danger);
   border: 1px solid var(--color-danger-border);
+}
+.status-live {
+  background: var(--badge-green-bg);
+  color: var(--badge-green);
+  border: 1px solid var(--badge-green-border);
+}
+.status-withdrawn {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border: 1px solid var(--color-border);
+}
+.status-draft {
+  background: var(--bg-surface-elevated);
+  color: var(--text-muted);
+  border: 1px solid var(--color-border);
+}
+.status-pending_scan {
+  background: rgba(192, 132, 252, 0.12);
+  color: var(--accent-violet);
+  border: 1px solid rgba(192, 132, 252, 0.3);
 }
 
 /* ── Dashboard Layout ─────────────────────────────────────────────────────── */

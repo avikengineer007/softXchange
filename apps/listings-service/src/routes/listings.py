@@ -465,6 +465,7 @@ def submit_version(
     package_content = data.package_content
 
     # Auto-detect git vs upload from package_path or git_url
+    # pyrefly: ignore [unnecessary-type-conversion]
     raw_path = str(data.package_path or git_url or "").strip()
     if raw_path:
         path_lower = raw_path.lower()
