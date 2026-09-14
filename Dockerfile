@@ -39,10 +39,15 @@ RUN pip install --no-cache-dir \
     -r /tmp/req-web.txt \
     psycopg2-binary>=2.9.9
 
-# Copy all app source code
+# Copy all app source code and internal engines
 COPY apps/ /app/apps/
 COPY packages/ /app/packages/
 COPY tokens/ /app/tokens/
+COPY ["Secret Scanner engine/", "/app/Secret Scanner engine/"]
+
+# Install internal packages so secrets_scanner, ml_shared, etc. are globally importable
+RUN pip install --no-cache-dir "/app/Secret Scanner engine" && \
+    pip install --no-cache-dir -e /app/packages/ml-shared
 
 # Ensure supervisor log and run dirs exist
 RUN mkdir -p /var/log/supervisor /var/run
