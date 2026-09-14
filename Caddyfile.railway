@@ -1,0 +1,91 @@
+# softXchange Railway Caddyfile
+# Single container — all services on localhost, Caddy on port 8080
+
+:{$PORT:8080} {
+    encode gzip zstd
+
+    # Security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Auth & Identity Service (8001)
+    handle /auth/* {
+        reverse_proxy localhost:8001
+    }
+    handle /kyc/* {
+        reverse_proxy localhost:8001
+    }
+    handle /admin/* {
+        reverse_proxy localhost:8001
+    }
+    handle /notifications/* {
+        reverse_proxy localhost:8001
+    }
+
+    # Scan Service (8002)
+    handle /scan/* {
+        reverse_proxy localhost:8002
+    }
+
+    # Listings Service (8003)
+    handle /listings/* {
+        reverse_proxy localhost:8003
+    }
+    handle /seller/listings* {
+        reverse_proxy localhost:8003
+    }
+
+    # Payments Service (8004)
+    handle /orders/* {
+        reverse_proxy localhost:8004
+    }
+    handle /payments/* {
+        reverse_proxy localhost:8004
+    }
+    handle /connect/* {
+        reverse_proxy localhost:8004
+    }
+    handle /seller/connect/* {
+        reverse_proxy localhost:8004
+    }
+    handle /seller/payouts* {
+        reverse_proxy localhost:8004
+    }
+    handle /seller/dashboard* {
+        reverse_proxy localhost:8004
+    }
+
+    # Buyer Assist (8005)
+    handle /assist/* {
+        reverse_proxy localhost:8005
+    }
+
+    # Seller Assist (8006)
+    handle /suggest/* {
+        reverse_proxy localhost:8006
+    }
+    handle /explain/* {
+        reverse_proxy localhost:8006
+    }
+    handle /reply/* {
+        reverse_proxy localhost:8006
+    }
+
+    # Broker (8007)
+    handle /broker/* {
+        reverse_proxy localhost:8007
+    }
+
+    # Health check endpoint
+    handle /healthz {
+        respond "OK" 200
+    }
+
+    # 404 fallback
+    handle {
+        respond "Not Found" 404
+    }
+}
