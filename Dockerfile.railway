@@ -44,9 +44,14 @@ COPY apps/ /app/apps/
 COPY packages/ /app/packages/
 COPY tokens/ /app/tokens/
 
+# Ensure supervisor log and run dirs exist
+RUN mkdir -p /var/log/supervisor /var/run
+
 # Copy supervisord + caddy configs
+COPY supervisord.conf /etc/supervisor/supervisord.conf
 COPY supervisord.conf /etc/supervisor/conf.d/softxchange.conf
 COPY Caddyfile.railway /etc/caddy/Caddyfile
+COPY Caddyfile.railway /app/Caddyfile.railway
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1

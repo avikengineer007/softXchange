@@ -1,0 +1,11 @@
+mutation SetDockerfileBuilder($serviceId: String!, $environmentId: String!) {
+  serviceInstanceUpdate(
+    serviceId: $serviceId
+    environmentId: $environmentId
+    input: {
+      dockerfilePath: "Dockerfile.railway"
+      builder: DOCKERFILE
+      startCommand: "/usr/bin/supervisord -c /etc/supervisor/supervisord.conf"
+    }
+  )
+}
