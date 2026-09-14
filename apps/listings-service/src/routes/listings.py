@@ -213,6 +213,30 @@ def get_my_listings(
             .order_by(ListingVersion.created_at.desc())
             .first()
         )
+        if l.status == ListingStatus.PENDING_SCAN.value and latest_ver:
+            try:
+                status_res = scanner_client.query_status(l.id, latest_ver.version_label)
+                raw_scan_status = status_res.get("scan_status", latest_ver.scan_status)
+                if raw_scan_status != latest_ver.scan_status:
+                    latest_ver.scan_status = raw_scan_status
+                    latest_ver.storage_location = status_res.get("storage_location")
+                    latest_ver.findings_summary = status_res.get("severity_counts", {})
+                    findings = status_res.get("findings", [])
+                    err_msg = status_res.get("error_message")
+                    if err_msg and not findings:
+                        findings = [{
+                            "rule_id": "SCAN_EXECUTION_ERROR",
+                            "severity": "HIGH",
+                            "description": err_msg,
+                            "file_path": latest_ver.storage_location or "source",
+                            "line_number": 0,
+                        }]
+                    latest_ver.findings_detail = findings
+                    evaluate_publish_gate(l, latest_ver, db)
+                    db.commit()
+            except Exception as exc:
+                logger.debug(f"Auto-sync scan status failed for {l.id}: {exc}")
+
         avg_rating = None
         rev_count = 0
         if hasattr(l, "reviews") and l.reviews:
@@ -543,7 +567,10 @@ def get_version_status(
     if listing.seller_id != auth_ctx.user_id and not auth_ctx.has_role("admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-    version = db.query(ListingVersion).filter(ListingVersion.id == version_id, ListingVersion.listing_id == listing_id).first()
+    version = db.query(ListingVersion).filter(
+        or_(ListingVersion.id == version_id, ListingVersion.version_label == version_id),
+        ListingVersion.listing_id == listing_id
+    ).first()
     if not version:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Version not found")
 
@@ -602,16 +629,37 @@ def get_version_findings(
     if listing.seller_id != auth_ctx.user_id and not auth_ctx.has_role("admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-    version = db.query(ListingVersion).filter(ListingVersion.id == version_id, ListingVersion.listing_id == listing_id).first()
+    version = db.query(ListingVersion).filter(
+        or_(ListingVersion.id == version_id, ListingVersion.version_label == version_id),
+        ListingVersion.listing_id == listing_id
+    ).first()
     if not version:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Version not found")
+
+    findings = version.findings_detail or []
+    if not findings and version.scan_status == ScanStatus.SCAN_FAILED.value:
+        try:
+            status_res = scanner_client.query_status(listing.id, version.version_label)
+            err_msg = status_res.get("error_message")
+            if err_msg:
+                findings = [{
+                    "rule_id": "SCAN_EXECUTION_ERROR",
+                    "severity": "HIGH",
+                    "description": err_msg,
+                    "file_path": version.storage_location or "source",
+                    "line_number": 0,
+                }]
+                version.findings_detail = findings
+                db.commit()
+        except Exception:
+            pass
 
     return FindingsDetailResponse(
         listing_id=listing.id,
         version_id=version.id,
         version_label=version.version_label,
         scan_status=version.scan_status,
-        findings=version.findings_detail or [],
+        findings=findings,
     )
 
 

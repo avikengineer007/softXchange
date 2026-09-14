@@ -4,10 +4,11 @@
 
 FROM python:3.12-slim AS base
 
-# Install system deps: supervisord, caddy, curl
+# Install system deps: supervisord, caddy, curl, git
 RUN apt-get update && apt-get install -y --no-install-recommends \
     supervisor \
     curl \
+    git \
     debian-archive-keyring \
     apt-transport-https \
     gnupg \

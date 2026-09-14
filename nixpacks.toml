@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python312", "supervisor", "caddy"]
+nixPkgs = ["python312", "supervisor", "caddy", "git"]
 
 [phases.install]
 cmds = [

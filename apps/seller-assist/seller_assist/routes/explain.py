@@ -8,6 +8,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from src.database import get_db
 from src.models.listing import Listing, ListingVersion
@@ -45,7 +46,9 @@ def explain_findings(
     re-stating engine remediation hints without adding new claims.
     Seller-only, owner-only.
     """
-    version = db.query(ListingVersion).filter(ListingVersion.id == version_id).first()
+    version = db.query(ListingVersion).filter(
+        or_(ListingVersion.id == version_id, ListingVersion.version_label == version_id)
+    ).first()
     if not version:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

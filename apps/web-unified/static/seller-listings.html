@@ -473,6 +473,7 @@
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:36px;color:var(--text-secondary);">No listings yet. Click "+ Create New Listing" to begin.</td></tr>';
         return;
       }
+      let hasScanning = false;
       listings.forEach(item => {
         const tr = document.createElement('tr');
         const localPrice = item.price_cents === 0 ? 'Free' : formatPriceInRegion(item.price_cents);
@@ -483,6 +484,7 @@
         if (item.status === 'draft') {
           actionBtn = `<button class="action-btn action-btn-qa" onclick="openVersionModal('${lid}','${ver}')">Submit for Scan</button>`;
         } else if (item.status === 'pending_scan') {
+          hasScanning = true;
           actionBtn = `<span class="action-btn" style="color:var(--accent-violet);background:rgba(192,132,252,0.08);border-color:rgba(192,132,252,0.25);cursor:default;">Scanning…</span>`;
         } else if (item.status === 'scan_passed_awaiting_kyc') {
           actionBtn = `<a href="/dashboard-seller.html" class="action-btn action-btn-qa">Complete KYC →</a>`;
@@ -491,7 +493,7 @@
         } else if (item.status === 'scan_failed') {
           actionBtn = `
             <div class="action-btn-group">
-              <button class="action-btn action-btn-withdraw" onclick="viewFindings('${lid}','${ver}','${lid}')">View Findings</button>
+              <button class="action-btn action-btn-withdraw" onclick="viewFindings('${lid}','${ver}','${ver}')">View Findings</button>
               <button class="action-btn" onclick="openVersionModal('${lid}','1.0.1')">Resubmit</button>
             </div>
           `;
@@ -530,6 +532,9 @@
         `;
         tbody.appendChild(tr);
       });
+      if (hasScanning) {
+        setTimeout(loadSellerListings, 3000);
+      }
     }
 
     // ── AI Assist ─────────────────────────────────────────────────────────────

@@ -58,12 +58,10 @@
         reverse_proxy localhost:8004
     }
 
-    # Buyer Assist (8005)
-    handle /assist* {
-        reverse_proxy localhost:8005
-    }
-
     # Seller Assist (8006)
+    handle /assist/seller* {
+        reverse_proxy localhost:8006
+    }
     handle /suggest* {
         reverse_proxy localhost:8006
     }
@@ -72,6 +70,11 @@
     }
     handle /reply* {
         reverse_proxy localhost:8006
+    }
+
+    # Buyer Assist (8005)
+    handle /assist* {
+        reverse_proxy localhost:8005
     }
 
     # Broker (8007)
