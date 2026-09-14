@@ -162,12 +162,17 @@
     </div>
   </main>
 
+  <script src="/static/js/config.js"></script>
   <script src="/static/js/auth.js"></script>
   <script src="/static/js/verification-motif.js" defer></script>
   <script>
-    const AUTH_API     = (window.__CONFIG__ && window.__CONFIG__.authServiceUrl)     || 'http://localhost:8001';
-    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || 'http://localhost:8004';
-    const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || 'http://localhost:8003';
+    const isCloudflare = window.location.hostname.endsWith('pages.dev');
+    const isProd = window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+    const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
+    const origin = isCloudflare ? RAILWAY_BACKEND : (isProd ? window.location.origin : '');
+    const AUTH_API     = (window.__CONFIG__ && window.__CONFIG__.authServiceUrl)     || (origin || 'http://localhost:8001');
+    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || (origin || 'http://localhost:8004');
+    const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || (origin || 'http://localhost:8003');
 
     // ── Tabs ─────────────────────────────────────────────────────────────────
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {

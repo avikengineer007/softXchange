@@ -387,12 +387,17 @@
     </div>
   </div>
 
+  <script src="/static/js/config.js"></script>
   <script src="/static/js/auth.js"></script>
   <script src="/static/js/ambient-layer.js" defer></script>
   <script>
-    const LISTINGS_API      = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || 'http://localhost:8003';
-    const SELLER_ASSIST_URL = (window.__CONFIG__ && window.__CONFIG__.sellerAssistUrl)    || 'http://localhost:8006';
-    const BROKER_API        = (window.__CONFIG__ && window.__CONFIG__.brokerUrl)           || 'http://localhost:8007';
+    const isCloudflare = window.location.hostname.endsWith('pages.dev');
+    const isProd = window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+    const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
+    const origin = isCloudflare ? RAILWAY_BACKEND : (isProd ? window.location.origin : '');
+    const LISTINGS_API      = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || (origin || 'http://localhost:8003');
+    const SELLER_ASSIST_URL = (window.__CONFIG__ && window.__CONFIG__.sellerAssistUrl)    || (origin || 'http://localhost:8006');
+    const BROKER_API        = (window.__CONFIG__ && window.__CONFIG__.brokerUrl)           || (origin || 'http://localhost:8007');
 
     // ── In-memory region state (NEVER persisted to storage) ─────────────────
     // seller_region is authoritatively derived from the seller's backend profile.

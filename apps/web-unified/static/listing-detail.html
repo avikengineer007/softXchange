@@ -220,15 +220,20 @@
     </div>
   </footer>
 
+  <script src="/static/js/config.js"></script>
   <script src="/static/js/auth.js" defer></script>
   <script src="/static/js/api-client.js" defer></script>
   <script src="/static/js/ambient-layer.js" defer></script>
   <script src="/static/js/verification-motif.js" defer></script>
   <script>
-    const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || 'http://localhost:8003';
-    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || 'http://localhost:8004';
-    const BUYER_ASSIST = (window.__CONFIG__ && window.__CONFIG__.buyerAssistUrl)    || 'http://localhost:8005';
-    const BROKER_API   = (window.__CONFIG__ && window.__CONFIG__.brokerUrl)         || 'http://localhost:8007';
+    const isCloudflare = window.location.hostname.endsWith('pages.dev');
+    const isProd = window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+    const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
+    const origin = isCloudflare ? RAILWAY_BACKEND : (isProd ? window.location.origin : '');
+    const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || (origin || 'http://localhost:8003');
+    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || (origin || 'http://localhost:8004');
+    const BUYER_ASSIST = (window.__CONFIG__ && window.__CONFIG__.buyerAssistUrl)    || (origin || 'http://localhost:8005');
+    const BROKER_API   = (window.__CONFIG__ && window.__CONFIG__.brokerUrl)         || (origin || 'http://localhost:8007');
 
     const urlParams = new URLSearchParams(window.location.search);
     const listingId = urlParams.get('id');

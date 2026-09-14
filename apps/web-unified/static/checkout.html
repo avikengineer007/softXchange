@@ -122,9 +122,14 @@
     </div>
   </main>
 
+  <script src="/static/js/config.js"></script>
   <script src="/static/js/auth.js"></script>
   <script>
-    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || 'http://localhost:8004';
+    const isCloudflare = window.location.hostname.endsWith('pages.dev');
+    const isProd = window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+    const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
+    const origin = isCloudflare ? RAILWAY_BACKEND : (isProd ? window.location.origin : '');
+    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || (origin || 'http://localhost:8004');
     const urlParams = new URLSearchParams(window.location.search);
     const orderId   = urlParams.get('order_id');
 
