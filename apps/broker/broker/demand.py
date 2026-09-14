@@ -2,7 +2,7 @@
 apps/broker/broker/demand.py
 
 Aggregate demand signals engine (Prompt 3).
-Surfaces non-committal, purely observational buyer interest signals over a 7-day rolling window.
+Surfaces non-committal, purely observational buyer interest signals over a 5-minute rolling window.
 Privacy guarantee: aggregates counts and queries only; NEVER stores or surfaces buyer identity.
 Guardrail enforcement: routes summary text through ml_shared.enforce_guardrails to strictly
 catch and block any sales guarantees or promises.
@@ -36,7 +36,8 @@ class ListingDemandSignal(BaseModel):
     title: str
     category: str
     status: str
-    total_questions_7d: int
+    total_questions_7d: int = 0  # legacy alias for backward compatibility
+    total_questions_5m: int = 0  # 5-minute observation window count
     unanswered_questions_count: int
     answered_questions_count: int
     related_search_terms: List[str]
@@ -50,6 +51,7 @@ class SellerDemandSignalsResponse(BaseModel):
     """
     seller_id: str
     window_days: int = 7
+    window_minutes: int = 5
     total_listings_tracked: int
     listings: List[ListingDemandSignal]
 
@@ -66,10 +68,11 @@ class DemandSignalService:
         forced_summary_for_test: Optional[str] = None,
     ) -> SellerDemandSignalsResponse:
         """
-        Calculates 7-day aggregate signals for all seller listings. Read-only, zero side effects.
+        Calculates 5-minute aggregate signals for all seller listings. Read-only, zero side effects.
         """
         now = utc_now()
-        window_start = now - timedelta(days=settings.DEMAND_WINDOW_DAYS)
+        window_minutes = getattr(settings, "DEMAND_WINDOW_MINUTES", 5)
+        window_start = now - timedelta(minutes=window_minutes)
 
         # 1. Fetch seller listings
         seller_listings = (
@@ -82,7 +85,7 @@ class DemandSignalService:
         signals: List[ListingDemandSignal] = []
 
         for listing in seller_listings:
-            # 2. Aggregate question counts in 7-day window
+            # 2. Aggregate question counts in 5-minute observation window
             # Questions on this specific listing
             listing_questions = (
                 db.query(BuyerQuestion)
@@ -106,9 +109,9 @@ class DemandSignalService:
 
             unanswered = sum(1 for q in category_questions if not q.seller_response)
             answered = sum(1 for q in category_questions if q.seller_response)
-            total_q_7d = len(listing_questions)
+            total_q_window = len(listing_questions)
 
-            # 3. Aggregate search queries in 7-day window matching category or keywords
+            # 3. Aggregate search queries in 5-minute window matching category or keywords
             # Guarantees buyer privacy: SearchEvent contains only query_text and timestamp
             cat_lower = listing.category.lower()
             title_keywords = [w.lower() for w in listing.title.split() if len(w) > 3]
@@ -140,14 +143,14 @@ class DemandSignalService:
             if forced_summary_for_test:
                 candidate_summary = forced_summary_for_test
             else:
-                if not matched_terms and total_q_7d == 0 and len(category_questions) == 0:
-                    candidate_summary = "No notable demand signals recorded for this listing over the past 7 days."
+                if not matched_terms and total_q_window == 0 and len(category_questions) == 0:
+                    candidate_summary = f"No notable demand signals recorded for this listing over the past {window_minutes} minutes."
                 else:
                     parts = []
                     if matched_terms:
                         parts.append(f"{len(matched_terms)} recent search queries matched this category or topic")
-                    if total_q_7d > 0:
-                        parts.append(f"{total_q_7d} direct inquiries submitted this week")
+                    if total_q_window > 0:
+                        parts.append(f"{total_q_window} direct inquiries submitted in the last {window_minutes} minutes")
                     if len(category_questions) > 0:
                         parts.append(f"{len(category_questions)} questions asked in '{listing.category}' ({unanswered} awaiting reply)")
                     
@@ -173,7 +176,8 @@ class DemandSignalService:
                     title=listing.title,
                     category=listing.category,
                     status=listing.status,
-                    total_questions_7d=total_q_7d,
+                    total_questions_7d=total_q_window,
+                    total_questions_5m=total_q_window,
                     unanswered_questions_count=unanswered,
                     answered_questions_count=answered,
                     related_search_terms=matched_terms,
@@ -185,6 +189,7 @@ class DemandSignalService:
         return SellerDemandSignalsResponse(
             seller_id=seller_id,
             window_days=settings.DEMAND_WINDOW_DAYS,
+            window_minutes=window_minutes,
             total_listings_tracked=len(signals),
             listings=signals,
         )

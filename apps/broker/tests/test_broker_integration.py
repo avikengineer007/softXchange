@@ -120,7 +120,7 @@ def test_end_to_end_demand_signals_aggregation_and_privacy(
             listing_id=pay_listing.id,
             buyer_id="buyer-private-id-777",
             question_text="Does this support multi-currency payouts?",
-            created_at=now - timedelta(days=1),
+            created_at=now - timedelta(minutes=1),
         )
     )
     db_session.commit()
@@ -129,9 +129,11 @@ def test_end_to_end_demand_signals_aggregation_and_privacy(
     res = client.get(f"/broker/sellers/{pay_listing.seller_id}/demand-signals")
     assert res.status_code == 200, res.text
     data = res.json()
+    assert data["window_minutes"] == 5
 
     sig = next(l for l in data["listings"] if l["listing_id"] == pay_listing.id)
     assert sig["total_questions_7d"] >= 1
+    assert sig["total_questions_5m"] >= 1
     assert any("payments" in t or "credit card" in t for t in sig["related_search_terms"])
     assert "buyer-private-id-777" not in res.text
     assert sig["guardrail_status"] == "passed"

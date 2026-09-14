@@ -41,7 +41,17 @@ def _background_scan_poller():
                             version.scan_status = raw_status
                             version.storage_location = status_res.get("storage_location")
                             version.findings_summary = status_res.get("severity_counts", {})
-                            version.findings_detail = status_res.get("findings", [])
+                            findings = status_res.get("findings", [])
+                            err_msg = status_res.get("error_message")
+                            if err_msg and not findings:
+                                findings = [{
+                                    "rule_id": "SCAN_EXECUTION_ERROR",
+                                    "severity": "HIGH",
+                                    "description": err_msg,
+                                    "file_path": version.storage_location or "source",
+                                    "line_number": 0,
+                                }]
+                            version.findings_detail = findings
                             db.commit()
 
                             listing = db.query(Listing).filter(Listing.id == version.listing_id).first()

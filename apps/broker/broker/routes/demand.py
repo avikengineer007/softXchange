@@ -36,10 +36,10 @@ class RecordSearchEventResponse(BaseModel):
 @router.get(
     "/sellers/{seller_id}/demand-signals",
     response_model=SellerDemandSignalsResponse,
-    summary="Aggregate 7-day buyer interest signals for seller listings",
+    summary="Aggregate 5-minute buyer interest signals for seller listings",
     description=(
         "Surfaces observational buyer search and inquiry activity aggregated over a "
-        "rolling 7-day window. Strictly preserves buyer privacy by stripping all buyer identities. "
+        "rolling 5-minute window. Strictly preserves buyer privacy by stripping all buyer identities. "
         "Purely read-only and informational; zero transactional side effects."
     ),
 )

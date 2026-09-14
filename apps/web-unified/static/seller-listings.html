@@ -100,6 +100,7 @@
              It is NOT persisted to localStorage (Zero Storage Rule). -->
         <select id="region-selector" class="form-control" style="width:auto;padding:6px 10px;" aria-label="Display currency region">
           <option value="US">USA ($ USD)</option>
+          <option value="GLOBAL">Open to World</option>
           <option value="RU">Russia (₽ RUB)</option>
           <option value="IN">India (₹ INR)</option>
           <option value="EU">Europe (€ EUR)</option>
@@ -135,7 +136,7 @@
         <div>
           <h2 style="font-family:var(--font-heading);font-size:18px;font-weight:700;margin:0 0 4px 0;display:flex;align-items:center;gap:8px;">
             <span>📈 Aggregate Buyer Demand Signals</span>
-            <span class="status-pill" style="font-size:11px;background:rgba(99,102,241,0.08);color:var(--color-primary);border:1px solid rgba(99,102,241,0.2);">7-Day Observation</span>
+            <span class="status-pill" style="font-size:11px;background:rgba(99,102,241,0.08);color:var(--color-primary);border:1px solid rgba(99,102,241,0.2);">5-Minute Observation</span>
           </h2>
           <p style="font-size:13px;color:var(--text-secondary);margin:0;">
             Non-committal aggregate search trends and category inquiry counts. Information only — never a sales forecast or promise.
@@ -269,12 +270,14 @@
     let activeListingForQuestions = null;
 
     const CURRENCY_MAP = {
-      'US': { code: 'USD', symbol: '$', rate: 1.0 },
-      'RU': { code: 'RUB', symbol: '₽', rate: 92.0 },
-      'IN': { code: 'INR', symbol: '₹', rate: 83.5 },
-      'EU': { code: 'EUR', symbol: '€', rate: 0.92 },
-      'GB': { code: 'GBP', symbol: '£', rate: 0.79 },
-      'JP': { code: 'JPY', symbol: '¥', rate: 155.0 },
+      'GLOBAL': { code: 'USD', symbol: '$', rate: 1.0, label: 'Open to World' },
+      'WORLD': { code: 'USD', symbol: '$', rate: 1.0, label: 'Open to World' },
+      'US': { code: 'USD', symbol: '$', rate: 1.0, label: 'USA ($ USD)' },
+      'RU': { code: 'RUB', symbol: '₽', rate: 92.0, label: 'Russia (₽ RUB)' },
+      'IN': { code: 'INR', symbol: '₹', rate: 83.5, label: 'India (₹ INR)' },
+      'EU': { code: 'EUR', symbol: '€', rate: 0.92, label: 'Europe (€ EUR)' },
+      'GB': { code: 'GBP', symbol: '£', rate: 0.79, label: 'UK (£ GBP)' },
+      'JP': { code: 'JPY', symbol: '¥', rate: 155.0, label: 'Japan (¥ JPY)' },
     };
 
     function escapeHtml(text) {
@@ -295,8 +298,10 @@
 
     function updateLocalPriceHint() {
       const cents = parseInt(document.getElementById('create-price').value, 10) || 0;
+      const info = CURRENCY_MAP[currentRegion] || CURRENCY_MAP['US'];
+      const regionLabel = info.label || currentRegion;
       document.getElementById('create-price-local').textContent =
-        `Localized preview in ${currentRegion}: ${formatPriceInRegion(cents)}`;
+        `Localized preview in ${regionLabel}: ${formatPriceInRegion(cents)}`;
     }
 
     document.getElementById('region-selector').addEventListener('change', () => {
@@ -601,7 +606,7 @@
               </div>
             ` : ''}
             <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:var(--text-muted);border-top:1px solid rgba(255,255,255,0.05);padding-top:8px;">
-              <span>Inquiries (7d): <strong style="color:var(--text-primary);">${sig.total_questions_7d}</strong></span>
+              <span>Inquiries (5m): <strong style="color:var(--text-primary);">${sig.total_questions_5m !== undefined ? sig.total_questions_5m : sig.total_questions_7d}</strong></span>
               <span>Pending in category: <strong style="color:var(--color-warning);">${sig.unanswered_questions_count}</strong></span>
             </div>
           </div>
@@ -734,9 +739,12 @@
 
       // Derive seller_region from backend profile (NOT from localStorage)
       const user = session.user;
-      const sellerRegionFromProfile = (user && user.region) ? user.region : 'US';
+      let sellerRegionFromProfile = (user && user.region) ? user.region : 'US';
+      if (sellerRegionFromProfile === 'WORLD') sellerRegionFromProfile = 'GLOBAL';
       currentRegion = sellerRegionFromProfile;
-      document.getElementById('region-selector').value = currentRegion;
+      if (document.getElementById('region-selector')) {
+        document.getElementById('region-selector').value = currentRegion;
+      }
       document.getElementById('session-indicator').textContent =
         `Authenticated: ${user.email || ''}`;
 

@@ -29,11 +29,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Prevent stale browser caching during development
+# Cache static assets to prevent repeated slow downloads over network tunnels
 @app.middleware("http")
-async def add_no_cache_headers(request, call_next):
+async def add_cache_headers(request, call_next):
     response = await call_next(request)
-    response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    path = request.url.path
+    if any(path.endswith(ext) for ext in [".css", ".js", ".png", ".jpg", ".svg", ".woff2", ".glb", ".gltf"]):
+        response.headers["Cache-Control"] = "public, max-age=3600"
+    else:
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
     return response
 
 # Health endpoint

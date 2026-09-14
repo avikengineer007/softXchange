@@ -26,6 +26,11 @@ FROM python:3.12-slim AS runner
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN useradd -m -u 10001 -s /bin/bash appuser
 
 COPY --from=builder /opt/venv /opt/venv

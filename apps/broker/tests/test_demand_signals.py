@@ -24,17 +24,17 @@ def test_demand_signals_aggregate_activity_without_buyer_identity(
     db_session: Session,
 ):
     """
-    Asserts 7-day aggregation of searches and questions, strictly verifying zero buyer identity exposure.
+    Asserts 5-minute aggregation of searches and questions, strictly verifying zero buyer identity exposure.
     """
     sec_listing: Listing = seeded_broker_catalog["security"]
     now = utc_now()
 
-    # Seed 3 search events in 7-day window
-    s1 = SearchEvent(query_text="cloud vulnerability auditor", matched_category="security", created_at=now - timedelta(days=1))
-    s2 = SearchEvent(query_text="kubernetes compliance audit", matched_category="security", created_at=now - timedelta(days=2))
-    s3 = SearchEvent(query_text="unrelated python compiler", matched_category="developer-tools", created_at=now - timedelta(days=1))
-    # Seed 1 old search event outside 7-day window (8 days ago)
-    s4 = SearchEvent(query_text="old security probe", matched_category="security", created_at=now - timedelta(days=8))
+    # Seed 3 search events in 5-minute window
+    s1 = SearchEvent(query_text="cloud vulnerability auditor", matched_category="security", created_at=now - timedelta(minutes=1))
+    s2 = SearchEvent(query_text="kubernetes compliance audit", matched_category="security", created_at=now - timedelta(minutes=2))
+    s3 = SearchEvent(query_text="unrelated python compiler", matched_category="developer-tools", created_at=now - timedelta(minutes=1))
+    # Seed 1 old search event outside 5-minute window (10 minutes ago)
+    s4 = SearchEvent(query_text="old security probe", matched_category="security", created_at=now - timedelta(minutes=10))
     db_session.add_all([s1, s2, s3, s4])
 
     # Seed 2 questions with buyer identities that MUST NOT leak
@@ -46,7 +46,7 @@ def test_demand_signals_aggregate_activity_without_buyer_identity(
         buyer_id=sensitive_buyer_id_1,
         question_text="Does this support AWS IAM role auditing?",
         seller_response=None,
-        created_at=now - timedelta(days=2),
+        created_at=now - timedelta(minutes=2),
     )
     q2 = BuyerQuestion(
         id="q-dem-2",
@@ -54,7 +54,7 @@ def test_demand_signals_aggregate_activity_without_buyer_identity(
         buyer_id=sensitive_buyer_id_2,
         question_text="Is there a Prometheus metrics exporter?",
         seller_response="Yes, Prometheus exporter is included.",
-        created_at=now - timedelta(days=3),
+        created_at=now - timedelta(minutes=3),
     )
     db_session.add_all([q1, q2])
     db_session.commit()
@@ -66,14 +66,16 @@ def test_demand_signals_aggregate_activity_without_buyer_identity(
 
     assert data["seller_id"] == "seller-alpha"
     assert data["window_days"] == 7
+    assert data["window_minutes"] == 5
 
     # Find security listing in results
     sec_signal = next(l for l in data["listings"] if l["listing_id"] == sec_listing.id)
     assert sec_signal["total_questions_7d"] == 2
+    assert sec_signal["total_questions_5m"] == 2
     assert sec_signal["unanswered_questions_count"] == 1
     assert sec_signal["answered_questions_count"] == 1
     assert any("cloud vulnerability" in term for term in sec_signal["related_search_terms"])
-    # 8-day old search must NOT be aggregated
+    # 10-minute old search must NOT be aggregated
     assert not any("old security" in term for term in sec_signal["related_search_terms"])
 
     # PRIVACY ASSERTION: Neither buyer ID may appear anywhere in the entire response body

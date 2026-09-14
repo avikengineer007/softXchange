@@ -16,10 +16,15 @@ html {
 
 body {
   background-color: var(--bg-app);
+  background-size: 54px 54px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
   color: var(--text-primary);
   font-family: var(--font-body);
   line-height: 1.5;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ── Site Navigation ──────────────────────────────────────────────────────── */

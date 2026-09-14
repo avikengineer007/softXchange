@@ -1,7 +1,9 @@
 # softXchange Production Caddy Configuration
 # Automates TLS (Let's Encrypt / ZeroSSL), HTTP -> HTTPS redirect, and internal API routing.
 
-{$DOMAIN:localhost} {
+http://:80, http://{$DOMAIN:localhost} {
+    encode gzip zstd
+
     # ── Security & Hardening Headers ───────────────────────────────────────────
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"

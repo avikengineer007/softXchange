@@ -19,8 +19,9 @@ class Settings(BaseSettings):
 
     PORT: int = 8007
 
-    # Rolling window duration in days for demand signals
-    DEMAND_WINDOW_DAYS: int = 7
+    # Rolling observation window duration for demand signals (in minutes)
+    DEMAND_WINDOW_MINUTES: int = 5
+    DEMAND_WINDOW_DAYS: int = 7  # retained for legacy fallback compatibility
 
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
