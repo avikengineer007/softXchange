@@ -238,6 +238,7 @@
     <span>© 2026 softXchange Marketplace · Zero-Trust Verified Software &amp; Artifact Exchange</span>
   </footer>
 
+  <script src="/static/js/config.js"></script>
   <script src="/static/js/auth.js"></script>
   <script>
     if (window.lucide) {
@@ -269,6 +270,10 @@
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       clearError();
+      if (!window.SoftXchangeAuth || !window.SoftXchangeAuth.login) {
+        showError('Authentication client is initializing. Please refresh the page.');
+        return;
+      }
       setLoading(true);
       try {
         const result = await window.SoftXchangeAuth.login(

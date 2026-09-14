@@ -1,0 +1,534 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+:root {
+  /* Luxury Obsidian Color Palette */
+  --bg-app: #030408;
+  --bg-surface: rgba(9, 12, 26, 0.76);
+  --bg-surface-elevated: rgba(12, 15, 30, 0.85);
+  --bg-surface-translucent: rgba(9, 12, 26, 0.76);
+  --bg-input: rgba(0, 0, 0, 0.45);
+
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-border-hover: rgba(56, 189, 248, 0.4);
+  --color-border-focus: #38bdf8;
+
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-inverse: #030408;
+
+  /* Brand Gradient Accent */
+  --accent-blue: #38bdf8;
+  --accent-violet: #c084fc;
+  --gradient-accent: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #c084fc 100%);
+  --gradient-accent-hover: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
+  --gradient-accent-border: linear-gradient(135deg, #38bdf8, #c084fc);
+
+  /* Reserved Trust Signal: Verified Emerald strictly for vetted badge & convergence motif */
+  --badge-green: #10B981;
+  --color-emerald-verified: #10B981;
+  --badge-green-bg: rgba(16, 185, 129, 0.12);
+  --badge-green-border: rgba(16, 185, 129, 0.32);
+
+  /* Deep Space: Tier C Obsidian Depth Gradient & Motion Easing */
+  --bg-depth-gradient: radial-gradient(circle at 50% 30%, #0c0f1e 0%, #070912 70%, #030408 100%);
+  --easing-convergence: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Semantic Alerts */
+  --color-danger: #F87171;
+  --color-danger-bg: rgba(248, 113, 113, 0.12);
+  --color-danger-border: rgba(248, 113, 113, 0.32);
+  --color-danger-text: #FCA5A5;
+
+  --color-warning: #FBBF24;
+  --color-warning-bg: rgba(251, 191, 36, 0.12);
+  --color-warning-border: rgba(251, 191, 36, 0.32);
+  --color-warning-text: #FDE68A;
+
+  --color-info: #38BDF8;
+  --color-info-bg: rgba(56, 189, 248, 0.12);
+  --color-info-border: rgba(56, 189, 248, 0.32);
+
+  /* Typography */
+  --font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+
+  /* Elevation & Shadows */
+  --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --shadow-elevated: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  --shadow-gradient-glow: 0 0 25px rgba(56, 189, 248, 0.2);
+  --shadow-green-glow: 0 0 20px rgba(16, 185, 129, 0.3);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+
+  /* Spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+
+  /* Text scale */
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+
+  /* Font weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Motion Tokens */
+  --transition-fast: 120ms;
+  --transition-base: 240ms;
+  --transition-slow: 300ms;
+  --easing-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --easing-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --easing-accelerate: cubic-bezier(0.4, 0.0, 1, 1);
+  --easing-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Legacy aliases for dashboard pages */
+  --border-color: #2A2B3B;
+  --trust-green: #4ADE80;
+  --status-critical: #F87171;
+}
+
+/* ==========================================================================
+   Motion System & Keyframe Animations
+   ========================================================================== */
+
+/* Page / Section Entrance Transition (< 300ms) */
+.page-transition,
+.page-container,
+main.container {
+  animation: pageFadeSlide var(--transition-slow) var(--easing-decelerate) both;
+}
+
+@keyframes pageFadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Polling Pulse Animation for pending_scan */
+@keyframes pulseGradientBorder {
+  0% {
+    border-color: rgba(91, 141, 239, 0.3);
+    box-shadow: 0 0 8px rgba(91, 141, 239, 0.2);
+  }
+  50% {
+    border-color: rgba(155, 107, 240, 0.9);
+    box-shadow: 0 0 22px rgba(155, 107, 240, 0.45);
+  }
+  100% {
+    border-color: rgba(91, 141, 239, 0.3);
+    box-shadow: 0 0 8px rgba(91, 141, 239, 0.2);
+  }
+}
+
+/* Celebratory Brief Transition for Scan Resolution (Passed) */
+@keyframes scanResolvePass {
+  0% {
+    transform: scale(0.98);
+    box-shadow: 0 0 0 rgba(74, 222, 128, 0);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 32px rgba(74, 222, 128, 0.55);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: var(--shadow-subtle);
+  }
+}
+
+/* Non-celebratory Transition for Scan Failure */
+@keyframes scanResolveFail {
+  0% {
+    transform: translateX(0);
+    border-color: var(--color-danger);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(0);
+    border-color: var(--color-danger-border);
+  }
+}
+
+/* ── Ambient Tier B: CSS gradient drift (zero WebGL) ──────────────────────── */
+/* Applied when data-tier="B" by ambient-layer.js                              */
+@keyframes ambientDrift {
+  0%   { background-position: 0% 50%;   opacity: 0.7; }
+  33%  { background-position: 50% 20%;  opacity: 0.9; }
+  66%  { background-position: 100% 80%; opacity: 0.75; }
+  100% { background-position: 0% 50%;   opacity: 0.7; }
+}
+
+.ambient-bg-tier-b {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 20% 60%, rgba(91, 141, 239, 0.12) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 30%, rgba(155, 107, 240, 0.10) 0%, transparent 55%),
+              var(--bg-app);
+  background-size: 200% 200%;
+  animation: ambientDrift 14s var(--easing-standard) infinite;
+}
+
+/* ── Verification/Convergence — Admin order release flourish ───────────────── */
+@keyframes convergenceFlourish {
+  0%   { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+  30%  { box-shadow: 0 0 0 8px rgba(74, 222, 128, 0.35); }
+  70%  { box-shadow: 0 0 0 16px rgba(74, 222, 128, 0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+}
+
+.convergence-flourish {
+  animation: convergenceFlourish 480ms var(--easing-spring) forwards;
+}
+
+/* Neutral refund fade — deliberately plain, no color flourish */
+@keyframes neutralFade {
+  from { opacity: 1; }
+  to   { opacity: 0.35; }
+}
+
+.refund-fade {
+  animation: neutralFade 200ms var(--easing-standard) forwards;
+}
+
+/* ── Trust Engine: The Convergence Primitive (Prompt 3 Specification) ───── */
+/* Micro-particles pull inward from orbital coordinates toward central anchor,
+   locking cleanly into place with radiant pulse before settling into verified emerald (#10B981).
+   Strictly prohibited on financial checkout loops and generic submit buttons. */
+
+.convergence-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.convergence-particle {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-emerald-verified, #10B981);
+  box-shadow: 0 0 8px var(--color-emerald-verified, #10B981);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 2;
+  will-change: transform, opacity;
+}
+
+.convergence-particle.p-tl { top: 50%; left: 50%; transform: translate(-22px, -22px); }
+.convergence-particle.p-tr { top: 50%; left: 50%; transform: translate(22px, -22px); }
+.convergence-particle.p-bl { top: 50%; left: 50%; transform: translate(-22px, 22px); }
+.convergence-particle.p-br { top: 50%; left: 50%; transform: translate(22px, 22px); }
+
+@keyframes particlePullInTL {
+  0%   { transform: translate(-24px, -24px) scale(1.6); opacity: 0; }
+  25%  { opacity: 1; }
+  85%  { transform: translate(-2px, -2px) scale(1); opacity: 0.9; }
+  100% { transform: translate(0, 0) scale(0); opacity: 0; }
+}
+
+@keyframes particlePullInTR {
+  0%   { transform: translate(24px, -24px) scale(1.6); opacity: 0; }
+  25%  { opacity: 1; }
+  85%  { transform: translate(2px, -2px) scale(1); opacity: 0.9; }
+  100% { transform: translate(0, 0) scale(0); opacity: 0; }
+}
+
+@keyframes particlePullInBL {
+  0%   { transform: translate(-24px, 24px) scale(1.6); opacity: 0; }
+  25%  { opacity: 1; }
+  85%  { transform: translate(-2px, 2px) scale(1); opacity: 0.9; }
+  100% { transform: translate(0, 0) scale(0); opacity: 0; }
+}
+
+@keyframes particlePullInBR {
+  0%   { transform: translate(24px, 24px) scale(1.6); opacity: 0; }
+  25%  { opacity: 1; }
+  85%  { transform: translate(2px, 2px) scale(1); opacity: 0.9; }
+  100% { transform: translate(0, 0) scale(0); opacity: 0; }
+}
+
+.animating-convergence .convergence-particle.p-tl { animation: particlePullInTL 360ms var(--easing-convergence) forwards; }
+.animating-convergence .convergence-particle.p-tr { animation: particlePullInTR 360ms var(--easing-convergence) forwards; }
+.animating-convergence .convergence-particle.p-bl { animation: particlePullInBL 360ms var(--easing-convergence) forwards; }
+.animating-convergence .convergence-particle.p-br { animation: particlePullInBR 360ms var(--easing-convergence) forwards; }
+
+@keyframes badgeConverge {
+  0%   { transform: scale(0.85) translateY(3px); opacity: 0.6; box-shadow: 0 0 0 rgba(16, 185, 129, 0); }
+  60%  { transform: scale(1.06) translateY(-1px); opacity: 1; box-shadow: 0 0 16px rgba(16, 185, 129, 0.45); border-color: rgba(16, 185, 129, 0.6); }
+  100% { transform: scale(1) translateY(0); opacity: 1; box-shadow: 0 0 6px rgba(16, 185, 129, 0.25); border-color: rgba(16, 185, 129, 0.35); }
+}
+
+.vetted-badge.badge-animate,
+.animating-convergence .vetted-badge {
+  animation: badgeConverge 360ms var(--easing-convergence) both;
+}
+
+/* Neutral calming indeterminate spinner for checkout/financial operations (Strict exclusion rule) */
+.calming-loading,
+.calming-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(91, 141, 239, 0.25);
+  border-top-color: var(--accent-blue, #5B8DEF);
+  border-radius: 50%;
+  animation: calmingSpin 0.9s linear infinite;
+}
+
+@keyframes calmingSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Micro-interaction Utility Classes ─────────────────────────────────────── */
+.interactive-btn {
+  transition: transform var(--transition-fast) var(--easing-standard),
+              filter var(--transition-fast) var(--easing-standard),
+              box-shadow var(--transition-fast) var(--easing-standard);
+}
+.interactive-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+.interactive-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  filter: brightness(0.95);
+}
+
+.interactive-input {
+  transition: border-color var(--transition-fast) var(--easing-standard),
+              box-shadow var(--transition-fast) var(--easing-standard);
+}
+.interactive-input:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.22);
+}
+
+/* ── Glassmorphic Layering System (Prompt 2 Token Spec) ──────────────────── */
+.glass-surface {
+  background: rgba(15, 20, 32, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* ── Glass Panel — layered depth over ambient background ───────────────────── */
+/* Applied to: browse grid container, filter bars, dashboard cards, admin tables */
+.glass-panel {
+  background: var(--bg-surface-translucent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow-subtle);
+}
+
+.glass-panel-elevated {
+  background: rgba(34, 35, 52, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: var(--shadow-elevated);
+}
+
+/* ── Deep Space Tier B (Hardware-accelerated CSS mesh) & Tier C (Static) ── */
+@keyframes ambientDrift3D {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate3d(25px, -35px, 0) scale(1.08);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.65;
+  }
+}
+
+.ambient-bg-tier-b {
+  position: fixed;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(91, 141, 239, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 50% at 80% 70%, rgba(155, 107, 240, 0.10) 0%, transparent 70%),
+    var(--bg-depth-gradient);
+  animation: ambientDrift3D 24s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+[data-tier="C"] body,
+.tier-c-bg {
+  background: var(--bg-depth-gradient) !important;
+}
+
+/* Vetted Green Badge */
+.vetted-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--badge-green-bg);
+  color: var(--badge-green);
+  border: 1px solid var(--badge-green-border);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Persistent Admin Header Bar */
+.admin-mode-banner,
+.admin-top-banner {
+  background: linear-gradient(90deg, rgba(155, 107, 240, 0.22), rgba(91, 141, 239, 0.22));
+  border-bottom: 1px solid rgba(155, 107, 240, 0.45);
+  padding: 8px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.admin-badge-pill {
+  background: var(--gradient-accent);
+  color: var(--text-primary);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.admin-banner-link {
+  color: var(--accent-blue);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: color var(--transition-fast) var(--easing-standard);
+}
+.admin-banner-link:hover { color: var(--accent-violet); }
+
+/* Accessibility: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   3D Tier System Tokens
+   Applied via JS: document.documentElement.setAttribute('data-tier', 'A'|'B'|'C')
+   ========================================================================== */
+
+/* Hero canvas placeholder — shown while glTF loads, matches brand */
+.hero-3d-placeholder {
+  background: radial-gradient(ellipse at 60% 40%, rgba(91, 141, 239, 0.22) 0%, rgba(155, 107, 240, 0.12) 60%, transparent 100%),
+              var(--bg-surface);
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+}
+.hero-3d-placeholder::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(91,141,239,0.08), rgba(155,107,240,0.08));
+  animation: placeholderShimmer 2s var(--easing-standard) infinite alternate;
+}
+@keyframes placeholderShimmer {
+  from { opacity: 0.4; }
+  to   { opacity: 1;   }
+}
+
+/* Tier A: enable GPU-accelerated card transforms */
+[data-tier="A"] .listing-card {
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition: transform var(--transition-base) var(--easing-standard),
+              box-shadow var(--transition-base) var(--easing-standard);
+}
+
+/* Tier A: scan-resolution depth flourish on the detail card */
+[data-tier="A"] .scan-resolve-card {
+  perspective: 800px;
+}
+
+/* Tier B/C: listing cards use flat hover only — no 3D transforms */
+[data-tier="B"] .listing-card,
+[data-tier="C"] .listing-card {
+  transform-style: flat;
+  will-change: auto;
+}
+
+/* Tier C: hide any 3D canvas placeholder shimmer (static image is shown instead) */
+[data-tier="C"] .hero-3d-placeholder::after {
+  animation: none;
+}
+
+/* Status pills for scan states */
+.status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.status-live {
+  background: var(--badge-green-bg);
+  color: var(--badge-green);
+  border: 1px solid var(--badge-green-border);
+}
+.status-pending_scan {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
+  animation: pulseGradientBorder 1.8s var(--easing-standard) infinite;
+}
+.status-failed {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
+}

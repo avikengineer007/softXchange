@@ -245,6 +245,7 @@
     <span>© 2026 softXchange Marketplace · Zero-Trust Verified Software &amp; Artifact Exchange</span>
   </footer>
 
+  <script src="/static/js/config.js"></script>
   <script src="/static/js/auth.js"></script>
   <script>
     if (window.lucide) {
@@ -300,13 +301,18 @@
         return;
       }
 
+      if (!window.SoftXchangeAuth || !window.SoftXchangeAuth.signup) {
+        showError('Authentication client is initializing. Please refresh the page.');
+        return;
+      }
+
       setLoading(true);
       try {
         const result = await window.SoftXchangeAuth.signup(email, password, 'customer', displayName);
-        showSuccess('Account created successfully! Redirecting...');
+        showSuccess('Account created successfully! Redirecting to login…');
         setTimeout(() => {
-          window.SoftXchangeAuth.routeUserAfterLogin(result.user);
-        }, 1200);
+          window.location.href = '/login-customer.html?registered=true';
+        }, 1500);
       } catch (err) {
         setLoading(false);
         showError(err.message || 'Registration failed. Please check your details.');
