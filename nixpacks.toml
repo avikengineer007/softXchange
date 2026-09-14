@@ -1,0 +1,17 @@
+[phases.setup]
+nixPkgs = ["python312", "supervisor", "caddy"]
+
+[phases.install]
+cmds = [
+  "pip install -r apps/auth-service/requirements.txt",
+  "pip install -r apps/scan-service/requirements.txt",
+  "pip install -r apps/listings-service/requirements.txt",
+  "pip install -r apps/payments-service/requirements.txt",
+  "pip install -r apps/buyer-assist/requirements.txt",
+  "pip install -r apps/seller-assist/requirements.txt",
+  "pip install -r apps/broker/requirements.txt",
+  "pip install psycopg2-binary"
+]
+
+[start]
+cmd = "supervisord -n -c supervisord.conf"
