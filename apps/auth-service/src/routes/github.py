@@ -124,11 +124,13 @@ def get_github_authorize_url(
     }
     authorize_url = f"https://github.com/login/oauth/authorize?{urlencode(params)}"
 
+    is_placeholder = (settings.GITHUB_CLIENT_ID in ("dev-github-client-id", "", None))
     return {
         "client_id": settings.GITHUB_CLIENT_ID,
         "scope": ALLOWED_SCOPES,
         "state": state,
         "authorize_url": authorize_url,
+        "is_placeholder": is_placeholder,
     }
 
 

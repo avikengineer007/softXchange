@@ -86,5 +86,8 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # Automatically enforce secure cookies in production if not explicitly overridden
-if settings.ENVIRONMENT.lower() == "production" and not settings.COOKIE_SECURE:
-    settings.COOKIE_SECURE = True
+if settings.ENVIRONMENT.lower() == "production":
+    if not settings.COOKIE_SECURE:
+        settings.COOKIE_SECURE = True
+    if settings.GITHUB_OAUTH_REDIRECT_URI == "http://localhost:8000/dashboard-seller.html":
+        settings.GITHUB_OAUTH_REDIRECT_URI = "https://softxchange-production.up.railway.app/dashboard-seller.html"
