@@ -9,5 +9,8 @@ search-path = [
     "apps/seller-assist",
     "apps/broker",
     "packages/ml-shared/src",
-    "Secret Scanner engine"
+    "Secret Scanner engine",
+    # listings-service is a shared model source — seller-assist, buyer-assist, and broker
+    # all import from src.models.listing via sys.path injection in run.py
+    "apps/listings-service"
 ]
