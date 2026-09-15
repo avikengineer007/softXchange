@@ -289,10 +289,11 @@
       lucide.createIcons();
     }
 
-    const isCloudflare = window.location.hostname.endsWith('pages.dev');
-    const isProd = window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
     const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
-    const defaultOrigin = isCloudflare ? RAILWAY_BACKEND : (isProd ? window.location.origin : 'http://localhost:8003');
+    const isRailway = hostname.endsWith('railway.app') || window.location.origin === RAILWAY_BACKEND;
+    const defaultOrigin = isRailway ? '' : (isLocalhost ? 'http://localhost:8003' : RAILWAY_BACKEND);
     const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || defaultOrigin;
 
     function escapeHtml(text) {

@@ -7,6 +7,7 @@ import threading
 import time
 from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, status
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from secrets_scanner.intake import IntakePipeline, IntakeSource
@@ -55,6 +56,15 @@ app = FastAPI(
     description="Thin wrapper service around secret-scanner-engine for automated security vetting.",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_origin_regex=r"^https?://.*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

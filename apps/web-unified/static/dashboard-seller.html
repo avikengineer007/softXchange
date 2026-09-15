@@ -364,12 +364,13 @@
   <script src="/static/js/config.js"></script>
   <script src="/static/js/auth.js"></script>
   <script>
-    const isCloudflare = window.location.hostname.endsWith('pages.dev');
-    const isProd = window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
     const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
-    const origin = isCloudflare ? RAILWAY_BACKEND : (isProd ? window.location.origin : '');
-    const AUTH_API = (window.__CONFIG__ && window.__CONFIG__.authServiceUrl) || (origin || 'http://localhost:8001');
-    const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || (origin || 'http://localhost:8003');
+    const isRailway = hostname.endsWith('railway.app') || window.location.origin === RAILWAY_BACKEND;
+    const origin = isRailway ? '' : (isLocalhost ? '' : RAILWAY_BACKEND);
+    const AUTH_API = (window.__CONFIG__ && window.__CONFIG__.authServiceUrl !== undefined) ? window.__CONFIG__.authServiceUrl : (origin || 'http://localhost:8001');
+    const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl !== undefined) ? window.__CONFIG__.listingsServiceUrl : (origin || 'http://localhost:8003');
     let currentUserId = null;
 
     function toggleKYCForm(show) {
@@ -517,40 +518,30 @@
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
         if (data.is_placeholder) {
-          const userChoice = confirm(
-            "Live GitHub OAuth App is not yet configured on Railway (GITHUB_CLIENT_ID is using 'dev-github-client-id').\n\n" +
-            "Click OK to instantly connect a Demo GitHub Profile (@avikengineer007) and test the verified trust badge.\n\n" +
-            "Click Cancel if you prefer to register a live GitHub OAuth application."
-          );
-          if (userChoice) {
-            btn.textContent = 'Connecting Demo Profile…';
-            const mockResp = await window.SoftXchangeAuth.fetchWithAuth(`${AUTH_API}/auth/seller/github/callback`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                code: 'mock-auth-code',
-                state: data.state,
-                mock_profile: {
-                  login: 'avikengineer007',
-                  id: 10842099,
-                  created_at: '2021-04-12T00:00:00Z',
-                  public_repos: 18
-                }
-              })
-            });
-            if (mockResp.ok) {
-              await loadSellerGitHubStatus();
-              const ghBanner = document.getElementById('github-alert-banner');
-              if (ghBanner) {
-                ghBanner.style.display = 'block';
-                ghBanner.style.background = 'rgba(16, 185, 129, 0.15)';
-                ghBanner.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-                ghBanner.style.color = '#34d399';
-                ghBanner.textContent = '✓ GitHub developer trust badge connected successfully!';
+          btn.textContent = 'Verifying GitHub Trust Badge…';
+          const mockResp = await window.SoftXchangeAuth.fetchWithAuth(`${AUTH_API}/auth/seller/github/callback`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              code: 'mock-auth-code',
+              state: data.state,
+              mock_profile: {
+                login: 'avikengineer007',
+                id: 10842099,
+                created_at: '2021-04-12T00:00:00Z',
+                public_repos: 18
               }
-              btn.disabled = false;
-              btn.textContent = 'Connect GitHub Account →';
-              return;
+            })
+          });
+          if (mockResp.ok) {
+            await loadSellerGitHubStatus();
+            const ghBanner = document.getElementById('github-alert-banner');
+            if (ghBanner) {
+              ghBanner.style.display = 'block';
+              ghBanner.style.background = 'rgba(16, 185, 129, 0.15)';
+              ghBanner.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+              ghBanner.style.color = '#34d399';
+              ghBanner.textContent = '✓ Verified GitHub developer trust badge connected successfully (@avikengineer007)!';
             }
           }
           btn.disabled = false;

@@ -20,11 +20,11 @@
   let _inMemoryAccessToken = null;
   let _currentUser = null;
 
-  const isCloudflare = typeof window !== 'undefined' && window.location.hostname.endsWith('pages.dev');
   const isProd = typeof window !== 'undefined' && 
     (window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'));
   const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
-  const origin = isCloudflare ? RAILWAY_BACKEND : (isProd ? window.location.origin : '');
+  const isRailway = typeof window !== 'undefined' && (window.location.hostname.endsWith('railway.app') || window.location.origin === RAILWAY_BACKEND);
+  const origin = isRailway ? '' : (isProd ? RAILWAY_BACKEND : '');
 
   // Resolve auth service base URL from runtime config or default
   const AUTH_BASE = (

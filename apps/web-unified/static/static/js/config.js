@@ -9,15 +9,17 @@
 
   const hostname = window.location.hostname;
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-  const isCloudflare = hostname.endsWith('pages.dev');
   const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
+  const isRailway = hostname.endsWith('railway.app') || window.location.origin === RAILWAY_BACKEND;
 
-  // In production (Railway or Cloudflare Pages), point to the Railway backend
+  // In production:
+  // - If directly on Railway (Caddy reverse proxies all services under same host): use relative paths ''
+  // - If on Cloudflare Pages, Vercel, Netlify, custom domain, or any static host: point to live Railway backend
   let prodBase = '';
-  if (isCloudflare) {
-    prodBase = RAILWAY_BACKEND;
+  if (isRailway) {
+    prodBase = '';
   } else if (!isLocalhost) {
-    prodBase = window.location.origin;
+    prodBase = RAILWAY_BACKEND;
   }
 
   window.__CONFIG__ = Object.assign({

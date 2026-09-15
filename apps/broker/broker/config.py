@@ -36,6 +36,7 @@ class Settings(BaseSettings):
         "http://localhost:8005",
         "http://localhost:8006",
         "http://localhost:8007",
+        "https://softxchange-production.up.railway.app",
     ]
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

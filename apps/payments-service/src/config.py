@@ -38,6 +38,7 @@ class Settings(BaseSettings):
         "http://localhost:8003",
         "http://localhost:8004",
         "http://127.0.0.1:8004",
+        "https://softxchange-production.up.railway.app",
     ]
 
     model_config = SettingsConfigDict(
