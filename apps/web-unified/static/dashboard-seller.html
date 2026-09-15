@@ -517,32 +517,16 @@
         const resp = await window.SoftXchangeAuth.fetchWithAuth(`${AUTH_API}/auth/seller/github/authorize`);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
+
         if (data.is_placeholder) {
-          btn.textContent = 'Verifying GitHub Trust Badge…';
-          const mockResp = await window.SoftXchangeAuth.fetchWithAuth(`${AUTH_API}/auth/seller/github/callback`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              code: 'mock-auth-code',
-              state: data.state,
-              mock_profile: {
-                login: 'avikengineer007',
-                id: 10842099,
-                created_at: '2021-04-12T00:00:00Z',
-                public_repos: 18
-              }
-            })
-          });
-          if (mockResp.ok) {
-            await loadSellerGitHubStatus();
-            const ghBanner = document.getElementById('github-alert-banner');
-            if (ghBanner) {
-              ghBanner.style.display = 'block';
-              ghBanner.style.background = 'rgba(16, 185, 129, 0.15)';
-              ghBanner.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-              ghBanner.style.color = '#34d399';
-              ghBanner.textContent = '✓ Verified GitHub developer trust badge connected successfully (@avikengineer007)!';
-            }
+          // GitHub OAuth app not yet configured — show inline info, no dialogs
+          const ghBanner = document.getElementById('github-alert-banner');
+          if (ghBanner) {
+            ghBanner.style.display = 'block';
+            ghBanner.style.background = 'rgba(251, 191, 36, 0.1)';
+            ghBanner.style.border = '1px solid rgba(251, 191, 36, 0.3)';
+            ghBanner.style.color = '#fbbf24';
+            ghBanner.textContent = 'GitHub OAuth is not yet configured for this deployment. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in your Railway environment variables.';
           }
           btn.disabled = false;
           btn.textContent = 'Connect GitHub Account →';
@@ -552,13 +536,11 @@
         if (data.authorize_url) {
           window.location.href = data.authorize_url;
         } else {
-          alert('Unable to initiate GitHub connection.');
           btn.disabled = false;
           btn.textContent = 'Connect GitHub Account →';
         }
       } catch (err) {
         console.error('Failed to get GitHub authorize URL', err);
-        alert('GitHub OAuth authorization failed: ' + err.message);
         btn.disabled = false;
         btn.textContent = 'Connect GitHub Account →';
       }
