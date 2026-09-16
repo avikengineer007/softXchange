@@ -62,6 +62,7 @@ PAGES = [
     "dashboard-customer.html",
     "dashboard-seller.html",
     "admin-dashboard.html",
+    "reset-password.html",
 ]
 
 for page in PAGES:

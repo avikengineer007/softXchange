@@ -78,8 +78,17 @@ class Settings(BaseSettings):
     GITHUB_OAUTH_REDIRECT_URI: Optional[str] = "http://localhost:8000/dashboard-seller.html"
     GITHUB_OAUTH_SCOPES: str = "read:user public_repo"
 
+    # -------------------------------------------------------------------------
+    # Transactional Email Delivery (Resend)
+    # -------------------------------------------------------------------------
+    EMAIL_PROVIDER_API_KEY: Optional[str] = None
+    EMAIL_FROM_ADDRESS: str = "noreply@softxchange.com"
+    EMAIL_FROM_NAME: str = "softXchange"
+    FRONTEND_URL: str = "https://softxchange.pages.dev"
+    EMAIL_TEST_MODE: bool = False
+
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "apps/auth-service/.env", "../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -87,9 +96,13 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Automatically enforce secure cookies in production if not explicitly overridden
+# Automatically enforce production guardrails
 if settings.ENVIRONMENT.lower() == "production":
+    if settings.EMAIL_TEST_MODE:
+        raise RuntimeError("FATAL: EMAIL_TEST_MODE cannot be enabled in production environment.")
     if not settings.COOKIE_SECURE:
         settings.COOKIE_SECURE = True
     if settings.GITHUB_OAUTH_REDIRECT_URI == "http://localhost:8000/dashboard-seller.html":
         settings.GITHUB_OAUTH_REDIRECT_URI = "https://softxchange-production.up.railway.app/dashboard-seller.html"
+    if settings.FRONTEND_URL == "http://localhost:8000":
+        settings.FRONTEND_URL = "https://softxchange.com"

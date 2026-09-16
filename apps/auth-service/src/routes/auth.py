@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta, timezone
 import logging
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response, BackgroundTasks
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from src.config import settings
 from src.database import get_db
+from src.email_service import send_password_reset_email, send_email_verification_email
 from src.models.user import (
     User,
     UserRole,
@@ -81,11 +82,16 @@ def _set_refresh_cookie(response: Response, raw_refresh_token: str) -> None:
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user account with role(s)",
 )
-def signup(data: UserSignup, db: Session = Depends(get_db)):
+def signup(
+    data: UserSignup,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """
     Accepts email, password, and roles.
     Creates user with email_verified=False.
     Does not issue session on signup alone because email verification is required.
+    Dispatches verification email asynchronously.
     """
     normalized_email = data.email.strip().lower()
 
@@ -127,7 +133,7 @@ def signup(data: UserSignup, db: Session = Depends(get_db)):
             )
             db.add(seller_profile)
 
-        # Create verification token placeholder hook
+        # Create verification token record
         raw_verify_token = generate_secure_token()
         token_record = VerificationToken(
             token_hash=hash_token(raw_verify_token),
@@ -140,6 +146,9 @@ def signup(data: UserSignup, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_user)
 
+        # Asynchronously dispatch email verification via Resend
+        background_tasks.add_task(send_email_verification_email, normalized_email, raw_verify_token)
+
     except Exception as exc:
         db.rollback()
         logger.error(f"Failed to create user during signup: {exc}", exc_info=True)
@@ -148,8 +157,6 @@ def signup(data: UserSignup, db: Session = Depends(get_db)):
             detail="An error occurred while creating your account. Please try again.",
         )
 
-    # Placeholder hook: in production, an email delivery service would be called.
-    # In dev/test mode, we provide the verification token for convenience.
     dev_token = raw_verify_token if settings.ENVIRONMENT != "production" else None
 
     return SignupSuccessResponse(
@@ -398,11 +405,14 @@ def get_public_key():
 )
 def request_email_verification(
     data: EmailVerifyRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """
     Returns identical generic success response whether email exists or not
     to prevent user enumeration.
+    Dispatches verification email asynchronously via Resend.
+    Raw token is never logged or returned in responses.
     """
     normalized_email = data.email.strip().lower()
     user = db.query(User).filter(User.email == normalized_email).first()
@@ -417,8 +427,11 @@ def request_email_verification(
         )
         db.add(token_record)
         db.commit()
-        # In dev mode, log token
-        logger.info(f"[DEV] Email verification token for {normalized_email}: {raw_token}")
+        # Asynchronously dispatch email without blocking client response
+        background_tasks.add_task(send_email_verification_email, normalized_email, raw_token)
+    else:
+        # Constant-time dummy operation to prevent timing attacks
+        verify_dummy_password("dummy-prevent-timing-leak")
 
     return MessageResponse(
         message="If this email is registered, a verification link has been sent to it."
@@ -468,15 +481,19 @@ def confirm_email_verification(
 )
 def request_password_reset(
     data: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """
-    Returns identical generic success response whether email exists or not.
+    Returns identical generic success response whether email exists or not
+    to prevent user enumeration.
+    Dispatches password reset email asynchronously via Resend.
+    Raw token is never logged or returned in responses.
     """
     normalized_email = data.email.strip().lower()
     user = db.query(User).filter(User.email == normalized_email).first()
 
-    if user:
+    if user and user.is_active:
         raw_token = generate_secure_token()
         token_record = VerificationToken(
             token_hash=hash_token(raw_token),
@@ -486,7 +503,11 @@ def request_password_reset(
         )
         db.add(token_record)
         db.commit()
-        logger.info(f"[DEV] Password reset token for {normalized_email}: {raw_token}")
+        # Asynchronously dispatch email without blocking client response
+        background_tasks.add_task(send_password_reset_email, normalized_email, raw_token)
+    else:
+        # Constant-time dummy operation to balance execution latency
+        verify_dummy_password("dummy-prevent-timing-leak")
 
     return MessageResponse(
         message="If this email is registered, password reset instructions have been sent."
@@ -574,15 +595,23 @@ def get_me(
 # ============================================================================
 
 @router.post("/customer/signup", response_model=SignupSuccessResponse, status_code=status.HTTP_201_CREATED)
-def legacy_customer_signup(data: UserSignup, db: Session = Depends(get_db)):
+def legacy_customer_signup(
+    data: UserSignup,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     data.roles = [UserRole.CUSTOMER.value]
-    return signup(data, db=db)
+    return signup(data, background_tasks=background_tasks, db=db)
 
 
 @router.post("/seller/signup", response_model=SignupSuccessResponse, status_code=status.HTTP_201_CREATED)
-def legacy_seller_signup(data: UserSignup, db: Session = Depends(get_db)):
+def legacy_seller_signup(
+    data: UserSignup,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     data.roles = [UserRole.SELLER.value]
-    return signup(data, db=db)
+    return signup(data, background_tasks=background_tasks, db=db)
 
 
 @router.post("/customer/login", response_model=TokenResponse)

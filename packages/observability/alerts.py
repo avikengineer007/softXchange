@@ -91,3 +91,18 @@ def alert_admin_provisioning_abuse(user_id: str, source_ip: Optional[str], faile
             "consecutive_failures": failed_attempts,
         },
     )
+
+
+def alert_email_delivery_failure(recipient_email: str, email_type: str, error: str, provider: str = "resend"):
+    """Triggers an alert when outbound transactional email delivery fails (network/provider outage)."""
+    trigger_alert(
+        alert_type="EMAIL_DELIVERY_FAILURE",
+        severity="WARNING",
+        title=f"Transactional Email Delivery Failed: {email_type}",
+        details={
+            "recipient": recipient_email,
+            "email_type": email_type,
+            "error": str(error),
+            "provider": provider,
+        },
+    )

@@ -19,6 +19,7 @@ This inventory catalogues every secret, key, and credential across the softXchan
 | **`DATABASE_URL` (Payments)** | `payments-service` | PostgreSQL URI with credentials | Connection string for `softxchange_payments` logical database. | 180 days | Service cannot boot if database authentication fails. |
 | **`DATABASE_URL` (Scan)** | `scan-service` | PostgreSQL URI with credentials | Connection string for `softxchange_scan` logical database. | 180 days | Service cannot boot if database authentication fails. |
 | **`MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`** | `minio`, `scan-service`, `listings-service` | Alphanumeric credentials | Administrative and client access to local/staging S3 object storage. | 180 days | Storage operations fail closed. |
+| **`EMAIL_PROVIDER_API_KEY`** | `auth-service` | Resend API Key (`re_...`) | Authenticates outbound transactional email delivery (password reset, email verification). | 90 days (or on compromise) | **Operational Alert**: When missing or failing, transactions fail-safe with generic user response and trigger CRITICAL operational alerts to ops/support. |
 
 ---
 
