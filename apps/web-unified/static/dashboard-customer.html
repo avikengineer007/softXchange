@@ -15,15 +15,7 @@
 
   <header class="site-nav" role="banner">
     <a href="/index.html" class="brand-link" id="brand-home">
-      <svg class="brand-logo-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="dc-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="var(--accent-blue)"/>
-            <stop offset="100%" stop-color="var(--accent-violet)"/>
-          </linearGradient>
-        </defs>
-        <path d="M4 5v14l8-7-8-7zm16 0v14l-8-7 8-7z" fill="url(#dc-grad)"/>
-      </svg>
+      <img src="/static/images/logo.png" alt="SoftXchange Logo" class="brand-logo-icon" />
       <span>softXchange</span>
     </a>
     <nav class="nav-links" aria-label="Main navigation">
@@ -36,10 +28,17 @@
     <div style="max-width:640px;margin:0 auto;">
       <!-- Welcome card -->
       <div class="overview-card glass-panel" style="margin-bottom:24px;padding:28px;">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
           <div>
             <h1 id="welcome-name" style="font-family:var(--font-heading);font-size:22px;font-weight:700;margin-bottom:4px;">Hello, Buyer</h1>
             <p id="user-email" style="font-size:13px;color:var(--text-secondary);">Loading session…</p>
+          </div>
+          <div class="logo-3d-emblem-wrap">
+            <div class="logo-3d-glow-disc"></div>
+            <div class="logo-3d-emblem" style="width: 54px; height: 54px;">
+              <img src="/static/images/logo.png" alt="SoftXchange 3D Emblem" class="logo-3d-layer-front" />
+              <img src="/static/images/logo.png" alt="" class="logo-3d-layer-back" />
+            </div>
           </div>
           <div id="admin-badge-container"></div>
         </div>

@@ -161,27 +161,7 @@
       
       <!-- Brand & Vector Mark -->
       <a href="/index.html" class="flex items-center gap-3.5 group">
-        <svg class="w-8 h-8 group-hover:scale-105 transition-transform drop-shadow-[0_0_15px_rgba(56,189,248,0.4)]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M50 14 L18 36 L18 68 L50 46 Z" fill="url(#nav-blue-gradient)" fill-opacity="0.85" stroke="#38bdf8" stroke-width="1.8" stroke-linejoin="round"/>
-          <path d="M50 14 L82 36 L82 68 L50 46 Z" fill="url(#nav-purple-gradient)" fill-opacity="0.85" stroke="#c084fc" stroke-width="1.8" stroke-linejoin="round"/>
-          <path d="M50 46 L32 68 L50 90 L68 68 Z" fill="url(#nav-core-gradient)" fill-opacity="0.95" stroke="#e0e7ff" stroke-width="1.5" stroke-linejoin="round"/>
-          <path d="M50 14 L50 90" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5"/>
-          <defs>
-            <linearGradient id="nav-blue-gradient" x1="18" y1="36" x2="50" y2="46" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#0284c7"/>
-              <stop offset="1" stop-color="#38bdf8"/>
-            </linearGradient>
-            <linearGradient id="nav-purple-gradient" x1="82" y1="36" x2="50" y2="46" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#9333ea"/>
-              <stop offset="1" stop-color="#c084fc"/>
-            </linearGradient>
-            <linearGradient id="nav-core-gradient" x1="32" y1="68" x2="68" y2="68" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#38bdf8"/>
-              <stop offset="0.5" stop-color="#a855f7"/>
-              <stop offset="1" stop-color="#c084fc"/>
-            </linearGradient>
-          </defs>
-        </svg>
+        <img src="/static/images/logo.png" alt="SoftXchange Logo" class="w-8 h-8 object-contain group-hover:scale-105 transition-transform drop-shadow-[0_0_15px_rgba(56,189,248,0.4)]" />
         <div class="flex flex-col">
           <span class="text-base font-bold tracking-tight text-white leading-tight font-sans">
             Soft<span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">Xchange</span>
@@ -856,106 +836,120 @@
     heroRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     heroBox.appendChild(heroRenderer.domElement);
 
-    // Build the exact Two-Plane Frosted Glass Ribbon
+    // Build the 3D SoftXchange Brand Emblem Hologram
     const logoGroup = new THREE.Group();
 
-    // 1. Precise 2.5D Translucent Plane Geometry
-    const planeGeo = new THREE.BoxGeometry(2.4, 3.4, 0.08);
-
-    // Left Cyan/Cobalt Frosted Glass Plane
-    const leftMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x0284c7,
-      emissive: 0x0369a1,
-      emissiveIntensity: 0.45,
-      transparent: true,
-      opacity: 0.72,
-      roughness: 0.12,
-      metalness: 0.05,
-      transmission: 0.9,
-      ior: 1.5,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.1,
-      side: THREE.DoubleSide
+    // 1. Texture Loader for Official High-Res Transparent Logo Mark
+    const textureLoader = new THREE.TextureLoader();
+    const logoTexture = textureLoader.load('/static/images/logo.png', () => {
+      heroRenderer.render(heroScene, heroCamera);
     });
+    logoTexture.generateMipmaps = true;
+    logoTexture.minFilter = THREE.LinearMipmapLinearFilter;
 
-    const leftPlane = new THREE.Mesh(planeGeo, leftMaterial);
-    leftPlane.position.set(-0.7, 0.3, 0.2);
-    leftPlane.rotation.set(-0.35, 0.55, -0.45);
-
-    // Left Glowing Edge Border
-    const leftEdges = new THREE.EdgesGeometry(planeGeo);
-    const leftLine = new THREE.LineSegments(
-      leftEdges,
-      new THREE.LineBasicMaterial({ color: 0x67e8f9, linewidth: 2 })
-    );
-    leftPlane.add(leftLine);
-
-    // Right Violet/Magenta Frosted Glass Plane
-    const rightMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x9333ea,
-      emissive: 0x7e22ce,
-      emissiveIntensity: 0.45,
+    // 2. Multi-Layer Stereoscopic 3D Emblem
+    // Layer A: Primary Front Facet (High definition, crisp refractive alpha)
+    const frontGeo = new THREE.PlaneGeometry(4.6, 4.6);
+    const frontMat = new THREE.MeshBasicMaterial({
+      map: logoTexture,
       transparent: true,
-      opacity: 0.72,
-      roughness: 0.12,
-      metalness: 0.05,
-      transmission: 0.9,
-      ior: 1.5,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.1,
-      side: THREE.DoubleSide
+      opacity: 0.96,
+      side: THREE.DoubleSide,
+      depthWrite: false
     });
+    const frontMesh = new THREE.Mesh(frontGeo, frontMat);
+    frontMesh.position.set(0, 0, 0.16);
 
-    const rightPlane = new THREE.Mesh(planeGeo, rightMaterial);
-    rightPlane.position.set(0.7, -0.3, -0.2);
-    rightPlane.rotation.set(-0.35, 0.55, -0.45);
+    // Layer B: Deep Refractive Parallax Backing (Simulates glass prism thickness)
+    const backGeo = new THREE.PlaneGeometry(4.6, 4.6);
+    const backMat = new THREE.MeshBasicMaterial({
+      map: logoTexture,
+      transparent: true,
+      opacity: 0.45,
+      color: 0xc084fc,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const backMesh = new THREE.Mesh(backGeo, backMat);
+    backMesh.position.set(0, 0, -0.22);
+    backMesh.scale.set(0.95, 0.95, 1);
 
-    // Right Glowing Edge Border
-    const rightEdges = new THREE.EdgesGeometry(planeGeo);
-    const rightLine = new THREE.LineSegments(
-      rightEdges,
-      new THREE.LineBasicMaterial({ color: 0xc084fc, linewidth: 2 })
-    );
-    rightPlane.add(rightLine);
+    // Layer C: Core Specular Caustic Gleam (Dynamic cyan luminance at plate nexus)
+    const gleamMat = new THREE.MeshBasicMaterial({
+      map: logoTexture,
+      transparent: true,
+      opacity: 0.35,
+      color: 0x38bdf8,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    const gleamMesh = new THREE.Mesh(frontGeo, gleamMat);
+    gleamMesh.position.set(0, 0, 0.02);
 
-    // 2. Central High-Intensity Overlap Caustic (The glowing center core)
-    const coreGeo = new THREE.PlaneGeometry(1.6, 2.2);
-    const coreMat = new THREE.MeshBasicMaterial({
+    // 3. Inclined Holographic Orbital Energy Rings
+    const ring1Geo = new THREE.RingGeometry(3.1, 3.14, 64);
+    const ring1Mat = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
       transparent: true,
-      opacity: 0.65,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide
+      opacity: 0.35,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
     });
-    const centralCaustic = new THREE.Mesh(coreGeo, coreMat);
-    centralCaustic.position.set(0, 0, 0.05);
-    centralCaustic.rotation.set(-0.35, 0.55, -0.45);
+    const ring1 = new THREE.Mesh(ring1Geo, ring1Mat);
+    ring1.rotation.x = Math.PI / 3;
 
-    // 3. Floating Orbital Particle Streams (Verification Motif Echo)
-    const orbitalCount = 80;
+    const ring2Geo = new THREE.RingGeometry(3.6, 3.63, 64);
+    const ring2Mat = new THREE.MeshBasicMaterial({
+      color: 0xc084fc,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
+    });
+    const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+    ring2.rotation.y = Math.PI / 4;
+    ring2.rotation.x = -Math.PI / 5;
+
+    // 4. Swirling Orbital Verification Particle Ribbon
+    const orbitalCount = 110;
     const orbitalPositions = new Float32Array(orbitalCount * 3);
+    const orbitalColors = new Float32Array(orbitalCount * 3);
+    const colorC = new THREE.Color(0x38bdf8);
+    const colorV = new THREE.Color(0xc084fc);
+
     for (let i = 0; i < orbitalCount * 3; i += 3) {
-      const theta = Math.random() * Math.PI * 2;
-      const radius = 2.4 + Math.random() * 1.6;
+      const theta = (i / (orbitalCount * 3)) * Math.PI * 2 * 3 + Math.random() * 0.4;
+      const radius = 2.5 + Math.random() * 1.5;
       orbitalPositions[i] = Math.cos(theta) * radius;
-      orbitalPositions[i + 1] = Math.sin(theta) * (radius * 0.65);
-      orbitalPositions[i + 2] = (Math.random() - 0.5) * 1.2;
+      orbitalPositions[i + 1] = Math.sin(theta) * (radius * 0.72);
+      orbitalPositions[i + 2] = (Math.random() - 0.5) * 1.6;
+
+      const mixed = colorC.clone().lerp(colorV, Math.random());
+      orbitalColors[i] = mixed.r;
+      orbitalColors[i + 1] = mixed.g;
+      orbitalColors[i + 2] = mixed.b;
     }
+
     const orbitalGeo = new THREE.BufferGeometry();
     orbitalGeo.setAttribute('position', new THREE.BufferAttribute(orbitalPositions, 3));
+    orbitalGeo.setAttribute('color', new THREE.BufferAttribute(orbitalColors, 3));
     const orbitalMat = new THREE.PointsMaterial({
-      size: 0.14,
-      color: 0x38bdf8,
+      size: 0.16,
+      vertexColors: true,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.85,
       blending: THREE.AdditiveBlending
     });
     const orbitalParticles = new THREE.Points(orbitalGeo, orbitalMat);
-    orbitalParticles.rotation.set(-0.35, 0.55, -0.45);
+    orbitalParticles.rotation.set(-0.3, 0.4, -0.2);
 
-    logoGroup.add(leftPlane);
-    logoGroup.add(rightPlane);
-    logoGroup.add(centralCaustic);
+    logoGroup.add(frontMesh);
+    logoGroup.add(backMesh);
+    logoGroup.add(gleamMesh);
+    logoGroup.add(ring1);
+    logoGroup.add(ring2);
     logoGroup.add(orbitalParticles);
 
     heroScene.add(logoGroup);
@@ -969,7 +963,7 @@
     lightPurple.position.set(5, -4, 6);
     heroScene.add(lightPurple);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
     heroScene.add(ambientLight);
 
     // Responsive Canvas Resize
@@ -997,11 +991,16 @@
       pSystem.rotation.x = currentTime * 0.0001 + targetY * 0.45;
       bgRenderer.render(bgScene, bgCamera);
 
-      // Hero Hologram Floating Dynamics & Cursor Interactivity
-      logoGroup.position.y = Math.sin(currentTime * 0.0015) * 0.15;
-      logoGroup.rotation.y = targetX * 0.4 + Math.sin(currentTime * 0.001) * 0.08;
-      logoGroup.rotation.x = -targetY * 0.4 + Math.cos(currentTime * 0.001) * 0.06;
-      orbitalParticles.rotation.z += 0.004;
+      // Hero Hologram Floating Dynamics & Precessional 3D Tilt
+      logoGroup.position.y = Math.sin(currentTime * 0.0018) * 0.22;
+      logoGroup.rotation.y = targetX * 0.55 + Math.sin(currentTime * 0.0009) * 0.25;
+      logoGroup.rotation.x = -targetY * 0.45 + Math.cos(currentTime * 0.0011) * 0.12;
+      logoGroup.rotation.z = Math.sin(currentTime * 0.0007) * 0.05;
+
+      // Orbital Rotations
+      ring1.rotation.z += 0.004;
+      ring2.rotation.z -= 0.003;
+      orbitalParticles.rotation.z += 0.006;
 
       heroRenderer.render(heroScene, heroCamera);
     }
