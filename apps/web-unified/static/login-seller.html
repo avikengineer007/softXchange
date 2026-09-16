@@ -195,7 +195,7 @@
           <div>
             <div class="flex items-center justify-between mb-1.5">
               <label class="text-slate-300 uppercase tracking-wider" for="password">Password</label>
-              <a href="#" class="text-[11px] text-purple-400 hover:text-purple-300 transition-colors">Forgot password?</a>
+              <button type="button" id="forgot-password-btn" class="text-[11px] text-purple-400 hover:text-purple-300 transition-colors cursor-pointer bg-transparent border-none p-0">Forgot password?</button>
             </div>
             <input 
               type="password" 
@@ -227,6 +227,70 @@
     </div>
   </main>
 
+  <!-- Forgot Password Modal -->
+  <div id="forgot-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none!important;">
+    <!-- Backdrop -->
+    <div id="forgot-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <!-- Panel -->
+    <div class="relative glass-panel rounded-2xl p-8 w-full max-w-md shadow-2xl shadow-purple-500/10 border border-white/10">
+      <!-- Close -->
+      <button id="forgot-close" type="button" class="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+
+      <!-- Step 1: Enter email -->
+      <div id="fp-step-1">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-white font-sans">Reset your password</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Enter your email and we'll generate a reset token.</p>
+          </div>
+        </div>
+        <div id="fp-error-1" class="hidden mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/25 text-sm text-red-300"></div>
+        <div id="fp-success-1" class="hidden mb-4 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-sm text-emerald-300"></div>
+        <label class="block text-xs text-slate-300 uppercase tracking-wider mb-1.5">Email address</label>
+        <input id="fp-email" type="email" autocomplete="email" placeholder="developer@studio.com"
+          class="w-full bg-black/40 border border-white/10 focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/60 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 transition-all font-sans text-sm outline-none mb-4">
+        <button id="fp-request-btn" type="button"
+          class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold font-mono text-xs tracking-wider uppercase shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+          <span id="fp-req-text">Send Reset Token</span>
+          <div id="fp-req-spin" class="spinner"></div>
+        </button>
+        <p class="mt-4 text-center text-xs text-slate-500">Already have a token? <button type="button" id="fp-go-step2" class="text-purple-400 hover:text-purple-300 transition-colors bg-transparent border-none p-0 cursor-pointer">Enter it here →</button></p>
+      </div>
+
+      <!-- Step 2: Enter token + new password -->
+      <div id="fp-step-2" class="hidden">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="1.8"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          </div>
+          <div>
+            <h2 class="text-base font-semibold text-white font-sans">Enter reset token</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Check server logs for the token, then set a new password.</p>
+          </div>
+        </div>
+        <div id="fp-error-2" class="hidden mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/25 text-sm text-red-300"></div>
+        <div id="fp-success-2" class="hidden mb-4 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-sm text-emerald-300"></div>
+        <label class="block text-xs text-slate-300 uppercase tracking-wider mb-1.5">Reset Token</label>
+        <input id="fp-token" type="text" autocomplete="off" placeholder="Paste token from server logs"
+          class="w-full bg-black/40 border border-white/10 focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/60 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 transition-all font-mono text-xs outline-none mb-3">
+        <label class="block text-xs text-slate-300 uppercase tracking-wider mb-1.5">New Password</label>
+        <input id="fp-newpass" type="password" autocomplete="new-password" placeholder="Min 8 characters"
+          class="w-full bg-black/40 border border-white/10 focus:border-purple-400/60 focus:ring-1 focus:ring-purple-400/60 rounded-xl px-4 py-3 text-slate-100 placeholder-slate-500 transition-all font-sans text-sm outline-none mb-4">
+        <button id="fp-confirm-btn" type="button"
+          class="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold font-mono text-xs tracking-wider uppercase shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+          <span id="fp-conf-text">Reset Password</span>
+          <div id="fp-conf-spin" class="spinner"></div>
+        </button>
+        <p class="mt-4 text-center text-xs text-slate-500"><button type="button" id="fp-back-step1" class="text-purple-400 hover:text-purple-300 transition-colors bg-transparent border-none p-0 cursor-pointer">← Back</button></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Simple Footer -->
   <footer class="w-full z-10 py-6 px-4 text-center text-[11px] font-mono text-slate-500 border-t border-white/5">
     <span>© 2026 softXchange Marketplace · Zero-Trust Verified Software &amp; Artifact Exchange</span>
@@ -238,6 +302,89 @@
     if (window.lucide) {
       lucide.createIcons();
     }
+
+    // ── Forgot Password Modal ──────────────────────────────────────────────────
+    (function () {
+      const modal      = document.getElementById('forgot-modal');
+      const backdrop   = document.getElementById('forgot-backdrop');
+      const closeBtn   = document.getElementById('forgot-close');
+      const step1      = document.getElementById('fp-step-1');
+      const step2      = document.getElementById('fp-step-2');
+
+      function openModal() {
+        modal.style.removeProperty('display');
+        modal.style.display = 'flex';
+        document.getElementById('fp-email').value = '';
+        document.getElementById('fp-token').value = '';
+        document.getElementById('fp-newpass').value = '';
+        showStep(1);
+        clearMessages();
+      }
+      function closeModal() {
+        modal.style.display = 'none';
+      }
+      function showStep(n) {
+        step1.classList.toggle('hidden', n !== 1);
+        step2.classList.toggle('hidden', n !== 2);
+      }
+      function clearMessages() {
+        ['fp-error-1','fp-success-1','fp-error-2','fp-success-2'].forEach(id => {
+          const el = document.getElementById(id);
+          el.textContent = '';
+          el.classList.add('hidden');
+        });
+      }
+      function showMsg(id, msg) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.classList.remove('hidden');
+      }
+      function setLoading(btnId, spinId, textId, on, label) {
+        document.getElementById(btnId).disabled = on;
+        document.getElementById(spinId).style.display = on ? 'inline-block' : 'none';
+        document.getElementById(textId).textContent = on ? '…' : label;
+      }
+
+      document.getElementById('forgot-password-btn').addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+      backdrop.addEventListener('click', closeModal);
+      document.getElementById('fp-go-step2').addEventListener('click', () => showStep(2));
+      document.getElementById('fp-back-step1').addEventListener('click', () => showStep(1));
+
+      document.getElementById('fp-request-btn').addEventListener('click', async () => {
+        clearMessages();
+        const email = document.getElementById('fp-email').value.trim();
+        if (!email) { showMsg('fp-error-1', 'Please enter your email address.'); return; }
+        setLoading('fp-request-btn', 'fp-req-spin', 'fp-req-text', true, 'Send Reset Token');
+        try {
+          const res = await window.SoftXchangeAuth.requestPasswordReset(email);
+          showMsg('fp-success-1', res.message || 'Reset token generated. Check server logs.');
+          setTimeout(() => showStep(2), 1800);
+        } catch (err) {
+          showMsg('fp-error-1', err.message || 'Something went wrong. Please try again.');
+        } finally {
+          setLoading('fp-request-btn', 'fp-req-spin', 'fp-req-text', false, 'Send Reset Token');
+        }
+      });
+
+      document.getElementById('fp-confirm-btn').addEventListener('click', async () => {
+        clearMessages();
+        const token   = document.getElementById('fp-token').value.trim();
+        const newPass = document.getElementById('fp-newpass').value;
+        if (!token)   { showMsg('fp-error-2', 'Please paste your reset token.'); return; }
+        if (newPass.length < 8) { showMsg('fp-error-2', 'Password must be at least 8 characters.'); return; }
+        setLoading('fp-confirm-btn', 'fp-conf-spin', 'fp-conf-text', true, 'Reset Password');
+        try {
+          const res = await window.SoftXchangeAuth.confirmPasswordReset(token, newPass);
+          showMsg('fp-success-2', res.message || 'Password reset! You can now sign in.');
+          setTimeout(closeModal, 2500);
+        } catch (err) {
+          showMsg('fp-error-2', err.message || 'Invalid or expired token.');
+        } finally {
+          setLoading('fp-confirm-btn', 'fp-conf-spin', 'fp-conf-text', false, 'Reset Password');
+        }
+      });
+    })();
 
     const loginForm  = document.getElementById('login-form');
     const errorAlert = document.getElementById('error-alert');

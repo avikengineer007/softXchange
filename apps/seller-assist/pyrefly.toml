@@ -4,3 +4,11 @@ version = "0.1.0"
 dependencies = [
     "ml-shared",
 ]
+
+# Runtime sys.path additions from run.py and Dockerfile:
+# - run.py inserts apps/listings-service so `src.*` resolves to listings-service/src/
+# - Dockerfile copies apps/listings-service/src into /app/src
+[python]
+search_path = [
+    "../listings-service",
+]

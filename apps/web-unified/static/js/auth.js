@@ -207,6 +207,40 @@
     },
 
     /**
+     * Request a password reset token for the given email.
+     * Backend always returns a generic success message (anti-enumeration).
+     */
+    async requestPasswordReset(email) {
+      const response = await fetch(`${AUTH_BASE}/auth/password-reset/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to request password reset.');
+      }
+      return data;
+    },
+
+    /**
+     * Confirm a password reset using the token from the server logs (dev)
+     * or email (prod). Revokes all existing sessions on success.
+     */
+    async confirmPasswordReset(token, newPassword) {
+      const response = await fetch(`${AUTH_BASE}/auth/password-reset/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, new_password: newPassword }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || 'Invalid or expired reset token.');
+      }
+      return data;
+    },
+
+    /**
      * Initializes persistent admin bar across pages if authenticated user is admin.
      * Admin bar link uses canonical root-relative path.
      */

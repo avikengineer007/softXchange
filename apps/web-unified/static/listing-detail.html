@@ -445,6 +445,8 @@
               <span id="wishlist-detail-text">Save to Wishlist</span>
             </button>
 
+            <div id="purchase-error" role="alert" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(239,68,68,0.10);border:1px solid rgba(239,68,68,0.30);border-radius:var(--radius-sm);font-size:12px;color:#fca5a5;line-height:1.5;text-align:left;"></div>
+
             <div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center;line-height:1.5;">
               Instant digital access upon purchase.<br>Cryptographically verified against tamper.
             </div>
@@ -470,8 +472,10 @@
       }
       const btn = document.getElementById('buy-btn');
       const spinner = document.getElementById('buy-spinner');
+      const errBox = document.getElementById('purchase-error');
       btn.disabled = true;
       if (spinner) spinner.style.display = 'inline-block';
+      if (errBox) errBox.style.display = 'none';
 
       try {
         const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/orders`, {
@@ -485,7 +489,15 @@
       } catch (err) {
         if (btn) btn.disabled = false;
         if (spinner) spinner.style.display = 'none';
-        alert('Purchase error: ' + err.message);
+        if (errBox) {
+          // Map internal seller-onboarding error to a friendly buyer-facing message
+          const raw = err.message || '';
+          const msg = raw.toLowerCase().includes('payment onboarding')
+            ? 'This listing is temporarily unavailable for purchase. Please try again later or contact support.'
+            : raw;
+          errBox.textContent = msg;
+          errBox.style.display = 'block';
+        }
       }
     }
 
