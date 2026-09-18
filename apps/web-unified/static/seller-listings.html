@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seller Package Manager — softXchange</title>
+  <link rel="canonical" href="https://softxchange-production.up.railway.app/seller-listings.html">
   <meta name="description" content="Submit software packages for security scanning, manage published versions, and respond to buyer inquiries.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -559,7 +560,7 @@
       document.getElementById('ai-suggestions-list').innerHTML = `
         <div class="ai-suggestion-item"><div><span style="font-size:11px;font-weight:700;color:var(--text-muted);">SUGGESTED TITLE</span><div style="font-weight:600;font-size:14px;margin-top:2px;">${escapeHtml(refinedTitle)}</div></div><button type="button" class="btn-filter" style="padding:4px 8px;font-size:11px;" onclick="document.getElementById('create-title').value=${JSON.stringify(refinedTitle)}">Apply</button></div>
         <div class="ai-suggestion-item"><div><span style="font-size:11px;font-weight:700;color:var(--text-muted);">SUGGESTED DESCRIPTION</span><div style="font-size:12px;white-space:pre-line;margin-top:2px;max-height:80px;overflow-y:auto;">${escapeHtml(refinedDesc)}</div></div><button type="button" class="btn-filter" style="padding:4px 8px;font-size:11px;" onclick="document.getElementById('create-desc').value=${JSON.stringify(refinedDesc)}">Apply</button></div>
-        <div class="ai-suggestion-item"><div><span style="font-size:11px;font-weight:700;color:var(--text-muted);">RECOMMENDED MEDIAN PRICE</span><div style="font-weight:600;font-size:14px;margin-top:2px;">${formatPriceInRegion(4900)} ($49.00)</div></div><button type="button" class="btn-filter" style="padding:4px 8px;font-size:11px;" onclick="document.getElementById('create-price').value=4900;updateLocalPriceHint()">Apply Price</button></div>
+        <div class="ai-suggestion-item"><div><span style="font-size:11px;font-weight:700;color:var(--text-muted);">RECOMMENDED MEDIAN PRICE</span><div style="font-weight:600;font-size:14px;margin-top:2px;">${formatPriceInRegion(4900)} (₹49.00)</div></div><button type="button" class="btn-filter" style="padding:4px 8px;font-size:11px;" onclick="document.getElementById('create-price').value=4900;updateLocalPriceHint()">Apply Price</button></div>
       `;
     }
 

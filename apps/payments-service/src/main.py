@@ -9,6 +9,7 @@ from src.database import init_db
 from src.routes import (
     connect_router,
     connect_alias_router,
+    connect_direct_alias_router,
     orders_router,
     webhooks_router,
     admin_router,
@@ -72,6 +73,7 @@ app.add_middleware(
 # Include all route controllers
 app.include_router(connect_router)
 app.include_router(connect_alias_router)
+app.include_router(connect_direct_alias_router)
 app.include_router(orders_router)
 app.include_router(webhooks_router)
 app.include_router(admin_router)

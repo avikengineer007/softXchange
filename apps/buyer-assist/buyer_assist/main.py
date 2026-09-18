@@ -30,6 +30,9 @@ app.include_router(assist_router)
 
 
 @app.get("/healthz", tags=["Health"])
+@app.get("/assist/health", tags=["Health"])
+@app.get("/assist/healthz", tags=["Health"])
+@app.get("/assist/buyer", tags=["Health"])
 def health_check():
     return {
         "status": "ok",

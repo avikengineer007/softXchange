@@ -53,6 +53,8 @@ app.include_router(demand_router)
 
 @app.get("/health", tags=["Health"])
 @app.get("/healthz", tags=["Health"])
+@app.get("/broker/health", tags=["Health"])
+@app.get("/broker/healthz", tags=["Health"])
 def health_check():
     return {
         "status": "ok",

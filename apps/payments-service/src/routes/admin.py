@@ -52,6 +52,7 @@ def list_held_orders(
                 buyer_id=order.buyer_id,
                 seller_id=order.seller_id,
                 amount_cents=order.amount_cents,
+                amount_inr=round(order.amount_cents / 100.0, 2),
                 amount_usd=round(order.amount_cents / 100.0, 2),
                 hold_status=order.hold_status,
                 hold_reason=order.hold_reason,

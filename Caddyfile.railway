@@ -18,7 +18,7 @@
     handle /kyc* {
         reverse_proxy localhost:8001
     }
-    handle /admin* {
+    handle /admin/* {
         reverse_proxy localhost:8001
     }
     handle /notifications* {

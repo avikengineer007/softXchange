@@ -16,10 +16,12 @@ class SellerOrderItem(BaseModel):
     id: str
     listing_id: str
     amount_cents: int
-    amount_usd: float
+    amount_inr: float
+    amount_usd: Optional[float] = None
     platform_fee_cents: int
     seller_payout_cents: int
-    seller_payout_usd: float
+    seller_payout_inr: float
+    seller_payout_usd: Optional[float] = None
     display_status: str
     status_message: str
     created_at: datetime
@@ -31,11 +33,15 @@ class SellerOrderItem(BaseModel):
 class SellerDashboardResponse(BaseModel):
     user_id: str
     available_payout_cents: int
-    available_payout_usd: float
+    available_payout_inr: float
+    available_payout_usd: Optional[float] = None
     under_review_payout_cents: int
-    under_review_payout_usd: float
+    under_review_payout_inr: float
+    under_review_payout_usd: Optional[float] = None
     total_sales_count: int
     orders: List[SellerOrderItem]
+    available_inr: Optional[float] = None
+    held_inr: Optional[float] = None
     available_usd: Optional[float] = None
     held_usd: Optional[float] = None
 
@@ -96,9 +102,11 @@ def get_seller_payout_dashboard(
                 id=o.id,
                 listing_id=o.listing_id,
                 amount_cents=o.amount_cents,
+                amount_inr=round(o.amount_cents / 100.0, 2),
                 amount_usd=round(o.amount_cents / 100.0, 2),
                 platform_fee_cents=o.platform_fee_cents,
                 seller_payout_cents=o.seller_payout_cents,
+                seller_payout_inr=round(o.seller_payout_cents / 100.0, 2),
                 seller_payout_usd=round(o.seller_payout_cents / 100.0, 2),
                 display_status=display_status,
                 status_message=status_message,
@@ -112,11 +120,15 @@ def get_seller_payout_dashboard(
     return SellerDashboardResponse(
         user_id=seller_id,
         available_payout_cents=available_cents,
+        available_payout_inr=round(available_cents / 100.0, 2),
         available_payout_usd=round(available_cents / 100.0, 2),
         under_review_payout_cents=under_review_cents,
+        under_review_payout_inr=round(under_review_cents / 100.0, 2),
         under_review_payout_usd=round(under_review_cents / 100.0, 2),
         total_sales_count=len([o for o in orders if o.status == OrderStatus.PAID.value]),
         orders=order_items,
+        available_inr=round(available_cents / 100.0, 2),
+        held_inr=round(under_review_cents / 100.0, 2),
         available_usd=round(available_cents / 100.0, 2),
         held_usd=round(under_review_cents / 100.0, 2),
     )

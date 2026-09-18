@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seller Payouts — softXchange</title>
+  <link rel="canonical" href="https://softxchange-production.up.railway.app/seller-payouts.html">
   <meta name="description" content="Monitor your softXchange seller payouts, Razorpay Route status, and transaction history.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -75,12 +76,12 @@
     <div class="stat-grid" role="region" aria-label="Payout statistics">
       <div class="stat-card">
         <div class="label">Available for Payout</div>
-        <div id="stat-available" class="value">$0.00</div>
+        <div id="stat-available" class="value">₹0.00</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Cleared &amp; transferable</div>
       </div>
       <div class="stat-card">
         <div class="label">Under Review (Holds)</div>
-        <div id="stat-review" class="value" style="color:var(--color-warning);">$0.00</div>
+        <div id="stat-review" class="value" style="color:var(--color-warning);">₹0.00</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Routine SLA review (max 48h)</div>
       </div>
       <div class="stat-card">
@@ -202,8 +203,8 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
 
-        const avail = Number(data.available_payout_usd ?? data.available_usd ?? (data.available_payout_cents ? data.available_payout_cents / 100 : 0));
-        const review = Number(data.under_review_payout_usd ?? data.held_usd ?? (data.under_review_payout_cents ? data.under_review_payout_cents / 100 : 0));
+        const avail = Number(data.available_payout_inr ?? data.available_inr ?? data.available_payout_usd ?? data.available_usd ?? (data.available_payout_cents ? data.available_payout_cents / 100 : 0));
+        const review = Number(data.under_review_payout_inr ?? data.held_inr ?? data.under_review_payout_usd ?? data.held_usd ?? (data.under_review_payout_cents ? data.under_review_payout_cents / 100 : 0));
         const count = data.total_sales_count !== undefined ? data.total_sales_count : (data.orders || []).length;
 
         document.getElementById('stat-available').textContent = `₹${avail.toFixed(2)}`;

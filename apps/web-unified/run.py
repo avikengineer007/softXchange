@@ -85,6 +85,12 @@ def root():
     return FileResponse(str(STATIC_DIR / "index.html"), media_type="text/html")
 
 
+# Gracefully handle any relative mailto link resolution
+@app.get("/mailto:{rest:path}", include_in_schema=False)
+def mailto_handler(rest: str):
+    return RedirectResponse(url=f"mailto:{rest}", status_code=301)
+
+
 # Mount static assets
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")

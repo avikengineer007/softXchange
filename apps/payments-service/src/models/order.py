@@ -152,7 +152,8 @@ class HeldOrderResponse(BaseModel):
     buyer_id: str
     seller_id: str
     amount_cents: int
-    amount_usd: float
+    amount_inr: float = 0.0
+    amount_usd: float = 0.0
     hold_status: str
     hold_reason: Optional[str] = None
     held_at: datetime

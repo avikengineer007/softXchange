@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Purchases — softXchange</title>
+  <link rel="canonical" href="https://softxchange-production.up.railway.app/dashboard-customer.html">
   <meta name="description" content="View your softXchange purchase history and manage your software licenses.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -261,7 +262,7 @@
           <div style="background:var(--bg-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:18px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
             <div>
               <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);margin-bottom:4px;">Order ${escapeHtml(order.id.slice(0, 8))}…</div>
-              <div style="font-size:14px;font-weight:600;color:var(--text-primary);">$${Number(order.amount_usd || 0).toFixed(2)}</div>
+              <div style="font-size:14px;font-weight:600;color:var(--text-primary);">₹${Number(order.amount_inr ?? order.amount_usd ?? (order.amount_cents ? order.amount_cents / 100 : 0)).toFixed(2)}</div>
               <div style="font-size:12px;color:var(--text-secondary);">${order.created_at ? new Date(order.created_at).toLocaleDateString() : '—'}</div>
             </div>
             <div style="display:flex;gap:10px;align-items:center;">

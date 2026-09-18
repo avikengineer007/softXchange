@@ -138,3 +138,10 @@ alias_router = APIRouter(prefix="/seller/connect", tags=["Razorpay Route Onboard
 alias_router.add_api_route("/start", start_connect_onboarding, methods=["POST"], response_model=ConnectStartResponse)
 alias_router.add_api_route("/onboard", start_connect_onboarding, methods=["POST"], response_model=ConnectStartResponse)
 alias_router.add_api_route("/status", get_connect_status, methods=["GET"], response_model=ConnectStatusResponse)
+
+# Direct alias router for /connect without prefix
+direct_alias_router = APIRouter(prefix="/connect", tags=["Razorpay Route Direct Alias"])
+direct_alias_router.add_api_route("/start", start_connect_onboarding, methods=["POST"], response_model=ConnectStartResponse)
+direct_alias_router.add_api_route("/onboard", start_connect_onboarding, methods=["POST"], response_model=ConnectStartResponse)
+direct_alias_router.add_api_route("/status", get_connect_status, methods=["GET"], response_model=ConnectStatusResponse)
+
