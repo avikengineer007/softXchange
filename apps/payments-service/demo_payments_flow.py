@@ -1,10 +1,10 @@
 """
 Milestone 3 End-to-End Demonstration Script
-Demonstrates the complete software marketplace transaction lifecycle:
-1. Seller Connect onboarding & HMAC webhook bridge to auth-service
-2. Order creation for live software package with 8% platform fee destination charge
+Demonstrates the complete software marketplace transaction lifecycle with Razorpay:
+1. Seller Razorpay Route onboarding & HMAC webhook bridge to auth-service
+2. Order creation for live software package with 8% platform fee
 3. Enforcement: rejection of non-live listing purchase
-4. Idempotent webhook receipt of payment_intent.succeeded & entitlement issuance
+4. Idempotent webhook receipt of order.paid / payment.captured & entitlement issuance
 5. Buyer ephemeral signed download token generation & package payload retrieval
 6. Per-order fraud hold isolation & SLA tracking
 7. Admin hold resolution & refund with entitlement revocation
@@ -23,6 +23,9 @@ from unittest.mock import MagicMock, patch
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 from fastapi.testclient import TestClient
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -33,6 +36,7 @@ from src.config import settings
 from src.database import get_db, Base, engine, SessionLocal
 from src.auth import jwks_manager
 from src.models import SellerPaymentProfile, Order, OrderStatus, HoldStatus, Entitlement
+from src.razorpay_client import razorpay_client
 
 client = TestClient(app)
 
@@ -68,7 +72,7 @@ def step(title: str):
     print(f"\n---> {title}")
 
 def run_demo():
-    banner("softXchange Milestone 3: Payments & Connect Engine Demo")
+    banner("softXchange Milestone 3: Razorpay Payments & Route Engine Demo")
 
     # Clean DB
     Base.metadata.drop_all(bind=engine)
@@ -84,50 +88,47 @@ def run_demo():
     buyer_token = create_demo_token(buyer_id, ["customer"], "buyer_enterprise@softxchange.io")
 
     # ---------------------------------------------------------
-    # 1. Stripe Connect Onboarding & KYC Webhook Bridge
+    # 1. Razorpay Route Onboarding & KYC Webhook Bridge
     # ---------------------------------------------------------
-    step("1. Seller Initiates Stripe Connect Express Onboarding")
-    with patch("src.stripe_client.stripe.Account.create", return_value=MagicMock(id="acct_stripe_express_999")), \
-         patch("src.stripe_client.stripe.AccountLink.create", return_value=MagicMock(url="https://connect.stripe.com/setup/s/mock_session")):
-        
+    step("1. Seller Initiates Razorpay Route Linked Account Onboarding")
+    with patch.object(razorpay_client, "create_linked_account", return_value="acc_rzp_route_999"):
         resp = client.post("/payments/seller/connect/start", headers={"Authorization": f"Bearer {seller_token}"})
         assert resp.status_code == 200, resp.text
         data = resp.json()
-        print(f"     Stripe Connect Account Created: {data['stripe_account_id']}")
-        print(f"     Onboarding Redirect URL: {data['onboarding_url']}")
+        print(f"     Razorpay Route Account Created: {data['razorpay_account_id']}")
+        print(f"     Onboarding Portal URL: {data['onboarding_url']}")
 
-    step("2. Stripe Webhook (account.updated) -> Auth Service HMAC Webhook Bridge")
-    # Stripe sends webhook indicating seller completed verification
+    step("2. Razorpay Webhook (account.activated) -> Auth Service HMAC Webhook Bridge")
+    # Razorpay sends webhook indicating linked account is activated
     account_event = {
-        "id": "evt_connect_verified_123",
-        "type": "account.updated",
-        "data": {
-            "object": {
-                "id": "acct_stripe_express_999",
-                "charges_enabled": True,
-                "payouts_enabled": True,
-                "details_submitted": True
+        "event": "account.activated",
+        "account_id": "acc_rzp_route_999",
+        "payload": {
+            "account": {
+                "entity": {
+                    "id": "acc_rzp_route_999",
+                    "status": "activated",
+                }
             }
         }
     }
     payload_bytes = json.dumps(account_event).encode("utf-8")
-    sig = f"t={int(time.time())},v1=" + hmac.new(b"whsec_mock_stripe", payload_bytes, hashlib.sha256).hexdigest()
 
-    with patch("src.stripe_client.stripe_client.construct_webhook_event", return_value=account_event), \
+    with patch.object(razorpay_client, "verify_webhook_signature", return_value=True), \
          patch("src.routes.webhooks._send_authenticated_kyc_callback") as mock_kyc_callback:
         resp = client.post(
-            "/payments/webhooks/stripe",
-            data=payload_bytes,
-            headers={"Stripe-Signature": sig, "Content-Type": "application/json"}
+            "/payments/webhooks/razorpay",
+            content=payload_bytes,
+            headers={"X-Razorpay-Signature": "rzp_sig_mock", "Content-Type": "application/json"}
         )
         assert resp.status_code == 200, resp.text
         assert mock_kyc_callback.called
         kwargs = mock_kyc_callback.call_args.kwargs
-        print(f"     Stripe webhook processed successfully.")
+        print(f"     Razorpay webhook processed successfully.")
         print(f"     Triggered Auth-Service KYC Webhook Bridge:")
         print(f"       User ID: {kwargs['user_id']}")
         print(f"       Status: {kwargs['status_str']}")
-        print(f"       Stripe Account ID: {kwargs['stripe_account_id']}")
+        print(f"       Razorpay Account ID: {kwargs['razorpay_account_id']}")
         print(f"       HMAC-SHA256 Signature verified against INTERNAL_SERVICE_SECRET")
 
     # ---------------------------------------------------------
@@ -147,12 +148,12 @@ def run_demo():
         print(f"     Attempted purchase of draft listing -> Status code: {resp.status_code}")
         print(f"     Error response: {resp.json()['detail']}")
         assert resp.status_code == 400
-        assert "Listing is not currently available for purchase" in resp.json()['detail']
+        assert "must be live and vetted" in resp.json()['detail']
 
     # ---------------------------------------------------------
-    # 3. Order Creation & Destination Charge Calculation
+    # 3. Order Creation & Razorpay Order Generation
     # ---------------------------------------------------------
-    step("4. Valid Purchase: Live Listing with 8% Platform Fee Destination Charge")
+    step("4. Valid Purchase: Live Listing with 8% Platform Fee Razorpay Order")
     live_listing_mock = {
         "id": listing_id,
         "seller_id": seller_id,
@@ -163,56 +164,66 @@ def run_demo():
         "current_version": {"id": version_id, "version": "1.0.0"}
     }
     
-    mock_pi = MagicMock(id="pi_stripe_live_order_101", client_secret="pi_stripe_live_order_101_secret_999")
+    mock_rzp_order = {
+        "id": "order_rzp_live_101",
+        "amount": 25000,
+        "currency": "INR",
+        "status": "created",
+    }
     with patch("httpx.Client.get", return_value=MagicMock(status_code=200, json=lambda: live_listing_mock)), \
-         patch("src.stripe_client.stripe.PaymentIntent.create", return_value=mock_pi) as mock_pi_create:
+         patch.object(razorpay_client, "create_order", return_value=mock_rzp_order) as mock_order_create:
         
         resp = client.post("/orders", json={"listing_id": listing_id}, headers={"Authorization": f"Bearer {buyer_token}"})
         assert resp.status_code == 201, resp.text
         order_data = resp.json()
         print(f"     Order Created:")
         print(f"       Order ID: {order_data['id']}")
-        print(f"       Amount Total: ${order_data['amount_usd']:.2f} ({order_data['amount_cents']} cents)")
+        print(f"       Amount Total: ₹{order_data['amount_cents'] / 100:.2f} ({order_data['amount_cents']} paise)")
+        print(f"       Platform Fee (8%): ₹{order_data['platform_fee_cents'] / 100:.2f} ({order_data['platform_fee_cents']} paise)")
+        print(f"       Seller Payout (92%): ₹{order_data['seller_payout_cents'] / 100:.2f} ({order_data['seller_payout_cents']} paise)")
+        print(f"       Razorpay Order ID: {order_data['razorpay_order_id']}")
         print(f"       Status: {order_data['status']}")
-        print(f"       Stripe Client Secret: {order_data['client_secret']}")
-        
-        pi_kwargs = mock_pi_create.call_args[1]
-        print(f"     Stripe Destination Charge Details:")
-        print(f"       Total Charged to Buyer: {pi_kwargs['amount']} cents (${pi_kwargs['amount']/100:.2f})")
-        print(f"       SoftXchange Platform Fee (8%): {pi_kwargs['application_fee_amount']} cents (${pi_kwargs['application_fee_amount']/100:.2f})")
-        print(f"       Seller Net Payout (92%): {pi_kwargs['amount'] - pi_kwargs['application_fee_amount']} cents (${(pi_kwargs['amount'] - pi_kwargs['application_fee_amount'])/100:.2f})")
-        print(f"       Destination Account: {pi_kwargs['transfer_data']['destination']}")
         order_id = order_data["id"]
 
     # ---------------------------------------------------------
     # 4. Payment Succeeded Webhook & Entitlement Issuance
     # ---------------------------------------------------------
-    step("5. Stripe Webhook (payment_intent.succeeded) -> Order Paid & Entitlement Issued")
-    pi_event = {
-        "id": "evt_pi_succeeded_888",
-        "type": "payment_intent.succeeded",
-        "data": {
-            "object": {
-                "id": "pi_stripe_live_order_101",
-                "status": "succeeded"
+    step("5. Razorpay Webhook (order.paid) -> Order Paid & Entitlement Issued")
+    paid_event = {
+        "event": "order.paid",
+        "payload": {
+            "order": {
+                "entity": {
+                    "id": "order_rzp_live_101",
+                    "amount": 25000,
+                    "status": "paid",
+                }
+            },
+            "payment": {
+                "entity": {
+                    "id": "pay_rzp_live_payment_999",
+                    "order_id": "order_rzp_live_101",
+                }
             }
         }
     }
-    pi_bytes = json.dumps(pi_event).encode("utf-8")
-    pi_sig = f"t={int(time.time())},v1=" + hmac.new(b"whsec_mock_stripe", pi_bytes, hashlib.sha256).hexdigest()
+    paid_bytes = json.dumps(paid_event).encode("utf-8")
 
-    with patch("src.stripe_client.stripe_client.construct_webhook_event", return_value=pi_event):
+    with patch.object(razorpay_client, "verify_webhook_signature", return_value=True):
         resp = client.post(
-            "/payments/webhooks/stripe",
-            data=pi_bytes,
-            headers={"Stripe-Signature": pi_sig, "Content-Type": "application/json"}
+            "/payments/webhooks/razorpay",
+            content=paid_bytes,
+            headers={"X-Razorpay-Signature": "rzp_sig_paid", "Content-Type": "application/json"}
         )
     assert resp.status_code == 200, resp.text
     
     db = SessionLocal()
     order = db.query(Order).filter(Order.id == order_id).first()
     entitlement = db.query(Entitlement).filter(Entitlement.order_id == order_id).first()
+    assert order is not None
+    assert entitlement is not None
     print(f"     Order Status: {order.status}")
+    print(f"     Razorpay Payment ID: {order.razorpay_payment_id}")
     print(f"     Entitlement Issued:")
     print(f"       Entitlement ID: {entitlement.id}")
     print(f"       Buyer ID: {entitlement.buyer_id}")
@@ -255,36 +266,39 @@ def run_demo():
     }
     # Register connect account for fraud seller
     db = SessionLocal()
-    db.add(SellerPaymentProfile(user_id=fraud_seller_id, stripe_account_id="acct_new_fraud_seller"))
+    db.add(SellerPaymentProfile(user_id=fraud_seller_id, razorpay_account_id="acc_new_fraud_seller"))
     db.commit()
     db.close()
 
-    mock_fraud_pi = MagicMock(id="pi_fraud_order_777", client_secret="pi_fraud_secret_777")
+    mock_fraud_order = {"id": "order_rzp_fraud_777", "amount": 120000, "currency": "INR", "status": "created"}
     with patch("httpx.Client.get", return_value=MagicMock(status_code=200, json=lambda: fraud_listing_mock)), \
-         patch("src.stripe_client.stripe.PaymentIntent.create", return_value=mock_fraud_pi):
+         patch.object(razorpay_client, "create_order", return_value=mock_fraud_order):
         
         resp = client.post("/orders", json={"listing_id": "lst_expensive_ml_core"}, headers={"Authorization": f"Bearer {buyer_token}"})
         assert resp.status_code == 201
         fraud_order_id = resp.json()["id"]
 
     # Webhook triggers payment success
-    fraud_pi_event = {
-        "id": "evt_pi_fraud_777",
-        "type": "payment_intent.succeeded",
-        "data": {"object": {"id": "pi_fraud_order_777", "status": "succeeded"}}
+    fraud_paid_event = {
+        "event": "order.paid",
+        "payload": {
+            "order": {"entity": {"id": "order_rzp_fraud_777", "amount": 120000}},
+            "payment": {"entity": {"id": "pay_fraud_payment_777", "order_id": "order_rzp_fraud_777"}}
+        }
     }
-    fraud_bytes = json.dumps(fraud_pi_event).encode("utf-8")
-    fraud_sig = f"t={int(time.time())},v1=" + hmac.new(b"whsec_mock_stripe", fraud_bytes, hashlib.sha256).hexdigest()
+    fraud_bytes = json.dumps(fraud_paid_event).encode("utf-8")
 
-    with patch("src.stripe_client.stripe_client.construct_webhook_event", return_value=fraud_pi_event):
-        client.post("/payments/webhooks/stripe", data=fraud_bytes, headers={"Stripe-Signature": fraud_sig, "Content-Type": "application/json"})
+    with patch.object(razorpay_client, "verify_webhook_signature", return_value=True):
+        client.post("/payments/webhooks/razorpay", content=fraud_bytes, headers={"X-Razorpay-Signature": "sig_fraud", "Content-Type": "application/json"})
 
     db = SessionLocal()
     held_order = db.query(Order).filter(Order.id == fraud_order_id).first()
+    assert held_order is not None
     print(f"     Order {held_order.id} status:")
     print(f"       Hold Status: {held_order.hold_status} (ISOLATED TO THIS ORDER ONLY)")
     print(f"       Hold Reason: {held_order.hold_reason}")
-    print(f"       Held At: {held_order.held_at.isoformat()}")
+    held_at_str = held_order.held_at.isoformat() if held_order.held_at else "—"
+    print(f"       Held At: {held_at_str}")
     db.close()
 
     step("8. Honest Messaging on Seller Dashboard (No False Accusations / Account Unfrozen)")
@@ -293,8 +307,8 @@ def run_demo():
     dash = resp.json()
     print(f"     Seller Dashboard Metrics:")
     print(f"       Total Paid Sales: {dash['total_sales_count']}")
-    print(f"       Available Payout: ${dash['available_payout_usd']:.2f}")
-    print(f"       Under Review Payout: ${dash['under_review_payout_usd']:.2f}")
+    print(f"       Available Payout: ₹{dash['available_payout_usd']:.2f}")
+    print(f"       Under Review Payout: ₹{dash['under_review_payout_usd']:.2f}")
     print(f"       Order Display Status: {dash['orders'][0]['display_status']}")
     print(f"       Seller-Facing Status Message: \"{dash['orders'][0]['status_message']}\"")
     assert dash['orders'][0]['display_status'] == "under_review"
@@ -317,21 +331,24 @@ def run_demo():
     # 7. Refund Flow & Entitlement Revocation
     # ---------------------------------------------------------
     step("10. Admin Initiates Refund on Initial Order -> Revokes Entitlement")
-    with patch("src.stripe_client.stripe.Refund.create", return_value=MagicMock(id="re_stripe_refund_001")):
+    with patch.object(razorpay_client, "refund_payment", return_value={"id": "rfnd_rzp_001", "status": "processed"}):
         ref_resp = client.post(f"/payments/orders/{order_id}/refund", headers={"Authorization": f"Bearer {admin_token}"})
         assert ref_resp.status_code == 200
-        print(f"     Refund executed successfully via Stripe. Order status is now: '{ref_resp.json()['status']}'")
+        print(f"     Refund executed successfully via Razorpay. Order status is now: '{ref_resp.json()['status']}'")
 
     db = SessionLocal()
     refunded_order = db.query(Order).filter(Order.id == order_id).first()
     revoked_entitlement = db.query(Entitlement).filter(Entitlement.order_id == order_id).first()
+    assert refunded_order is not None
+    assert revoked_entitlement is not None
     print(f"     Post-Refund State:")
     print(f"       Order Status: {refunded_order.status}")
     print(f"       Entitlement Status: {revoked_entitlement.status}")
-    print(f"       Entitlement Revoked At: {revoked_entitlement.revoked_at.isoformat()}")
+    revoked_at_str = revoked_entitlement.revoked_at.isoformat() if revoked_entitlement.revoked_at else "—"
+    print(f"       Entitlement Revoked At: {revoked_at_str}")
     db.close()
 
-    banner("Milestone 3 Verified: All Marketplace Payout & Purchase Requirements Met!")
+    banner("Milestone 3 Verified: Razorpay Marketplace Purchase & Route Lifecycle Complete!")
 
 if __name__ == "__main__":
     run_demo()

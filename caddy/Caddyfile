@@ -36,7 +36,7 @@
         reverse_proxy listings-service:8003
     }
 
-    # 4. Payments, Orders & Stripe Connect Service (Port 8004)
+    # 4. Payments, Orders & Razorpay Route Service (Port 8004)
     handle /orders/* {
         reverse_proxy payments-service:8004
     }

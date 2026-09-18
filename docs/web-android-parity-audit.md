@@ -44,8 +44,8 @@ Both client frontends operate against the exact same backend microservice endpoi
 | **5.1** | **Catalog Search & Facets** | Keyword & semantic search | `browse-listings.html` | `BrowseScreen.kt` | `PARITY CONFIRMED` | Query params `q`, category filtering |
 | **5.2** | | Price sorting & filters | Ascending, descending, recency | Sort dropdown & category chips | `PARITY CONFIRMED` | Server-driven parameters |
 | **5.3** | | Verified-only live catalog filter | Live listing constraint + Vetted badge | Live listing constraint + Vetted badge | `PARITY CONFIRMED` | Pending/failed packages omitted from public feed |
-| **6.1** | **Stripe Checkout & Orders**| Marketplace fee split (92/8) | `checkout.html` | `CheckoutScreen.kt` | `PARITY CONFIRMED` | 8% platform fee calculation |
-| **6.2** | | Stripe Connect / Payment confirmation | `checkout.html` | `CheckoutScreen.kt` | `PARITY CONFIRMED` | Stripe Hosted / Dev test-confirm endpoint |
+| **6.1** | **Razorpay Checkout & Orders**| Marketplace fee split (92/8) | `checkout.html` | `CheckoutScreen.kt` | `PARITY CONFIRMED` | 8% platform fee calculation |
+| **6.2** | | Razorpay Route / Payment confirmation | `checkout.html` | `CheckoutScreen.kt` | `PARITY CONFIRMED` | Razorpay Checkout.js / Dev test-confirm endpoint |
 | **6.3** | | Instant cryptographic entitlement | `order-confirmation.html` | `OrderSuccessScreen.kt` | `PARITY CONFIRMED` | Order write generates signed entitlement |
 | **7.1** | **Downloads & Delivery** | Package binary delivery | `dashboard-customer.html` | `CustomerLibraryScreen.kt` | `PARITY CONFIRMED` | GET `/orders/download/{id}` |
 | **7.2** | | Unentitled access defense | 403 Forbidden intercept with purchase modal | 403 Forbidden intercept with snackbar | `PARITY CONFIRMED` | Validated by backend entitlement check |

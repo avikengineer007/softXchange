@@ -160,7 +160,7 @@ def run_demo():
         "user_id": seller_id,
         "event": "identity.verified",
         "status": "verified",
-        "details": {"reference": "stripe_acct_demo_123"},
+        "details": {"reference": "razorpay_acct_demo_123"},
     })
     assert wb_resp.json()["kyc_status"] == "verified"
     assert wb_resp.json()["payout_enabled"] is True

@@ -159,7 +159,7 @@
               ⚡ Dev Quick-Verify: Approve Instantly
             </button>
             <a href="/seller-payouts.html" class="btn-secondary" style="width:100%;text-align:center;text-decoration:none;font-size:13px;color:var(--accent-blue);border-color:var(--accent-blue);">
-              🔗 Open Stripe Connect Payouts Portal →
+              🔗 Open Razorpay Route Payouts Portal →
             </a>
           </div>
           <p id="kyc-action-note" style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:6px;" aria-live="polite"></p>
@@ -186,7 +186,7 @@
             Add a public developer trust badge showing your GitHub username, account age, and public repository count. Read-only public access only.
           </p>
           <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.25);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:12px;color:var(--text-secondary);">
-            <strong style="color:var(--accent-violet,#8b5cf6);">Strict Decoupling:</strong> Optional developer trust signal. Does not affect Stripe Connect KYC identity verification or payout clearance.
+            <strong style="color:var(--accent-violet,#8b5cf6);">Strict Decoupling:</strong> Optional developer trust signal. Does not affect Razorpay Route KYC identity verification or payout clearance.
           </div>
           <button id="connect-github-btn" class="btn-primary" style="width:100%;background:linear-gradient(135deg, #24292e 0%, #161b22 100%);border:1px solid rgba(255,255,255,0.15);color:#fff;" type="button">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:middle;margin-right:6px;" aria-hidden="true">
@@ -256,7 +256,7 @@
           Seller SPOC &amp; Dedicated Support
         </h3>
         <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;line-height:1.5;">
-          For expedited seller KYC verification, Stripe payouts onboarding, or package scan dispute escalation:
+          For expedited seller KYC verification, Razorpay payouts onboarding, or package scan dispute escalation:
         </p>
         <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;">
           <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:rgba(21, 22, 34, 0.9);border:1px solid rgba(255, 255, 255, 0.1);border-radius:var(--radius-sm);flex-wrap:wrap;gap:6px;">
@@ -464,7 +464,7 @@
         startBtn.style.display = 'inline-flex';
         startBtn.textContent = '✏️ Update / Edit KYC Details';
         devContainer.style.display = 'flex';
-        actionNote.textContent = 'Verification is pending review. In production, awaits Stripe/ID compliance approval.';
+        actionNote.textContent = 'Verification is pending review. In production, awaits Razorpay/ID compliance approval.';
       } else {
         payoutStatus.textContent = 'Disabled (Fail-Closed)';
         payoutStatus.style.color = 'var(--color-danger)';
@@ -491,7 +491,7 @@
             user_id: currentUserId,
             event: 'kyc.verified',
             status: 'verified',
-            details: { provider: 'mock_stripe_connect', note: 'Dev instant approval' },
+            details: { provider: 'mock_razorpay_route', note: 'Dev instant approval' },
           }),
         });
         if (resp.ok) await loadKYCStatus();

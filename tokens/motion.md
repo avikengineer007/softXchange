@@ -52,7 +52,7 @@ The convergence motif is **mandated** on the following verification milestones:
 To preserve the sacred trust value of the verified emerald convergence, the motif is **strictly prohibited** in the following contexts:
 
 1. **Checkout & Payment Loops (`checkout.html`)**:
-   - Payment submission, card validation, and Stripe webhooks must NEVER use convergence emerald or particle flourishes.
+   - Payment submission, card validation, and Razorpay webhooks must NEVER use convergence emerald or particle flourishes.
    - **Mandated Alternative**: Neutral, calming indeterminate spinner (`.calming-loading`, `.calming-spinner`) using muted slate-blue (`#5B8DEF`).
 2. **Refund & Cancellation Flows**:
    - Order refunds, seller listing rejections, or suspensions must NEVER use green or radiant bursts.

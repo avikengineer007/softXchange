@@ -1,9 +1,15 @@
 """
 ml_shared.currency
 
-Regional currency conversion, formatting, and pricing distribution engine.
-Provides region-centric localization (e.g. RUB in Russia, INR in India,
-USD in USA, EUR in Europe, GBP in UK, JPY in Japan).
+Currency formatting and pricing distribution engine standardized strictly on
+the Indian Rupee (INR / ₹). All foreign currency exchange mechanisms have
+been retired in favor of single canonical INR accounting.
+
+Note on `_cents` fields:
+All database and API fields named `*_cents` (e.g. `price_cents`, `amount_cents`,
+`base_min_cents`) represent integer minor currency units (paise, where
+1 INR = 100 paise). The field names are deliberately retained to avoid breaking
+persisted database schemas and client contracts.
 """
 
 from __future__ import annotations
@@ -15,96 +21,66 @@ class CurrencyInfo(BaseModel):
     code: str
     symbol: str
     name: str
-    symbol_prefix: bool = True  # True: $49, False: 4,500 ₽
+    symbol_prefix: bool = True  # e.g. ₹49.00
     decimals: int = 2
-    # Reference exchange rate relative to 1 USD
-    # Used for baseline conversions across marketplace regions
-    usd_rate: float
+    # Parity baseline: 1.0 (INR is the platform canonical currency)
+    usd_rate: float = 1.0
 
 
-# Supported currencies with symbols and default USD parity rates
+DEFAULT_CURRENCY: str = "INR"
+
+# Sole supported platform currency: Indian Rupee (INR / ₹)
 CURRENCIES: Dict[str, CurrencyInfo] = {
-    "USD": CurrencyInfo(code="USD", symbol="$", name="US Dollar", symbol_prefix=True, decimals=2, usd_rate=1.0),
-    "EUR": CurrencyInfo(code="EUR", symbol="€", name="Euro", symbol_prefix=False, decimals=2, usd_rate=0.92),
-    "GBP": CurrencyInfo(code="GBP", symbol="£", name="British Pound", symbol_prefix=True, decimals=2, usd_rate=0.79),
-    "INR": CurrencyInfo(code="INR", symbol="₹", name="Indian Rupee", symbol_prefix=True, decimals=2, usd_rate=83.5),
-    "RUB": CurrencyInfo(code="RUB", symbol="₽", name="Russian Ruble", symbol_prefix=False, decimals=0, usd_rate=92.0),
-    "JPY": CurrencyInfo(code="JPY", symbol="¥", name="Japanese Yen", symbol_prefix=True, decimals=0, usd_rate=155.0),
-    "CAD": CurrencyInfo(code="CAD", symbol="CA$", name="Canadian Dollar", symbol_prefix=True, decimals=2, usd_rate=1.36),
-    "AUD": CurrencyInfo(code="AUD", symbol="A$", name="Australian Dollar", symbol_prefix=True, decimals=2, usd_rate=1.52),
+    "INR": CurrencyInfo(
+        code="INR",
+        symbol="₹",
+        name="Indian Rupee",
+        symbol_prefix=True,
+        decimals=2,
+        usd_rate=1.0,
+    ),
 }
 
-# ISO 3166-1 alpha-2 region mapping to standard local currency
+# Regional mapping resolves exclusively to INR
 REGION_TO_CURRENCY: Dict[str, str] = {
-    "US": "USD",
-    "USA": "USD",
     "IN": "INR",
     "IND": "INR",
-    "RU": "RUB",
-    "RUS": "RUB",
-    "GB": "GBP",
-    "UK": "GBP",
-    "DE": "EUR",
-    "FR": "EUR",
-    "IT": "EUR",
-    "ES": "EUR",
-    "NL": "EUR",
-    "EU": "EUR",
-    "JP": "JPY",
-    "JPN": "JPY",
-    "CA": "CAD",
-    "AU": "AUD",
 }
 
 
 def resolve_currency(currency: Optional[str] = None, region: Optional[str] = None) -> str:
     """
-    Resolves currency code from explicit currency or region identifier.
-    Defaults to USD if unmapped.
+    Resolves currency code. The platform operates exclusively in Indian Rupee (INR).
+    Always returns "INR".
     """
-    if currency:
-        curr_upper = currency.upper().strip()
-        if curr_upper in CURRENCIES:
-            return curr_upper
-    if region:
-        reg_upper = region.upper().strip()
-        if reg_upper in REGION_TO_CURRENCY:
-            return REGION_TO_CURRENCY[reg_upper]
-    return "USD"
+    return DEFAULT_CURRENCY
 
 
-def convert_cents_to_currency(cents: int, target_currency: str) -> float:
+def convert_cents_to_currency(cents: int, target_currency: str = "INR") -> float:
     """
-    Converts USD cents to target currency amount.
+    Converts minor units (paise, 100 paise = 1 INR) to INR major amount.
+    `cents` represents minor units (paise).
     """
-    curr = CURRENCIES.get(target_currency, CURRENCIES["USD"])
-    usd_amount = cents / 100.0
-    return usd_amount * curr.usd_rate
+    return cents / 100.0
 
 
-def format_money(amount_or_cents: float, currency: str = "USD", is_cents: bool = False) -> str:
+def format_money(amount_or_cents: float, currency: str = "INR", is_cents: bool = False) -> str:
     """
-    Formats a numeric amount with the localized currency symbol and rules.
+    Formats a numeric amount with the Indian Rupee symbol (₹).
+    If is_cents=True, amount_or_cents is treated as minor units (paise).
     """
-    curr = CURRENCIES.get(currency.upper(), CURRENCIES["USD"])
+    curr = CURRENCIES["INR"]
     val = (amount_or_cents / 100.0) if is_cents else amount_or_cents
 
-    if curr.decimals == 0:
-        formatted_num = f"{int(round(val)):,}"
-    else:
-        formatted_num = f"{val:,.2f}"
-
-    if curr.symbol_prefix:
-        return f"{curr.symbol}{formatted_num}"
-    else:
-        return f"{formatted_num} {curr.symbol}"
+    formatted_num = f"{val:,.2f}"
+    return f"{curr.symbol}{formatted_num}"
 
 
 class LocalizedPriceGuidance(BaseModel):
-    """Region-aware price guidance range and distribution."""
-    currency: str
-    currency_symbol: str
-    region: Optional[str] = None
+    """INR price guidance range and distribution."""
+    currency: str = "INR"
+    currency_symbol: str = "₹"
+    region: Optional[str] = "IN"
     min_price: float
     median_price: float
     max_price: float
@@ -112,7 +88,7 @@ class LocalizedPriceGuidance(BaseModel):
     median_price_formatted: str
     max_price_formatted: str
     recommended_range: str
-    # Base canonical USD cents for platform persistence/comparison
+    # Base canonical minor units (paise: 1 INR = 100 paise) for persistence/comparison
     base_min_cents: int
     base_median_cents: int
     base_max_cents: int
@@ -120,12 +96,13 @@ class LocalizedPriceGuidance(BaseModel):
 
 def calculate_price_guidance(
     prices_cents: List[int],
-    currency: str = "USD",
+    currency: str = "INR",
     region: Optional[str] = None,
 ) -> Optional[LocalizedPriceGuidance]:
     """
-    Calculates localized price distribution from comparable listing prices (cents).
+    Calculates localized INR price distribution from comparable listing prices (paise).
     Returns None if prices list is empty.
+    Note: prices_cents values represent integer minor units (paise).
     """
     if not prices_cents:
         return None
@@ -139,9 +116,9 @@ def calculate_price_guidance(
     if n % 2 == 1:
         median_cents = sorted_prices[n // 2]
     else:
-        median_cents = int(round((sorted_prices[n // 2 - 1] + sorted_prices[n // 2]) / 2))
+        median_cents = round((sorted_prices[n // 2 - 1] + sorted_prices[n // 2]) / 2)
 
-    curr_info = CURRENCIES.get(currency.upper(), CURRENCIES["USD"])
+    curr_info = CURRENCIES["INR"]
 
     min_local = convert_cents_to_currency(min_cents, curr_info.code)
     med_local = convert_cents_to_currency(median_cents, curr_info.code)
@@ -156,10 +133,10 @@ def calculate_price_guidance(
     return LocalizedPriceGuidance(
         currency=curr_info.code,
         currency_symbol=curr_info.symbol,
-        region=region,
-        min_price=round(min_local, 2 if curr_info.decimals > 0 else 0),
-        median_price=round(med_local, 2 if curr_info.decimals > 0 else 0),
-        max_price=round(max_local, 2 if curr_info.decimals > 0 else 0),
+        region=region or "IN",
+        min_price=round(min_local, 2),
+        median_price=round(med_local, 2),
+        max_price=round(max_local, 2),
         min_price_formatted=min_fmt,
         median_price_formatted=med_fmt,
         max_price_formatted=max_fmt,

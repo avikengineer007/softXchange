@@ -327,7 +327,7 @@ def test_payments_order_and_entitlement_lifecycle(monkeypatch):
     db = TestingSessionLocal()
     seller_profile = SellerPaymentProfile(
         user_id="seller-user-77",
-        stripe_account_id="acct_shared_test",
+        razorpay_account_id="acc_shared_test",
     )
     db.add(seller_profile)
     db.commit()
@@ -357,10 +357,10 @@ def test_payments_order_and_entitlement_lifecycle(monkeypatch):
 
     monkeypatch.setattr(httpx.Client, "get", mock_get)
 
-    # Mock stripe payment intent creation
+    # Mock razorpay order creation
     monkeypatch.setattr(
-        "src.stripe_client.stripe_client.create_payment_intent",
-        lambda **kwargs: {"id": "pi_mock_shared_123", "client_secret": "pi_mock_shared_secret"},
+        "src.razorpay_client.razorpay_client.create_order",
+        lambda **kwargs: {"id": "order_mock_shared_123"},
     )
 
     # 1. Buyer creates order

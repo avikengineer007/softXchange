@@ -10,7 +10,7 @@ Verifies:
    or lacks cryptographic entropy.
 3. payments-service test-confirm endpoint is genuinely unregistered (returns 404) in production,
    and lifespan fails closed with RuntimeError if registered.
-4. Stripe webhook signature verification fails closed with 400 Bad Request on invalid signatures.
+4. Razorpay webhook signature verification fails closed with 400 Bad Request on invalid signatures.
 """
 
 import sys
@@ -129,6 +129,12 @@ def test_auth_service_refuses_low_entropy_admin_code_in_production(monkeypatch):
             pass
 
 
+def _provide_valid_razorpay_creds(monkeypatch, settings):
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", "rzp_live_realprod123456")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", "sec_live_realproductionsecret123456")
+    monkeypatch.setattr(settings, "RAZORPAY_WEBHOOK_SECRET", "whsec_live_realproductionsecret12345")
+
+
 def test_payments_service_test_confirm_is_unreachable_in_production(monkeypatch):
     """In production, /orders/{id}/test-confirm is NOT registered in routes and returns 404."""
     _clean_src_modules()
@@ -137,6 +143,7 @@ def test_payments_service_test_confirm_is_unreachable_in_production(monkeypatch)
 
     from src.config import settings
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    _provide_valid_razorpay_creds(monkeypatch, settings)
 
     from src.main import app
 
@@ -154,6 +161,7 @@ def test_payments_service_lifespan_fails_closed_if_test_confirm_registered(monke
 
     from src.config import settings
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    _provide_valid_razorpay_creds(monkeypatch, settings)
 
     from src.main import app
 
@@ -171,32 +179,51 @@ def test_payments_service_lifespan_fails_closed_if_test_confirm_registered(monke
         app.router.routes = [r for r in app.router.routes if getattr(r, "path", None) != "/test-confirm-adversarial"]
 
 
-def test_stripe_webhook_rejects_missing_or_invalid_signature(monkeypatch):
-    """Stripe webhook endpoint requires authentic Stripe-Signature and valid webhook secret."""
+def test_payments_service_refuses_mock_razorpay_credentials_in_production(monkeypatch):
+    """payments-service lifespan must raise RuntimeError if mock Razorpay credentials are used in production."""
     _clean_src_modules()
     sys.path = [p for p in sys.path if "apps" not in p]
     sys.path.insert(0, str(PAYMENTS_ROOT))
 
     from src.config import settings
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
-    monkeypatch.setattr(settings, "STRIPE_WEBHOOK_SECRET", "whsec_live_real_secret_1234567890")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", "rzp_test_softxchange_mock_key")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", "rzp_test_softxchange_mock_secret")
+    monkeypatch.setattr(settings, "RAZORPAY_WEBHOOK_SECRET", "whsec_softxchange_mock_webhook_secret")
+
+    from src.main import app
+
+    with pytest.raises(RuntimeError, match="Mock or dev-default Razorpay credentials detected in production"):
+        with TestClient(app):
+            pass
+
+
+def test_razorpay_webhook_rejects_missing_or_invalid_signature(monkeypatch):
+    """Razorpay webhook endpoint requires authentic X-Razorpay-Signature and valid webhook secret."""
+    _clean_src_modules()
+    sys.path = [p for p in sys.path if "apps" not in p]
+    sys.path.insert(0, str(PAYMENTS_ROOT))
+
+    from src.config import settings
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    _provide_valid_razorpay_creds(monkeypatch, settings)
 
     from src.main import app
 
     with TestClient(app) as client:
         # 1. Missing header
         resp_no_header = client.post(
-            "/payments/webhooks/stripe",
-            json={"type": "payment_intent.succeeded"},
+            "/payments/webhooks/razorpay",
+            json={"event": "order.paid"},
         )
         assert resp_no_header.status_code == 400
-        assert "Missing Stripe-Signature" in resp_no_header.json()["detail"]
+        assert "Missing X-Razorpay-Signature" in resp_no_header.json()["detail"]
 
         # 2. Forged header / invalid signature
         resp_bad_sig = client.post(
-            "/payments/webhooks/stripe",
-            json={"type": "payment_intent.succeeded"},
-            headers={"Stripe-Signature": "t=12345678,v1=forged_signature_hex"},
+            "/payments/webhooks/razorpay",
+            json={"event": "order.paid"},
+            headers={"X-Razorpay-Signature": "forged_signature_hex"},
         )
         assert resp_bad_sig.status_code == 400
         assert "signature verification failed" in resp_bad_sig.json()["detail"].lower()

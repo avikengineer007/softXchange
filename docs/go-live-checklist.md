@@ -16,9 +16,9 @@ Complete each verification gate sequentially before announcing softXchange produ
 | | Alembic migrations applied forward to `head` across all 4 databases. | `pytest tests/test_database_migrations.py` | [ ] | |
 | | Connection pooling enabled (`pool_size=10`, `max_overflow=20`, `pool_pre_ping=True`). | Inspect `src/database.py` | [ ] | |
 | | Disaster recovery: automated backup script tested and test restore executed into staging. | `scripts/backup-db.sh && scripts/restore-db.sh` | [ ] | |
-| **3. Payments** | Stripe Connect platform verified in live mode with Express onboarding active. | Stripe Dashboard > Connect | [ ] | |
-| | Restricted live API key (`sk_live_...`) configured in `payments-service`. | `.env.production` | [ ] | |
-| | Production webhook URL (`https://<domain>/payments/webhooks/stripe`) registered with live signing secret (`whsec_...`). | Stripe Dashboard > Webhooks | [ ] | |
+| **3. Payments** | Razorpay Route platform verified in live mode with linked account onboarding active. | Razorpay Dashboard > Route | [ ] | |
+| | Live API keys (`rzp_live_...`) configured in `payments-service`. | `.env.production` | [ ] | |
+| | Production webhook URL (`https://<domain>/payments/webhooks/razorpay`) registered with live signing secret (`whsec_...`). | Razorpay Dashboard > Webhooks | [ ] | |
 | | Fail-closed gate: `/orders/{id}/test-confirm` confirmed completely unregistered (404). | `pytest tests/test_production_fail_closed.py -k test_confirm` | [ ] | |
 | | Safe live transaction verified: small $1.00 charge completed, entitlement verified, and immediately refunded. | End-to-end checkout walkthrough | [ ] | |
 | **4. Domain & TLS** | Reverse proxy (Caddy) listening on port 80 & 443 with Let's Encrypt automated TLS. | `curl -I https://<domain>` (HTTP 200) | [ ] | |
@@ -29,7 +29,7 @@ Complete each verification gate sequentially before announcing softXchange produ
 | | 3D `.glb` assets comply with byte-size budget. | `npm run check:assets` | [ ] | |
 | | Zero-Storage-Rule: frontend verified free of `localStorage`, `sessionStorage`, and unauthorized cookies. | `pytest tests/test_storage_rule.py` | [ ] | |
 | **6. Observability** | Correlation IDs (`X-Correlation-ID`) propagating across microservice requests. | Inspect request logs | [ ] | |
-| | Alert hooks active for Stripe webhook rejections, scan job dead states, and repeated admin elevation failures. | Trigger test alert | [ ] | |
+| | Alert hooks active for Razorpay webhook rejections, scan job dead states, and repeated admin elevation failures. | Trigger test alert | [ ] | |
 | **7. CI/CD** | Automated pipeline configured in `.github/workflows/ci-cd.yml` with manual approval gate for production. | GitHub Actions repository settings | [ ] | |
 
 ---
@@ -39,9 +39,9 @@ Complete each verification gate sequentially before announcing softXchange produ
 Execute this exact sequence through the public HTTPS domain before declaring general availability:
 
 1. **Customer Registration**: Sign up a new customer account at `https://<domain>/signup-customer.html`. Confirm redirect to `dashboard-customer.html`.
-2. **Seller Onboarding**: Sign up a seller at `https://<domain>/signup-seller.html`. Complete Stripe Connect Express bank onboarding. Confirm KYC verified status in seller dashboard.
+2. **Seller Onboarding**: Sign up a seller at `https://<domain>/signup-seller.html`. Complete Razorpay Route linked account onboarding. Confirm KYC verified status in seller dashboard.
 3. **Software Package Upload & Scan**: Upload a software package archive via `https://<domain>/seller-listings.html`. Verify background scan job transitions from `pending_scan` to `passed`.
 4. **Natural Language Discovery & Q&A**: Search for the listing on `https://<domain>/browse-listings.html`. Open `listing-detail.html`, submit a natural-language question, and verify broker route handling.
-5. **Purchase & Entitlement**: Proceed to `checkout.html`, pay via Stripe Checkout, confirm redirect to `order-confirmation.html`. Verify entitlement token and download link active.
+5. **Purchase & Entitlement**: Proceed to `checkout.html`, pay via Razorpay Checkout, confirm redirect to `order-confirmation.html`. Verify entitlement token and download link active.
 6. **Package Download**: Click download and confirm cryptographic artifact is served securely.
 7. **Admin Elevation**: Execute one-time admin code provisioning at `https://<domain>/admin-dashboard.html`. Verify admin audit logs display single-use consumption and subsequent reuse is blocked.

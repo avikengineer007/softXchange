@@ -197,7 +197,7 @@
         tbody.innerHTML = data.map(order => `
           <tr id="order-row-${order.id}">
             <td><code>${order.id.substring(0, 8)}…</code></td>
-            <td>$${order.amount_usd}</td>
+            <td>₹${order.amount_inr || order.amount_usd}</td>
             <td>${order.hold_reason || 'Escrow Review'}</td>
             <td>${order.hours_held}h</td>
             <td><span class="${order.sla_breached ? 'sla-badge-breached' : 'sla-badge-ok'}">${order.sla_breached ? 'SLA BREACHED (>48h)' : 'Within SLA'}</span></td>
@@ -306,7 +306,7 @@
             <td><code>${listing.id.substring(0, 8)}…</code></td>
             <td><strong>${listing.title}</strong></td>
             <td>${listing.category}</td>
-            <td>$${listing.price_usd}</td>
+            <td>₹${listing.price_inr || listing.price_usd}</td>
             <td><span class="status-pill status-${listing.status}">${listing.status}</span></td>
             <td>${listing.status !== 'suspended'
               ? `<button class="btn-xs btn-suspend" onclick="suspendListing('${listing.id}')">Suspend</button>`

@@ -52,8 +52,8 @@ class MockKYCProvider(KYCProvider):
         
         self._user_statuses[user_id] = "pending"
         return {
-            "provider": "mock_stripe_connect",
-            "onboarding_url": f"https://connect.stripe.com/setup/s/mock_{user_id}",
+            "provider": "mock_razorpay_route",
+            "onboarding_url": f"https://dashboard.razorpay.com/app/route/mock_{user_id}",
             "status": "pending",
         }
 

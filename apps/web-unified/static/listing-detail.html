@@ -266,7 +266,7 @@
 
     function renderListing(item) {
       const container = document.getElementById('content-container');
-      const formattedPrice = item.price_cents === 0 ? 'Free' : `$${(item.price_cents / 100).toFixed(2)}`;
+      const formattedPrice = item.price_cents === 0 ? 'Free' : `₹${(item.price_cents / 100).toFixed(2)}`;
       const scanSummary = item.scan_findings_summary || {};
 
       const criticalCount = scanSummary.critical || 0;

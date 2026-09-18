@@ -197,13 +197,7 @@
              This selector is for UI display-only currency conversion.
              It is NOT persisted to localStorage (Zero Storage Rule). -->
         <select id="region-selector" class="form-control" style="width:auto;padding:6px 10px;" aria-label="Display currency region">
-          <option value="US">USA ($ USD)</option>
-          <option value="GLOBAL">Open to World</option>
-          <option value="RU">Russia (₽ RUB)</option>
           <option value="IN">India (₹ INR)</option>
-          <option value="EU">Europe (€ EUR)</option>
-          <option value="GB">UK (£ GBP)</option>
-          <option value="JP">Japan (¥ JPY)</option>
         </select>
       </div>
       <span id="session-indicator" style="font-size:12px;color:var(--text-muted);">Loading session…</span>
@@ -281,7 +275,7 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="create-price">Price in Cents (e.g. 4900 = $49.00, 0 = Free)</label>
+          <label for="create-price">Price in Paise (e.g. 4900 = ₹49.00, 0 = Free)</label>
           <input type="number" id="create-price" class="form-control" min="0" value="0" required>
           <small id="create-price-local" style="color:var(--text-secondary);font-size:12px;margin-top:4px;display:block;"></small>
         </div>
@@ -394,18 +388,11 @@
     // ── In-memory region state (NEVER persisted to storage) ─────────────────
     // seller_region is authoritatively derived from the seller's backend profile.
     // This variable tracks the UI display-currency preference only.
-    let currentRegion = 'US';
+    let currentRegion = 'IN';
     let activeListingForQuestions = null;
 
     const CURRENCY_MAP = {
-      'GLOBAL': { code: 'USD', symbol: '$', rate: 1.0, label: 'Open to World' },
-      'WORLD': { code: 'USD', symbol: '$', rate: 1.0, label: 'Open to World' },
-      'US': { code: 'USD', symbol: '$', rate: 1.0, label: 'USA ($ USD)' },
-      'RU': { code: 'RUB', symbol: '₽', rate: 92.0, label: 'Russia (₽ RUB)' },
-      'IN': { code: 'INR', symbol: '₹', rate: 83.5, label: 'India (₹ INR)' },
-      'EU': { code: 'EUR', symbol: '€', rate: 0.92, label: 'Europe (€ EUR)' },
-      'GB': { code: 'GBP', symbol: '£', rate: 0.79, label: 'UK (£ GBP)' },
-      'JP': { code: 'JPY', symbol: '¥', rate: 155.0, label: 'Japan (¥ JPY)' },
+      'IN': { code: 'INR', symbol: '₹', rate: 1.0, label: 'India (₹ INR)' },
     };
 
     function escapeHtml(text) {
@@ -416,20 +403,14 @@
     }
 
     function formatPriceInRegion(cents) {
-      const info = CURRENCY_MAP[currentRegion] || CURRENCY_MAP['US'];
-      const converted = (cents / 100.0) * info.rate;
-      if (info.code === 'RUB' || info.code === 'JPY') {
-        return `${Math.round(converted).toLocaleString()} ${info.symbol}`;
-      }
-      return `${info.symbol}${converted.toFixed(2)}`;
+      const converted = cents / 100.0;
+      return `₹${converted.toFixed(2)}`;
     }
 
     function updateLocalPriceHint() {
       const cents = parseInt(document.getElementById('create-price').value, 10) || 0;
-      const info = CURRENCY_MAP[currentRegion] || CURRENCY_MAP['US'];
-      const regionLabel = info.label || currentRegion;
       document.getElementById('create-price-local').textContent =
-        `Localized preview in ${regionLabel}: ${formatPriceInRegion(cents)}`;
+        `Price preview in ₹ INR: ${formatPriceInRegion(cents)}`;
     }
 
     document.getElementById('region-selector').addEventListener('change', () => {

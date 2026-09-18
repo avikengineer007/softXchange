@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     JWKS_URL: str = "http://localhost:8001/.well-known/jwks.json"
 
     DEFAULT_K_COMPARABLES: int = 3
-    DEFAULT_CURRENCY: str = "USD"
-    DEFAULT_REGION: str = "US"
+    DEFAULT_CURRENCY: str = "INR"
+    DEFAULT_REGION: str = "IN"
 
     PORT: int = 8006
 

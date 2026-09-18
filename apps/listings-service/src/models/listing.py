@@ -44,7 +44,9 @@ class Listing(Base):
     seller_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(String(2000), nullable=False)
-    # Price stored strictly as integer in cents (e.g. 4900 = $49.00)
+    # Note on price_cents:
+    # Stored strictly as integer minor currency units (paise, where 1 INR = 100 paise; e.g. 4900 = ₹49.00).
+    # Field name is deliberately retained to avoid schema migration churn and contract breakage.
     price_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     category: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     status: Mapped[str] = mapped_column(String(64), default=ListingStatus.DRAFT.value, nullable=False, index=True)
@@ -204,7 +206,8 @@ class ListingResponse(BaseModel):
     title: str
     description: str
     price_cents: int
-    price_usd: float
+    price_inr: float = 0.0
+    price_usd: float = 0.0  # Retained for backwards compatibility
     category: str
     status: str
     status_message: Optional[str] = None
@@ -248,6 +251,7 @@ class ListingResponse(BaseModel):
             title=listing.title,
             description=listing.description,
             price_cents=listing.price_cents,
+            price_inr=round(listing.price_cents / 100.0, 2),
             price_usd=round(listing.price_cents / 100.0, 2),
             category=listing.category,
             status=listing.status,
@@ -278,7 +282,8 @@ class ListingDetailResponse(BaseModel):
     title: str
     description: str
     price_cents: int
-    price_usd: float
+    price_inr: float = 0.0
+    price_usd: float = 0.0  # Retained for backwards compatibility
     category: str
     status: str
     status_message: Optional[str] = None
@@ -296,7 +301,8 @@ class SellerListingItemResponse(BaseModel):
     id: str
     title: str
     price_cents: int
-    price_usd: float
+    price_inr: float = 0.0
+    price_usd: float = 0.0  # Retained for backwards compatibility
     category: str
     status: str
     status_message: Optional[str] = None

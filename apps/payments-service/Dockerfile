@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # softXchange Payments Service — Production Dockerfile
-# Multi-stage build with Stripe Connect orchestration and non-root runtime
+# Multi-stage build with Razorpay Route orchestration and non-root runtime
 
 # ── Stage 1: Build Dependencies ──────────────────────────────────────────────
 FROM python:3.12-slim AS builder

@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
     display_name VARCHAR(255),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     
-    -- Payout Account (e.g., Stripe Connect Account ID; touched exclusively by payments-service)
+    -- Payout Account (e.g., Razorpay Route Account ID; touched exclusively by payments-service)
     payout_account_id VARCHAR(255),
     
     -- KYC submission metadata (optional JSON for document references or business details)

@@ -98,6 +98,7 @@
     .text-gradient-logo {
       background: linear-gradient(135deg, #ffffff 0%, #38bdf8 30%, #818cf8 65%, #c084fc 100%);
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
@@ -340,9 +341,9 @@
           card.className = 'glass-card p-6 rounded-3xl flex flex-col justify-between relative overflow-hidden group block';
           card.href = `/listing-detail.html?id=${encodeURIComponent(item.id)}`;
           card.setAttribute('role', 'listitem');
-          card.setAttribute('aria-label', `${item.title} — ${item.price_cents === 0 ? 'Free' : '$' + (item.price_cents / 100).toFixed(2)}`);
+          card.setAttribute('aria-label', `${item.title} — ${item.price_cents === 0 ? 'Free' : '₹' + (item.price_cents / 100).toFixed(2)}`);
 
-          const formattedPrice = item.price_cents === 0 ? 'Free' : `$${(item.price_cents / 100).toFixed(2)}`;
+          const formattedPrice = item.price_cents === 0 ? 'Free' : `₹${(item.price_cents / 100).toFixed(2)}`;
           const ratingHtml = (item.review_count > 0 && item.average_rating !== null)
             ? `<span class="inline-flex items-center gap-1 text-xs text-amber-400 font-semibold font-mono">★ ${Number(item.average_rating).toFixed(1)} <span class="text-slate-500 font-normal">(${item.review_count})</span></span>`
             : `<span class="text-[11px] text-slate-500 font-mono">Unrated package</span>`;

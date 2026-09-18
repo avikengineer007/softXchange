@@ -1,5 +1,6 @@
 import hmac
 import logging
+import time
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from fastapi.responses import JSONResponse, Response
@@ -8,11 +9,19 @@ from sqlalchemy.orm import Session
 from src.database import get_db
 from src.config import settings
 from src.auth import require_auth, AuthContext
-from src.models.order import Order, OrderStatus, HoldStatus, OrderCreateRequest, OrderResponse, utc_now
+from src.models.order import (
+    Order,
+    OrderStatus,
+    HoldStatus,
+    OrderCreateRequest,
+    OrderVerifyRequest,
+    OrderResponse,
+    utc_now,
+)
 from src.models.seller_payment_profile import SellerPaymentProfile
 from src.models.entitlement import Entitlement, EntitlementStatus
 from src.fraud import evaluate_fraud_rules
-from src.stripe_client import stripe_client
+from src.razorpay_client import razorpay_client
 from src.storage import generate_signed_download_url, verify_download_token
 from src.notifications_client import emit_notification
 
@@ -25,7 +34,7 @@ router = APIRouter(prefix="/orders", tags=["Orders & Checkout"])
     "",
     response_model=OrderResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create order and initialize Stripe PaymentIntent with Connect destination charge",
+    summary="Create order and initialize Razorpay Order",
 )
 def create_order(
     data: OrderCreateRequest,
@@ -39,7 +48,7 @@ def create_order(
     - Queries listings-service over HTTP for fresh price and version.
     - Rejects if listing is not currently 'live'.
     - Pins order to the exact immutable listing_version_id purchased.
-    - Splits funds at Stripe level using destination charges and application fees.
+    - Creates Razorpay order in canonical INR accounting with charged amount (in paise).
     """
     buyer_id = auth_ctx.user_id
     listing_id = data.listing_id
@@ -86,9 +95,9 @@ def create_order(
             detail="Sellers cannot purchase their own software listings",
         )
 
-    # 3. Lookup Seller's Stripe Connect Account
+    # 3. Lookup Seller's Razorpay Route Account
     seller_profile = db.query(SellerPaymentProfile).filter(SellerPaymentProfile.user_id == seller_id).first()
-    if not seller_profile or not seller_profile.stripe_account_id:
+    if not seller_profile or not seller_profile.razorpay_account_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Seller has not completed payment onboarding. Purchase cannot proceed.",
@@ -110,54 +119,135 @@ def create_order(
         seller_payout_cents=seller_payout_cents,
         status=OrderStatus.PENDING_PAYMENT.value,
         hold_status=HoldStatus.NONE.value,
+        charged_currency="INR",
+        charged_amount_minor_units=amount_cents,
     )
     db.add(new_order)
     db.flush()
 
-    # 6. Create Stripe PaymentIntent with Destination Charge
+    # 6. Create Razorpay Order
     try:
-        pi = stripe_client.create_payment_intent(
-            amount_cents=amount_cents,
-            application_fee_cents=platform_fee_cents,
-            destination_account_id=seller_profile.stripe_account_id,
-            metadata={
+        rzp_order = razorpay_client.create_order(
+            amount_minor_units=amount_cents,
+            currency="INR",
+            receipt=new_order.id,
+            notes={
                 "order_id": new_order.id,
                 "buyer_id": buyer_id,
+                "seller_id": seller_id,
                 "listing_id": listing_id,
                 "listing_version_id": listing_version_id,
+                "platform_fee_cents": platform_fee_cents,
+                "seller_payout_cents": seller_payout_cents,
+                "seller_razorpay_account_id": seller_profile.razorpay_account_id,
             },
         )
-        new_order.stripe_payment_intent_id = pi["id"]
-        client_secret = pi.get("client_secret")
+        new_order.razorpay_order_id = rzp_order.get("id")
         db.commit()
         db.refresh(new_order)
     except Exception as exc:
         db.rollback()
-        logger.error(f"Stripe PaymentIntent creation failed: {exc}", exc_info=True)
+        logger.error(f"Razorpay order creation failed: {exc}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Payment initialization failed: {str(exc)}",
         )
 
-    return OrderResponse(
-        id=new_order.id,
-        listing_id=new_order.listing_id,
-        listing_version_id=new_order.listing_version_id,
-        buyer_id=new_order.buyer_id,
-        seller_id=new_order.seller_id,
-        amount_cents=new_order.amount_cents,
-        amount_usd=round(new_order.amount_cents / 100.0, 2),
-        platform_fee_cents=new_order.platform_fee_cents,
-        seller_payout_cents=new_order.seller_payout_cents,
-        status=new_order.status,
-        hold_status=new_order.hold_status,
-        hold_reason=new_order.hold_reason,
-        held_at=new_order.held_at,
-        stripe_payment_intent_id=new_order.stripe_payment_intent_id,
-        client_secret=client_secret,
-        created_at=new_order.created_at,
-        updated_at=new_order.updated_at,
+    return OrderResponse.from_orm_order(new_order, razorpay_key_id=settings.RAZORPAY_KEY_ID)
+
+
+@router.post(
+    "/{order_id}/verify",
+    response_model=OrderResponse,
+    summary="Verify client-side Razorpay payment signature and confirm order",
+)
+def verify_order_payment(
+    order_id: str,
+    data: OrderVerifyRequest,
+    auth_ctx: AuthContext = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    """
+    Synchronously verifies payment signature from frontend Razorpay Checkout.
+    Transitions order to 'paid', issues entitlement, and evaluates fraud holds.
+    """
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    if order.buyer_id != auth_ctx.user_id and not auth_ctx.has_role("admin"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+    # Idempotent response if already paid
+    if order.status == OrderStatus.PAID.value:
+        return OrderResponse.from_orm_order(order, razorpay_key_id=settings.RAZORPAY_KEY_ID)
+
+    # Constant-time cryptographic signature verification using Razorpay library
+    is_valid = razorpay_client.verify_payment_signature(
+        razorpay_order_id=data.razorpay_order_id,
+        razorpay_payment_id=data.razorpay_payment_id,
+        razorpay_signature=data.razorpay_signature,
     )
+    if not is_valid:
+        logger.warning(f"Payment signature verification failed for order {order_id}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid payment signature",
+        )
+
+    # Transition to PAID
+    order.status = OrderStatus.PAID.value
+    order.razorpay_payment_id = data.razorpay_payment_id
+    order.razorpay_signature = data.razorpay_signature
+    order.updated_at = utc_now()
+
+    # Issue Entitlement
+    existing_entitlement = db.query(Entitlement).filter(Entitlement.order_id == order.id).first()
+    if not existing_entitlement:
+        entitlement = Entitlement(
+            order_id=order.id,
+            buyer_id=order.buyer_id,
+            listing_version_id=order.listing_version_id,
+            status=EntitlementStatus.ACTIVE.value,
+        )
+        db.add(entitlement)
+
+    # Evaluate deterministic fraud rules
+    should_hold, hold_reason = evaluate_fraud_rules(order, db)
+    if should_hold:
+        order.hold_status = HoldStatus.HELD.value
+        order.hold_reason = hold_reason
+        order.held_at = utc_now()
+    else:
+        order.hold_status = HoldStatus.NONE.value
+
+    db.commit()
+    db.refresh(order)
+
+    # Emit notifications
+    emit_notification(
+        user_id=order.seller_id,
+        notification_type="order_paid",
+        payload={
+            "order_id": order.id,
+            "listing_id": order.listing_id,
+            "amount_cents": order.amount_cents,
+            "buyer_id": order.buyer_id,
+            "role": "seller",
+        },
+    )
+    emit_notification(
+        user_id=order.buyer_id,
+        notification_type="order_paid",
+        payload={
+            "order_id": order.id,
+            "listing_id": order.listing_id,
+            "amount_cents": order.amount_cents,
+            "role": "buyer",
+        },
+    )
+
+    return OrderResponse.from_orm_order(order, razorpay_key_id=settings.RAZORPAY_KEY_ID)
 
 
 @router.get(
@@ -185,24 +275,7 @@ def get_order(
     if not is_authorized:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-    return OrderResponse(
-        id=order.id,
-        listing_id=order.listing_id,
-        listing_version_id=order.listing_version_id,
-        buyer_id=order.buyer_id,
-        seller_id=order.seller_id,
-        amount_cents=order.amount_cents,
-        amount_usd=round(order.amount_cents / 100.0, 2),
-        platform_fee_cents=order.platform_fee_cents,
-        seller_payout_cents=order.seller_payout_cents,
-        status=order.status,
-        hold_status=order.hold_status,
-        hold_reason=order.hold_reason,
-        held_at=order.held_at,
-        stripe_payment_intent_id=order.stripe_payment_intent_id,
-        created_at=order.created_at,
-        updated_at=order.updated_at,
-    )
+    return OrderResponse.from_orm_order(order, razorpay_key_id=settings.RAZORPAY_KEY_ID)
 
 
 @router.get(
@@ -368,7 +441,7 @@ if settings.ENVIRONMENT.lower() != "production":
         db: Session = Depends(get_db),
     ):
         """
-        Simulates successful Stripe payment completion for testing/development.
+        Simulates successful payment completion for testing/development.
         Transitions order to 'paid', issues entitlement, and applies deterministic fraud checks.
         Refused in production.
         """
@@ -380,9 +453,10 @@ if settings.ENVIRONMENT.lower() != "production":
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
         if order.status == OrderStatus.PAID.value:
-            return OrderResponse.from_orm_order(order)
+            return OrderResponse.from_orm_order(order, razorpay_key_id=settings.RAZORPAY_KEY_ID)
 
         order.status = OrderStatus.PAID.value
+        order.razorpay_payment_id = f"pay_test_confirm_{int(time.time())}"
         order.updated_at = utc_now()
 
         # Create Entitlement Record
@@ -432,6 +506,6 @@ if settings.ENVIRONMENT.lower() != "production":
             },
         )
 
-        return OrderResponse.from_orm_order(order)
+        return OrderResponse.from_orm_order(order, razorpay_key_id=settings.RAZORPAY_KEY_ID)
 
 

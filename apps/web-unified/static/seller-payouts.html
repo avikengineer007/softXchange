@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Seller Payouts — softXchange</title>
-  <meta name="description" content="Monitor your softXchange seller payouts, Stripe Connect status, and transaction history.">
+  <meta name="description" content="Monitor your softXchange seller payouts, Razorpay Route status, and transaction history.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -63,11 +63,11 @@
     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:28px;flex-wrap:wrap;gap:16px;">
       <div>
         <h1 style="font-family:var(--font-heading);font-size:28px;font-weight:700;color:var(--text-primary);">Seller Payout Dashboard</h1>
-        <p style="color:var(--text-secondary);font-size:14px;margin-top:4px;">Monitor cleared payouts, ongoing transactions, and Stripe Connect status.</p>
+        <p style="color:var(--text-secondary);font-size:14px;margin-top:4px;">Monitor cleared payouts, ongoing transactions, and Razorpay Route status.</p>
       </div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div id="connect-status-badge"></div>
-        <button id="btn-connect" class="btn-primary" type="button">Connect Stripe Account</button>
+        <button id="btn-connect" class="btn-primary" type="button">Connect Razorpay Account</button>
       </div>
     </div>
 
@@ -141,7 +141,7 @@
 
         if (status.payout_enabled) {
           btn.style.display = 'none';
-          badge.innerHTML = '<span class="status-pill status-cleared" style="font-size:13px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;"><span>✓</span> Stripe Connect Active</span>';
+          badge.innerHTML = '<span class="status-pill status-cleared" style="font-size:13px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;"><span>✓</span> Razorpay Route Active</span>';
         } else if (status.connected) {
           btn.textContent = 'Complete Verification';
           badge.innerHTML = '<span class="status-pill status-under_review" style="font-size:13px;padding:6px 14px;">Onboarding Pending</span>';
@@ -160,7 +160,7 @@
       }
       const btn = document.getElementById('btn-connect');
       btn.disabled = true;
-      btn.textContent = 'Opening Stripe Portal…';
+      btn.textContent = 'Opening Razorpay Portal…';
       try {
         let res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/payments/seller/connect/start`, {
           method: 'POST',
@@ -189,7 +189,7 @@
         alert('Network error: ' + err.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Connect Stripe Account';
+        btn.textContent = 'Connect Razorpay Account';
       }
     }
 
@@ -206,8 +206,8 @@
         const review = Number(data.under_review_payout_usd ?? data.held_usd ?? (data.under_review_payout_cents ? data.under_review_payout_cents / 100 : 0));
         const count = data.total_sales_count !== undefined ? data.total_sales_count : (data.orders || []).length;
 
-        document.getElementById('stat-available').textContent = `$${avail.toFixed(2)}`;
-        document.getElementById('stat-review').textContent = `$${review.toFixed(2)}`;
+        document.getElementById('stat-available').textContent = `₹${avail.toFixed(2)}`;
+        document.getElementById('stat-review').textContent = `₹${review.toFixed(2)}`;
         document.getElementById('stat-count').textContent = count;
 
         const tbody = document.getElementById('orders-tbody');
@@ -220,10 +220,10 @@
 
         orders.forEach(order => {
           const tr = document.createElement('tr');
-          const gross = `$${Number(order.amount_usd ?? (order.amount_cents ? order.amount_cents / 100 : 0)).toFixed(2)}`;
-          const fee   = `$${Number((order.platform_fee_cents || 0) / 100).toFixed(2)}`;
-          const netVal = order.seller_payout_usd ?? (order.seller_payout_cents ? order.seller_payout_cents / 100 : (order.seller_net_cents ? order.seller_net_cents / 100 : 0));
-          const net   = `$${Number(netVal).toFixed(2)}`;
+          const gross = `₹${Number(order.amount_inr ?? order.amount_usd ?? (order.amount_cents ? order.amount_cents / 100 : 0)).toFixed(2)}`;
+          const fee   = `₹${Number((order.platform_fee_cents || 0) / 100).toFixed(2)}`;
+          const netVal = order.seller_payout_inr ?? order.seller_payout_usd ?? (order.seller_payout_cents ? order.seller_payout_cents / 100 : (order.seller_net_cents ? order.seller_net_cents / 100 : 0));
+          const net   = `₹${Number(netVal).toFixed(2)}`;
 
           const dStatus = (order.display_status || order.hold_status || 'cleared').toLowerCase();
           let statusClass = 'status-cleared';

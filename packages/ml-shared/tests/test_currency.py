@@ -1,6 +1,6 @@
 """
 Unit tests for ml_shared.currency.
-Tests regional currency resolution, conversions, formatting, and pricing distribution.
+Tests single canonical Indian Rupee (INR / ₹) resolution, formatting, and pricing distribution.
 """
 
 import pytest
@@ -10,80 +10,62 @@ from ml_shared.currency import (
     format_money,
     calculate_price_guidance,
     CURRENCIES,
+    DEFAULT_CURRENCY,
 )
 
 
-def test_resolve_currency_by_code_and_region():
-    assert resolve_currency("USD") == "USD"
-    assert resolve_currency("rub") == "RUB"
+def test_resolve_currency_always_returns_inr():
+    # Explicit inputs all resolve to INR
+    assert resolve_currency("INR") == "INR"
     assert resolve_currency("inr") == "INR"
-    assert resolve_currency("eur") == "EUR"
-    assert resolve_currency("gbp") == "GBP"
-    assert resolve_currency("jpy") == "JPY"
+    assert resolve_currency("USD") == "INR"
+    assert resolve_currency("EUR") == "INR"
+    assert resolve_currency("RUB") == "INR"
 
-    # Region code fallback
-    assert resolve_currency(region="RU") == "RUB"
+    # Region code fallback always resolves to INR
     assert resolve_currency(region="IN") == "INR"
-    assert resolve_currency(region="US") == "USD"
-    assert resolve_currency(region="GB") == "GBP"
-    assert resolve_currency(region="EU") == "EUR"
-    assert resolve_currency(region="JP") == "JPY"
-
-    # Unknown defaults to USD
-    assert resolve_currency(region="ZZ") == "USD"
-    assert resolve_currency(None, None) == "USD"
+    assert resolve_currency(region="US") == "INR"
+    assert resolve_currency(region="RU") == "INR"
+    assert resolve_currency(region="ZZ") == "INR"
+    assert resolve_currency(None, None) == "INR"
+    assert DEFAULT_CURRENCY == "INR"
 
 
-def test_format_money_across_regions():
-    # USD: $49.00
-    assert format_money(4900, "USD", is_cents=True) == "$49.00"
+def test_format_money_inr_only():
+    # 4900 paise -> ₹49.00
+    assert format_money(4900, is_cents=True) == "₹49.00"
+    assert format_money(4900, "INR", is_cents=True) == "₹49.00"
 
-    # INR: ₹4,091.50
+    # Large amount with comma formatting: ₹4,091.50
     inr_val = 4091.5
+    assert format_money(inr_val) == "₹4,091.50"
     assert format_money(inr_val, "INR") == "₹4,091.50"
 
-    # RUB: 4,508 ₽ (no decimals)
-    assert format_money(4508.0, "RUB") == "4,508 ₽"
 
-    # EUR: 45.08 €
-    assert format_money(45.08, "EUR") == "45.08 €"
-
-    # GBP: £38.71
-    assert format_money(38.71, "GBP") == "£38.71"
-
-    # JPY: ¥7,595
-    assert format_money(7595.0, "JPY") == "¥7,595"
+def test_convert_cents_to_currency_minor_units():
+    # 100 paise = 1.00 INR
+    assert convert_cents_to_currency(100) == 1.0
+    assert convert_cents_to_currency(4900) == 49.0
+    assert convert_cents_to_currency(250000) == 2500.0
 
 
 def test_calculate_price_guidance_distributions():
-    # Prices in USD cents: $39.00 (3900), $59.00 (5900), $89.00 (8900)
+    # Prices in paise: ₹39.00 (3900), ₹59.00 (5900), ₹89.00 (8900)
     prices = [3900, 5900, 8900]
 
-    # USD
-    guidance_usd = calculate_price_guidance(prices, currency="USD", region="US")
-    assert guidance_usd is not None
-    assert guidance_usd.currency == "USD"
-    assert guidance_usd.base_min_cents == 3900
-    assert guidance_usd.base_median_cents == 5900
-    assert guidance_usd.base_max_cents == 8900
-    assert guidance_usd.recommended_range == "$39.00 - $89.00"
-
-    # Russian Ruble (RUB)
-    guidance_rub = calculate_price_guidance(prices, currency="RUB", region="RU")
-    assert guidance_rub is not None
-    assert guidance_rub.currency == "RUB"
-    assert guidance_rub.currency_symbol == "₽"
-    # 39 * 92 = 3588, 89 * 92 = 8188
-    assert "₽" in guidance_rub.recommended_range
-    assert guidance_rub.min_price == 3588
-
-    # Indian Rupee (INR)
-    guidance_inr = calculate_price_guidance(prices, currency="INR", region="IN")
-    assert guidance_inr is not None
-    assert guidance_inr.currency == "INR"
-    assert guidance_inr.currency_symbol == "₹"
-    assert "₹" in guidance_inr.recommended_range
+    guidance = calculate_price_guidance(prices)
+    assert guidance is not None
+    assert guidance.currency == "INR"
+    assert guidance.currency_symbol == "₹"
+    assert guidance.base_min_cents == 3900
+    assert guidance.base_median_cents == 5900
+    assert guidance.base_max_cents == 8900
+    assert guidance.min_price == 39.00
+    assert guidance.median_price == 59.00
+    assert guidance.max_price == 89.00
+    assert guidance.recommended_range == "₹39.00 - ₹89.00"
 
 
 def test_calculate_price_guidance_empty_list():
     assert calculate_price_guidance([]) is None
+

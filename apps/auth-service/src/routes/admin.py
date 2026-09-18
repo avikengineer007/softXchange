@@ -286,7 +286,7 @@ def verify_seller_kyc_admin(
     
     IMPORTANT: Routes strictly through update_seller_kyc_status(), preserving
     the exact same is_seller_payout_enabled / kyc_status state machine as the
-    automated Stripe Connect webhook flow. Zero dual-source-of-truth drift.
+    automated Razorpay Route webhook flow. Zero dual-source-of-truth drift.
     """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -328,7 +328,7 @@ def reject_seller_kyc_admin(
     
     IMPORTANT: Routes strictly through update_seller_kyc_status(), preserving
     the exact same is_seller_payout_enabled / kyc_status state machine as the
-    automated Stripe Connect webhook flow. Zero dual-source-of-truth drift.
+    automated Razorpay Route webhook flow. Zero dual-source-of-truth drift.
     """
     user = db.query(User).filter(User.id == user_id).first()
     if not user:

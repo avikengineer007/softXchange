@@ -24,6 +24,8 @@ utc_now = _listing_mod.utc_now
 _indexer_mod = importlib.import_module("src.indexer")
 sync_live_listing_embedding = _indexer_mod.sync_live_listing_embedding
 
+# Seed packages for marketplace initialization.
+# Note: price_cents represents integer minor currency units (paise, where 1 INR = 100 paise; e.g. 4900 = ₹49.00).
 SEED_PACKAGES = [
     {
         "title": "Cloud Sentry CLI",

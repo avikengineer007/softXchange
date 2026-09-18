@@ -28,6 +28,25 @@ async def lifespan(app: FastAPI):
                 raise RuntimeError(
                     "SECURITY FATAL: Test-confirm endpoint is registered in production! Refusing startup."
                 )
+
+        # Hard fail-closed assertion: refuse mock or dev-default Razorpay credentials in production
+        mock_indicators = ["mock", "test_softxchange"]
+        has_mock_key = any(ind in settings.RAZORPAY_KEY_ID.lower() for ind in mock_indicators)
+        has_mock_secret = any(ind in settings.RAZORPAY_KEY_SECRET.lower() for ind in mock_indicators)
+        has_mock_webhook = any(ind in settings.RAZORPAY_WEBHOOK_SECRET.lower() for ind in mock_indicators)
+
+        if (
+            has_mock_key
+            or has_mock_secret
+            or has_mock_webhook
+            or len(settings.RAZORPAY_KEY_ID.strip()) < 8
+            or len(settings.RAZORPAY_KEY_SECRET.strip()) < 16
+            or len(settings.RAZORPAY_WEBHOOK_SECRET.strip()) < 16
+        ):
+            raise RuntimeError(
+                "SECURITY FATAL: Mock or dev-default Razorpay credentials detected in production! Real live credentials required."
+            )
+
     logger.info("Initializing payments-service database schema...")
     init_db()
     yield
@@ -35,7 +54,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="softXchange Payments Service",
-    description="Dedicated payments and Stripe Connect orchestration microservice.",
+    description="Dedicated payments and Razorpay Route orchestration microservice.",
     version="0.1.0",
     lifespan=lifespan,
 )

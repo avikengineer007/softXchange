@@ -33,7 +33,7 @@ All convergence animations are constructed using CSS transforms and SVG elements
 
 > [!CAUTION]
 > **Strict Prohibition on Checkout & Payment Flows:**
-> The Convergence Motif and any particle effects are **strictly prohibited** during checkout, payment authentication, or Stripe Connect handshakes.
+> The Convergence Motif and any particle effects are **strictly prohibited** during checkout, payment authentication, or Razorpay Route handshakes.
 
 ### Rationale:
 1. **Cognitive Load & Calmness**: Financial transactions require maximum clarity, sobriety, and cognitive calm. Extraneous motion creates user anxiety and distrust.

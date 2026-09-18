@@ -6,7 +6,7 @@ Seller GitHub OAuth connection routes providing a complementary public developer
 CRITICAL ARCHITECTURAL INVARIANTS:
 1. Connecting GitHub is explicitly OPTIONAL and ADDITIVE.
 2. Connecting GitHub does NOT set payout_enabled or modify kyc_status in any way.
-   payout_enabled continues to depend solely on KYCProvider / Stripe Connect verification.
+   payout_enabled continues to depend solely on KYCProvider / Razorpay Route verification.
 3. Minimal OAuth Scopes: strictly 'read:user public_repo' (read-only, public data).
    Never request 'repo' (private repos), admin scopes, or write permissions.
 4. Ephemeral Token Discipline: access token is used strictly in-memory during the callback
@@ -255,7 +255,7 @@ def _process_github_connection(
         db.add(conn)
 
     # STRICT GUARANTEE: Do NOT touch seller_profile.payout_enabled or kyc_status!
-    # KYC status and payout readiness remain governed exclusively by KYCProvider / Stripe.
+    # KYC status and payout readiness remain governed exclusively by KYCProvider / Razorpay Route.
     notification = Notification(
         user_id=user_id,
         type=NotificationType.GITHUB_CONNECTED.value,
@@ -409,7 +409,7 @@ def get_seller_public_trust(
     """
     Public trust readout for marketplace listings.
     Clearly distinguishes:
-    - kyc_verified & payout_enabled: Stripe / KYCProvider identity clearance
+    - kyc_verified & payout_enabled: Razorpay Route / KYCProvider identity clearance
     - github_connected & github: complementary developer public repository trust signal
     """
     profile = db.query(SellerProfile).filter(SellerProfile.user_id == seller_id).first()

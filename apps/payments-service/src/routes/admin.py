@@ -8,7 +8,8 @@ from src.database import get_db
 from src.auth import require_admin, AuthContext
 from src.models.order import Order, OrderStatus, HoldStatus, HeldOrderResponse, OrderResponse, utc_now
 from src.models.entitlement import Entitlement, EntitlementStatus
-from src.stripe_client import stripe_client
+from src.config import settings
+from src.razorpay_client import razorpay_client
 
 logger = logging.getLogger("payments-service.routes.admin")
 
@@ -93,13 +94,13 @@ def release_order_hold(
     db.refresh(order)
 
     logger.info(f"Admin {auth_ctx.user_id} released hold on order {order_id}")
-    return OrderResponse.from_orm_order(order)
+    return OrderResponse.from_orm_order(order, razorpay_key_id=settings.RAZORPAY_KEY_ID)
 
 
 @router.post(
     "/{order_id}/refund",
     response_model=OrderResponse,
-    summary="Admin refund of an order via Stripe with entitlement revocation",
+    summary="Admin refund of an order via Razorpay with entitlement revocation",
 )
 def refund_order(
     order_id: str,
@@ -107,7 +108,7 @@ def refund_order(
     db: Session = Depends(get_db),
 ):
     """
-    Refunds payment intent via Stripe, transitions order to 'refunded',
+    Refunds payment via Razorpay, transitions order to 'refunded',
     and revokes buyer entitlement.
     """
     order = db.query(Order).filter(Order.id == order_id).first()
@@ -120,18 +121,19 @@ def refund_order(
             detail=f"Cannot refund order in status '{order.status}'",
         )
 
-    # 1. Trigger Stripe refund if payment was captured
-    if order.stripe_payment_intent_id:
+    # 1. Trigger Razorpay refund if payment was captured
+    if order.razorpay_payment_id:
         try:
-            stripe_client.refund_payment_intent(
-                payment_intent_id=order.stripe_payment_intent_id,
-                reason="fraudulent" if order.hold_status == HoldStatus.HELD.value else "requested_by_customer",
+            razorpay_client.refund_payment(
+                payment_id=order.razorpay_payment_id,
+                amount_minor_units=order.amount_cents,
+                notes={"reason": "fraudulent" if order.hold_status == HoldStatus.HELD.value else "requested_by_customer"},
             )
         except Exception as exc:
-            logger.error(f"Stripe refund failed for order {order_id}: {exc}")
+            logger.error(f"Razorpay refund failed for order {order_id}: {exc}")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Stripe refund failed: {str(exc)}",
+                detail=f"Razorpay refund failed: {str(exc)}",
             )
 
     # 2. Update order state
@@ -139,7 +141,7 @@ def refund_order(
     order.hold_status = HoldStatus.REFUNDED.value
     order.updated_at = utc_now()
 
-    # 3. Revoke entitlement
+    # 3. Explicitly revoke buyer entitlement
     entitlement = db.query(Entitlement).filter(Entitlement.order_id == order.id).first()
     if entitlement:
         entitlement.status = EntitlementStatus.REVOKED.value
@@ -149,4 +151,4 @@ def refund_order(
     db.refresh(order)
 
     logger.info(f"Admin {auth_ctx.user_id} refunded order {order_id} and revoked entitlement")
-    return OrderResponse.from_orm_order(order)
+    return OrderResponse.from_orm_order(order, razorpay_key_id=settings.RAZORPAY_KEY_ID)

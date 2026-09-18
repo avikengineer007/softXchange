@@ -7,7 +7,7 @@ Grounded in real comparable live listings using the shared embedding vector spac
 Strict guarantees:
 1. Advisory only: zero writes/modifications to Listing records.
 2. Shared embeddings: uses BAAI/bge-small-en-v1.5 and listing_embeddings.
-3. Multi-currency & region-aware pricing guidance (RUB, INR, USD, EUR, GBP, JPY).
+3. Single canonical INR pricing guidance (₹). All `_cents` fields represent minor units (paise: 1 INR = 100 paise).
 4. Graceful degradation when inventory is sparse (0, 1-2, >=3 comparables).
 5. Code-enforced guardrails on generated copy (skip_price_check=True for pre-publish drafts).
 """
@@ -35,8 +35,8 @@ from ml_shared.guardrails import (
 )
 from ml_shared.context import ListingContextBundle, ListingMetadata, ScanSummary
 
-from src.models.listing import Listing, ListingStatus
-from src.models.embedding import ListingEmbedding
+from src.models.listing import Listing, ListingStatus  # type: ignore # pyrefly: ignore
+from src.models.embedding import ListingEmbedding  # type: ignore # pyrefly: ignore
 from seller_assist.config import settings
 
 
@@ -55,9 +55,9 @@ class CopySuggestionRequest(BaseModel):
     title: Optional[str] = Field(None, description="Optional draft title override")
     description: Optional[str] = Field(None, description="Optional draft description override")
     category: Optional[str] = Field(None, description="Optional category override")
-    rough_price_cents: Optional[int] = Field(None, ge=0, description="Optional rough price in cents")
-    currency: Optional[str] = Field(None, description="Target currency code (e.g. RUB, INR, USD, EUR, GBP)")
-    region: Optional[str] = Field(None, description="Target region code (e.g. RU, IN, US, GB, EU)")
+    rough_price_cents: Optional[int] = Field(None, ge=0, description="Optional rough price in minor units (paise: 1 INR = 100 paise)")
+    currency: Optional[str] = Field("INR", description="Target currency code (standardized to INR)")
+    region: Optional[str] = Field("IN", description="Target region code (standardized to IN)")
     k: Optional[int] = Field(settings.DEFAULT_K_COMPARABLES, ge=1, le=10)
 
 
@@ -218,7 +218,7 @@ def generate_listing_suggestions(
     enforce_guardrails(suggested_desc, bundle, skip_price_check=True)
     enforce_guardrails(suggested_title, bundle, skip_price_check=True)
 
-    curr_symbol = price_guidance.currency_symbol if price_guidance else "$"
+    curr_symbol = price_guidance.currency_symbol if price_guidance else "₹"
 
     return CopySuggestionResponse(
         listing_id=listing_id,

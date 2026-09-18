@@ -6,10 +6,10 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DATABASE_URL: str = "sqlite:///./softxchange_payments.db"
 
-    # Stripe Configuration (payments-service is the sole custodian)
-    STRIPE_SECRET_KEY: str = "sk_test_softxchange_mock_secret"
-    STRIPE_PUBLISHABLE_KEY: str = "pk_test_softxchange_mock_pub"
-    STRIPE_WEBHOOK_SECRET: str = "whsec_softxchange_mock_webhook_secret"
+    # Razorpay Configuration (payments-service is the sole custodian)
+    RAZORPAY_KEY_ID: str = "rzp_test_softxchange_mock_key"
+    RAZORPAY_KEY_SECRET: str = "rzp_test_softxchange_mock_secret"
+    RAZORPAY_WEBHOOK_SECRET: str = "whsec_softxchange_mock_webhook_secret"
 
     # Inter-Service Communication
     AUTH_SERVICE_URL: str = "http://localhost:8001"

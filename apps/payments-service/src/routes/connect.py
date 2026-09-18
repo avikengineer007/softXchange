@@ -8,38 +8,38 @@ from src.database import get_db
 from src.config import settings
 from src.auth import require_seller, AuthContext
 from src.models.seller_payment_profile import SellerPaymentProfile
-from src.stripe_client import stripe_client
+from src.razorpay_client import razorpay_client
 
 logger = logging.getLogger("payments-service.routes.connect")
 
-router = APIRouter(prefix="/payments/seller/connect", tags=["Stripe Connect Onboarding"])
+router = APIRouter(prefix="/payments/seller/connect", tags=["Razorpay Route Onboarding"])
 
 
 class ConnectStartResponse(BaseModel):
     user_id: str
-    stripe_account_id: str
+    razorpay_account_id: str
     onboarding_url: str
 
 
 class ConnectStatusResponse(BaseModel):
     user_id: str
     connected: bool
-    stripe_account_id: str | None = None
+    razorpay_account_id: str | None = None
     payout_enabled: bool
 
 
 @router.post(
     "/start",
     response_model=ConnectStartResponse,
-    summary="Initiate Stripe Connect Express onboarding for authenticated seller",
+    summary="Initiate Razorpay Route linked account onboarding for authenticated seller",
 )
 def start_connect_onboarding(
     auth_ctx: AuthContext = Depends(require_seller),
     db: Session = Depends(get_db),
 ):
     """
-    Creates a Stripe Connect Express account for the seller if not already present,
-    and returns an Account Link to Stripe's hosted onboarding interface.
+    Creates a Razorpay Route linked account for the seller if not already present,
+    and returns account onboarding information.
     """
     user_id = auth_ctx.user_id
     email = auth_ctx.claims.get("email")
@@ -48,40 +48,29 @@ def start_connect_onboarding(
 
     if not profile:
         try:
-            account_id = stripe_client.create_connect_account(user_id=user_id, email=email)
-            profile = SellerPaymentProfile(user_id=user_id, stripe_account_id=account_id)
+            account_id = razorpay_client.create_linked_account(user_id=user_id, email=email)
+            profile = SellerPaymentProfile(user_id=user_id, razorpay_account_id=account_id)
             db.add(profile)
             db.commit()
             db.refresh(profile)
         except Exception as exc:
-            logger.error(f"Failed to create Stripe Connect account for {user_id}: {exc}", exc_info=True)
+            logger.error(f"Failed to create Razorpay Route linked account for {user_id}: {exc}", exc_info=True)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Stripe Connect account creation failed: {str(exc)}",
+                detail=f"Razorpay Route linked account creation failed: {str(exc)}",
             )
     else:
-        account_id = profile.stripe_account_id
+        account_id = profile.razorpay_account_id
 
-    # Generate hosted onboarding link
-    refresh_url = f"{settings.FRONTEND_URL}/seller-payouts.html?reauth=1"
-    return_url = f"{settings.FRONTEND_URL}/seller-payouts.html?onboarded=1"
-
-    try:
-        onboarding_url = stripe_client.create_account_link(
-            account_id=account_id,
-            refresh_url=refresh_url,
-            return_url=return_url,
-        )
-    except Exception as exc:
-        logger.error(f"Failed to generate Account Link for {account_id}: {exc}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Stripe Account Link creation failed: {str(exc)}",
-        )
+    # Razorpay Route portal / onboarding URL
+    if account_id.startswith("acc_dev_mock"):
+        onboarding_url = f"{settings.FRONTEND_URL}/seller-payouts.html?onboarded=1"
+    else:
+        onboarding_url = f"https://dashboard.razorpay.com/app/route/accounts/{account_id}"
 
     return ConnectStartResponse(
         user_id=user_id,
-        stripe_account_id=account_id,
+        razorpay_account_id=account_id,
         onboarding_url=onboarding_url,
     )
 
@@ -89,7 +78,7 @@ def start_connect_onboarding(
 @router.post(
     "/onboard",
     response_model=ConnectStartResponse,
-    summary="Initiate Stripe Connect Express onboarding for authenticated seller (alias for /start)",
+    summary="Initiate Razorpay Route onboarding for authenticated seller (alias for /start)",
 )
 def onboard_connect_alias(
     auth_ctx: AuthContext = Depends(require_seller),
@@ -101,21 +90,21 @@ def onboard_connect_alias(
 @router.get(
     "/status",
     response_model=ConnectStatusResponse,
-    summary="Get Stripe Connect onboarding and payout readiness status",
+    summary="Get Razorpay Route onboarding and payout readiness status",
 )
 def get_connect_status(
     auth_ctx: AuthContext = Depends(require_seller),
     db: Session = Depends(get_db),
 ):
     """
-    Returns seller's Stripe Connect linkage and checks payout authorization with auth-service.
+    Returns seller's Razorpay Route linkage and checks payout authorization with auth-service.
     SINGLE SOURCE OF TRUTH: Payout readiness status is retrieved directly from auth-service.
     """
     user_id = auth_ctx.user_id
     profile = db.query(SellerPaymentProfile).filter(SellerPaymentProfile.user_id == user_id).first()
 
     connected = profile is not None
-    stripe_account_id = profile.stripe_account_id if profile else None
+    razorpay_account_id = profile.razorpay_account_id if profile else None
     payout_enabled = False
 
     if connected:
@@ -139,13 +128,13 @@ def get_connect_status(
     return ConnectStatusResponse(
         user_id=user_id,
         connected=connected,
-        stripe_account_id=stripe_account_id,
+        razorpay_account_id=razorpay_account_id,
         payout_enabled=payout_enabled,
     )
 
 
 # Additional router alias without /payments prefix
-alias_router = APIRouter(prefix="/seller/connect", tags=["Stripe Connect Onboarding Alias"])
+alias_router = APIRouter(prefix="/seller/connect", tags=["Razorpay Route Onboarding Alias"])
 alias_router.add_api_route("/start", start_connect_onboarding, methods=["POST"], response_model=ConnectStartResponse)
 alias_router.add_api_route("/onboard", start_connect_onboarding, methods=["POST"], response_model=ConnectStartResponse)
 alias_router.add_api_route("/status", get_connect_status, methods=["GET"], response_model=ConnectStatusResponse)

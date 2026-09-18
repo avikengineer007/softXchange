@@ -31,8 +31,11 @@ def upgrade() -> None:
         sa.Column("hold_status", sa.String(length=32), nullable=False, server_default="none"),
         sa.Column("hold_reason", sa.String(length=255), nullable=True),
         sa.Column("held_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("stripe_payment_intent_id", sa.String(length=64), nullable=True),
-        sa.Column("stripe_transfer_id", sa.String(length=64), nullable=True),
+        sa.Column("razorpay_order_id", sa.String(length=64), nullable=True),
+        sa.Column("razorpay_payment_id", sa.String(length=64), nullable=True),
+        sa.Column("razorpay_signature", sa.String(length=255), nullable=True),
+        sa.Column("charged_currency", sa.String(length=10), nullable=False, server_default="USD"),
+        sa.Column("charged_amount_minor_units", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
@@ -43,7 +46,8 @@ def upgrade() -> None:
     op.create_index(op.f("ix_orders_seller_id"), "orders", ["seller_id"], unique=False)
     op.create_index(op.f("ix_orders_status"), "orders", ["status"], unique=False)
     op.create_index(op.f("ix_orders_hold_status"), "orders", ["hold_status"], unique=False)
-    op.create_index(op.f("ix_orders_stripe_payment_intent_id"), "orders", ["stripe_payment_intent_id"], unique=False)
+    op.create_index(op.f("ix_orders_razorpay_order_id"), "orders", ["razorpay_order_id"], unique=False)
+    op.create_index(op.f("ix_orders_razorpay_payment_id"), "orders", ["razorpay_payment_id"], unique=False)
 
     # 2. entitlements
     op.create_table(
@@ -66,12 +70,12 @@ def upgrade() -> None:
     op.create_table(
         "seller_payment_profiles",
         sa.Column("user_id", sa.String(length=36), nullable=False),
-        sa.Column("stripe_account_id", sa.String(length=64), nullable=False),
+        sa.Column("razorpay_account_id", sa.String(length=64), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("user_id"),
     )
-    op.create_index(op.f("ix_seller_payment_profiles_stripe_account_id"), "seller_payment_profiles", ["stripe_account_id"], unique=True)
+    op.create_index(op.f("ix_seller_payment_profiles_razorpay_account_id"), "seller_payment_profiles", ["razorpay_account_id"], unique=True)
 
 
 def downgrade() -> None:

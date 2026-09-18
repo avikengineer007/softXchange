@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Checkout — softXchange</title>
-  <meta name="description" content="Complete your softXchange software license purchase securely.">
+  <meta name="description" content="Complete your softXchange software license purchase securely via Razorpay.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/style.css">
-  <!-- Stripe Elements SDK -->
-  <script src="https://js.stripe.com/v3/"></script>
+  <!-- Razorpay Checkout.js SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <style>
     .checkout-card {
       background: var(--bg-surface);
@@ -86,19 +86,19 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
             </svg>
-            <strong style="font-size:14px;color:var(--text-primary);">Credit / Debit Card (Stripe Test Mode)</strong>
+            <strong style="font-size:14px;color:var(--text-primary);">Razorpay Secure Checkout</strong>
           </div>
           <div id="card-element" style="background:var(--bg-input);padding:14px;border:1px solid var(--color-border);border-radius:var(--radius-sm);">
-            <p style="font-size:13px;color:var(--text-secondary);">Ready to process card details via Stripe SDK.</p>
+            <p style="font-size:13px;color:var(--text-secondary);">Cards, Netbanking, UPI processed securely in Indian Rupees (INR) via Razorpay Checkout.</p>
           </div>
         </div>
 
         <button id="submit-btn" class="btn-primary" style="width:100%;" type="button">
-          Complete Purchase &amp; Obtain Software License
+          Pay with Razorpay &amp; Obtain License
         </button>
 
         <p style="margin-top:14px;font-size:12px;text-align:center;color:var(--text-muted);">
-          Processed via Stripe Connect. Card data never stored on our servers.
+          Processed via Razorpay Route. Payment credentials never stored on our servers.
         </p>
       </div>
 
@@ -124,6 +124,7 @@
     const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || (origin || 'http://localhost:8004');
     const urlParams = new URLSearchParams(window.location.search);
     const orderId   = urlParams.get('order_id');
+    let currentOrder = null;
 
     function showStatus(msg, isError = true) {
       const el = document.getElementById('status-message');
@@ -147,25 +148,88 @@
           ? window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/orders/${orderId}`)
           : fetch(`${PAYMENTS_API}/orders/${orderId}`));
         if (res.ok) {
-          const order = await res.json();
-          document.getElementById('pkg-title').textContent = `Order #${order.id.slice(0, 8)}`;
-          if (order.listing_version_id) {
-            document.getElementById('pkg-version').textContent = `Version Ref: ${order.listing_version_id.slice(0, 8)}`;
+          currentOrder = await res.json();
+          document.getElementById('pkg-title').textContent = `Order #${currentOrder.id.slice(0, 8)}`;
+          if (currentOrder.listing_version_id) {
+            document.getElementById('pkg-version').textContent = `Version Ref: ${currentOrder.listing_version_id.slice(0, 8)}`;
           }
-          document.getElementById('pkg-price').textContent = order.amount_usd != null ? `$${Number(order.amount_usd).toFixed(2)}` : '—';
+          const amt = currentOrder.amount_inr != null ? currentOrder.amount_inr : (currentOrder.amount_usd != null ? currentOrder.amount_usd : (currentOrder.amount_cents / 100));
+          document.getElementById('pkg-price').textContent = amt != null ? `₹${Number(amt).toFixed(2)}` : '—';
         }
       } catch (err) {
         console.error('Order load error:', err);
       }
     }
 
-    async function simulatePaymentCompletion() {
+    async function startPaymentFlow() {
       if (!orderId) { showStatus('No order ID found.'); return; }
       if (!window.SoftXchangeAuth || !window.SoftXchangeAuth.getAccessToken()) {
         window.location.href = `/login-customer.html?next=${encodeURIComponent(window.location.href)}`;
         return;
       }
 
+      if (!currentOrder) {
+        await loadOrder();
+      }
+      if (!currentOrder) {
+        showStatus('Unable to load order details.');
+        return;
+      }
+
+      // If Razorpay Checkout SDK is available and order has razorpay_order_id
+      if (window.Razorpay && currentOrder.razorpay_order_id && currentOrder.razorpay_key_id) {
+        const options = {
+          key: currentOrder.razorpay_key_id,
+          amount: currentOrder.charged_amount_minor_units || currentOrder.amount_cents,
+          currency: currentOrder.charged_currency || 'INR',
+          name: 'softXchange',
+          description: 'Software License Purchase',
+          order_id: currentOrder.razorpay_order_id,
+          handler: async function (response) {
+            setProcessing(true);
+            try {
+              const verifyRes = await window.SoftXchangeAuth.fetchWithAuth(
+                `${PAYMENTS_API}/orders/${orderId}/verify`,
+                {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature,
+                  }),
+                }
+              );
+
+              if (!verifyRes.ok) {
+                const err = await verifyRes.json();
+                setProcessing(false);
+                showStatus('Payment verification failed: ' + (err.detail || verifyRes.statusText));
+                return;
+              }
+
+              window.location.href = `/order-confirmation.html?order_id=${encodeURIComponent(orderId)}`;
+            } catch (err) {
+              setProcessing(false);
+              showStatus('Network error verifying payment: ' + err.message);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setProcessing(false);
+            }
+          },
+          theme: {
+            color: '#2563eb'
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+        return;
+      }
+
+      // Development / Non-production test confirmation fallback
       setProcessing(true);
       document.getElementById('status-message').style.display = 'none';
 
@@ -182,7 +246,6 @@
           return;
         }
 
-        // Plain navigation to confirmation page — no convergence flourish on checkout
         window.location.href = `/order-confirmation.html?order_id=${encodeURIComponent(orderId)}`;
       } catch (err) {
         setProcessing(false);
@@ -190,7 +253,7 @@
       }
     }
 
-    document.getElementById('submit-btn').addEventListener('click', simulatePaymentCompletion);
+    document.getElementById('submit-btn').addEventListener('click', startPaymentFlow);
     window.addEventListener('DOMContentLoaded', loadOrder);
   </script>
 </body>

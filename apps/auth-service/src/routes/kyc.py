@@ -139,7 +139,7 @@ async def kyc_provider_webhook(
     db: Session = Depends(get_db),
 ):
     """
-    Webhook endpoint called by identity provider (e.g. Stripe Connect webhook via payments-service).
+    Webhook endpoint called by identity provider (e.g. Razorpay Route webhook via payments-service).
     Transitions kyc_status to 'verified' or 'rejected' and updates payout_enabled.
     Fail-closed: unknown or error states remain pending and payout_enabled remains False.
     Requires and verifies HMAC signature from payments-service with 5-minute replay protection.

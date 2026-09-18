@@ -2,7 +2,7 @@
 packages/observability/alerts.py
 
 Lightweight alerting handlers for production incidents:
-1. Stripe Webhook Failures (signature fraud or processing crashes)
+1. Razorpay Webhook Failures (signature fraud or processing crashes)
 2. Scan Job Failures / Dead Jobs / Timeouts
 3. Admin Provisioning Abuse (multiple consecutive failed elevation attempts)
 """
@@ -51,11 +51,11 @@ def trigger_alert(alert_type: str, severity: str, title: str, details: Dict[str,
 
 
 def alert_payment_webhook_failure(reason: str, event_id: Optional[str] = None, correlation_id: Optional[str] = None):
-    """Triggers an alert when a Stripe payment webhook fails signature or crashes."""
+    """Triggers an alert when a Razorpay payment webhook fails signature or crashes."""
     trigger_alert(
         alert_type="PAYMENT_WEBHOOK_FAILURE",
         severity="CRITICAL",
-        title="Stripe Payment Webhook Rejected or Failed",
+        title="Razorpay Payment Webhook Rejected or Failed",
         details={
             "reason": reason,
             "event_id": event_id,

@@ -372,7 +372,7 @@
           const timeStr = new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
           let summary = '';
           if (n.payload) {
-            summary = n.payload.message || n.payload.listing_title || (n.payload.amount_cents ? `$${(n.payload.amount_cents/100).toFixed(2)}` : '') || '';
+            summary = n.payload.message || n.payload.listing_title || (n.payload.amount_cents ? `₹${(n.payload.amount_cents/100).toFixed(2)}` : '') || '';
           }
 
           return `

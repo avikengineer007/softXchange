@@ -40,7 +40,7 @@ from src.models import (
     Entitlement,
     EntitlementStatus,
 )
-from src.stripe_client import stripe_client
+from src.razorpay_client import razorpay_client
 from src.storage import generate_signed_download_url, verify_download_token
 
 # In-memory SQLite for testing with StaticPool
@@ -118,11 +118,11 @@ def admin_token():
 
 
 # ============================================================================
-# Prompt 1: Stripe Connect Account Onboarding & Webhook Bridge Tests
+# Section 1: Razorpay Route Linked Account Onboarding & Webhook Bridge Tests
 # ============================================================================
 
 def test_connect_start_requires_seller_role(client, buyer_token):
-    """Only sellers can initiate Stripe Connect onboarding."""
+    """Only sellers can initiate Razorpay Route onboarding."""
     res_unauth = client.post("/payments/seller/connect/start")
     assert res_unauth.status_code == 401
 
@@ -133,10 +133,13 @@ def test_connect_start_requires_seller_role(client, buyer_token):
     assert res_buyer.status_code == 403
 
 
-def test_connect_start_creates_account_and_link(client, seller_token, monkeypatch):
-    """Seller onboarding creates Stripe Connect Express account and returns Account Link."""
-    monkeypatch.setattr(stripe_client, "create_connect_account", lambda user_id, email: "acct_test_123")
-    monkeypatch.setattr(stripe_client, "create_account_link", lambda account_id, refresh_url, return_url: "https://connect.stripe.com/setup/s/mock123")
+def test_connect_start_creates_linked_account(client, seller_token, monkeypatch):
+    """Seller onboarding creates Razorpay Route linked account and returns details."""
+    monkeypatch.setattr(
+        razorpay_client,
+        "create_linked_account",
+        lambda user_id, email, business_name=None: "acc_rzp_test_123"
+    )
 
     res = client.post(
         "/payments/seller/connect/start",
@@ -145,80 +148,126 @@ def test_connect_start_creates_account_and_link(client, seller_token, monkeypatc
     assert res.status_code == 200
     data = res.json()
     assert data["user_id"] == "seller-user-123"
-    assert data["stripe_account_id"] == "acct_test_123"
-    assert "https://connect.stripe.com" in data["onboarding_url"]
+    assert data["razorpay_account_id"] == "acc_rzp_test_123"
+    assert "onboarding_url" in data
 
     # Verify profile stored in DB without duplicate KYC flags
     db = TestingSessionLocal()
     profile = db.query(SellerPaymentProfile).filter(SellerPaymentProfile.user_id == "seller-user-123").first()
     assert profile is not None
-    assert profile.stripe_account_id == "acct_test_123"
+    assert profile.razorpay_account_id == "acc_rzp_test_123"
     assert not hasattr(profile, "kyc_status")  # Single source of truth guarantee
     db.close()
 
 
-def test_stripe_webhook_rejects_missing_or_invalid_signature(client):
-    """Stripe webhook rejects unauthenticated or tampered payloads (400)."""
+def test_razorpay_webhook_rejects_missing_or_invalid_signature(client):
+    """Razorpay webhook rejects unauthenticated or tampered payloads (400)."""
     # Missing header
-    res_no_sig = client.post("/payments/webhooks/stripe", content=b"{}")
+    res_no_sig = client.post("/payments/webhooks/razorpay", content=b"{}")
     assert res_no_sig.status_code == 400
 
     # Invalid signature
     res_bad_sig = client.post(
-        "/payments/webhooks/stripe",
+        "/payments/webhooks/razorpay",
         content=b"{}",
-        headers={"Stripe-Signature": "t=123,v1=invalid_signature"}
+        headers={"X-Razorpay-Signature": "invalid_signature"}
     )
     assert res_bad_sig.status_code == 400
 
 
-def test_stripe_webhook_account_updated_triggers_auth_kyc_callback(client, monkeypatch):
-    """When Connect account requirements clear, webhook triggers HMAC-signed callback to auth-service."""
+def test_razorpay_webhook_account_activated_triggers_auth_kyc_callback(client, monkeypatch):
+    """When Razorpay Route account is activated, webhook triggers HMAC-signed callback to auth-service."""
     db = TestingSessionLocal()
-    profile = SellerPaymentProfile(user_id="seller-kyc-test", stripe_account_id="acct_verified_456")
+    profile = SellerPaymentProfile(user_id="seller-kyc-test", razorpay_account_id="acc_verified_456")
     db.add(profile)
     db.commit()
     db.close()
 
-    # Mock Stripe webhook signature validation
+    # Mock signature verification
+    monkeypatch.setattr(razorpay_client, "verify_webhook_signature", lambda body, sig, secret=None: True)
+
     mock_event = {
-        "type": "account.updated",
-        "data": {
-            "object": {
-                "id": "acct_verified_456",
-                "charges_enabled": True,
-                "payouts_enabled": True,
+        "event": "account.activated",
+        "account_id": "acc_verified_456",
+        "payload": {
+            "account": {
+                "entity": {
+                    "id": "acc_verified_456",
+                    "status": "activated",
+                }
             }
         }
     }
-    monkeypatch.setattr(stripe_client, "construct_webhook_event", lambda payload, sig, secret=None: mock_event)
 
     # Capture HMAC callback to auth-service
     captured_callback = {}
-    def mock_send_kyc(user_id, status_str, stripe_account_id):
+    def mock_send_kyc(user_id, status_str, razorpay_account_id):
         captured_callback["user_id"] = user_id
         captured_callback["status"] = status_str
-        captured_callback["stripe_account_id"] = stripe_account_id
+        captured_callback["razorpay_account_id"] = razorpay_account_id
         return True
 
     import src.routes.webhooks as webhooks_mod
     monkeypatch.setattr(webhooks_mod, "_send_authenticated_kyc_callback", mock_send_kyc)
 
     res = client.post(
-        "/payments/webhooks/stripe",
-        content=b"dummy-raw-payload",
-        headers={"Stripe-Signature": "t=123,v1=valid_sig"}
+        "/payments/webhooks/razorpay",
+        content=json.dumps(mock_event).encode("utf-8"),
+        headers={"X-Razorpay-Signature": "valid_sig"}
     )
     assert res.status_code == 200
     assert captured_callback["user_id"] == "seller-kyc-test"
     assert captured_callback["status"] == "verified"
-    assert captured_callback["stripe_account_id"] == "acct_verified_456"
+    assert captured_callback["razorpay_account_id"] == "acc_verified_456"
+
+
+@pytest.mark.parametrize("ambiguous_event,expected_status", [
+    ("account.under_review", "pending_review"),
+    ("account.needs_clarification", "pending_review"),
+    ("account.suspended", "suspended"),
+    ("account.rejected", "rejected"),
+])
+def test_razorpay_webhook_fails_closed_on_ambiguous_or_rejected_kyc_states(
+    client, monkeypatch, ambiguous_event, expected_status
+):
+    """Fails closed on non-activated Route account states, never assuming verified."""
+    db = TestingSessionLocal()
+    profile = SellerPaymentProfile(user_id="seller-ambig", razorpay_account_id="acc_ambig_789")
+    db.add(profile)
+    db.commit()
+    db.close()
+
+    monkeypatch.setattr(razorpay_client, "verify_webhook_signature", lambda b, s, secret=None: True)
+
+    mock_event = {
+        "event": ambiguous_event,
+        "account_id": "acc_ambig_789",
+    }
+
+    captured_callback = {}
+    def mock_send_kyc(user_id, status_str, razorpay_account_id):
+        captured_callback["user_id"] = user_id
+        captured_callback["status"] = status_str
+        captured_callback["razorpay_account_id"] = razorpay_account_id
+        return True
+
+    import src.routes.webhooks as webhooks_mod
+    monkeypatch.setattr(webhooks_mod, "_send_authenticated_kyc_callback", mock_send_kyc)
+
+    res = client.post(
+        "/payments/webhooks/razorpay",
+        content=json.dumps(mock_event).encode("utf-8"),
+        headers={"X-Razorpay-Signature": "valid_sig"}
+    )
+    assert res.status_code == 200
+    assert captured_callback["user_id"] == "seller-ambig"
+    assert captured_callback["status"] == expected_status
+    assert captured_callback["razorpay_account_id"] == "acc_ambig_789"
 
 
 def test_send_authenticated_kyc_callback_generates_valid_hmac(monkeypatch):
     """Verifies that _send_authenticated_kyc_callback computes correct SHA256 HMAC."""
     from src.routes.webhooks import _send_authenticated_kyc_callback
-    import httpx
     captured = {}
     def mock_post(url, content, headers):
         captured["url"] = url
@@ -231,7 +280,7 @@ def test_send_authenticated_kyc_callback_generates_valid_hmac(monkeypatch):
 
     monkeypatch.setattr(httpx.Client, "post", lambda self, url, content=None, headers=None: mock_post(url, content, headers))
 
-    ok = _send_authenticated_kyc_callback("user-1", "verified", "acct_1")
+    ok = _send_authenticated_kyc_callback("user-1", "verified", "acc_1")
     assert ok is True
     assert "X-Service-Signature" in captured["headers"]
     assert "X-Service-Timestamp" in captured["headers"]
@@ -247,7 +296,7 @@ def test_send_authenticated_kyc_callback_generates_valid_hmac(monkeypatch):
 
 
 # ============================================================================
-# Prompt 2: Order Model + Checkout Flow Tests
+# Section 2: Order Model + Razorpay Order Creation Tests
 # ============================================================================
 
 def test_create_order_requires_authentication(client):
@@ -284,16 +333,14 @@ def test_create_order_rejects_non_live_listing(client, buyer_token, monkeypatch)
     assert "must be live and vetted" in res.json()["detail"]
 
 
-def test_create_order_fee_split_math_and_destination_charge(client, buyer_token, monkeypatch):
-    """Validates 8% flat platform fee calculation and Stripe Connect destination charge."""
-    # Register seller connect profile in DB
+def test_create_order_fee_split_math_and_razorpay_order(client, buyer_token, monkeypatch):
+    """Validates 8% flat platform fee calculation and Razorpay order creation."""
     db = TestingSessionLocal()
-    seller_profile = SellerPaymentProfile(user_id="seller-corp-1", stripe_account_id="acct_seller_1")
+    seller_profile = SellerPaymentProfile(user_id="seller-corp-1", razorpay_account_id="acc_seller_1")
     db.add(seller_profile)
     db.commit()
     db.close()
 
-    # Mock listings-service returning live listing
     def mock_get(url):
         class MockResp:
             status_code = 200
@@ -311,19 +358,20 @@ def test_create_order_fee_split_math_and_destination_charge(client, buyer_token,
 
     monkeypatch.setattr("httpx.Client.get", lambda self, url: mock_get(url))
 
-    # Mock Stripe PaymentIntent
-    captured_pi = {}
-    def mock_create_pi(amount_cents, application_fee_cents, destination_account_id, metadata):
-        captured_pi["amount_cents"] = amount_cents
-        captured_pi["application_fee_cents"] = application_fee_cents
-        captured_pi["destination_account_id"] = destination_account_id
+    captured_rzp_order = {}
+    def mock_create_rzp_order(amount_minor_units, currency="INR", receipt=None, notes=None):
+        captured_rzp_order["amount"] = amount_minor_units
+        captured_rzp_order["currency"] = currency
+        captured_rzp_order["receipt"] = receipt
+        captured_rzp_order["notes"] = notes
         return {
-            "id": "pi_mock_999",
-            "client_secret": "pi_mock_999_secret_abc",
-            "status": "requires_payment_method",
+            "id": "order_rzp_mock_999",
+            "amount": amount_minor_units,
+            "currency": currency,
+            "status": "created",
         }
 
-    monkeypatch.setattr(stripe_client, "create_payment_intent", mock_create_pi)
+    monkeypatch.setattr(razorpay_client, "create_order", mock_create_rzp_order)
 
     res = client.post(
         "/orders",
@@ -333,31 +381,173 @@ def test_create_order_fee_split_math_and_destination_charge(client, buyer_token,
     assert res.status_code == 201
     order = res.json()
 
-    # Verify amounts and fee split math
+    # Verify amounts and fee split math in canonical INR (paise)
     assert order["amount_cents"] == 5000
     assert order["platform_fee_cents"] == 400   # 8% of 5000
     assert order["seller_payout_cents"] == 4600 # 5000 - 400
     assert order["platform_fee_cents"] + order["seller_payout_cents"] == order["amount_cents"]
 
+    # Verify Razorpay fields
+    assert order["razorpay_order_id"] == "order_rzp_mock_999"
+    assert order["charged_currency"] == "INR"
+    assert order["charged_amount_minor_units"] == 5000
+
+    # Verify DEAD client_secret field is dropped completely
+    assert "client_secret" not in order
+
     # Verify immutable version pinning
     assert order["listing_version_id"] == "v-pinned-100"
     assert order["status"] == "pending_payment"
-    assert order["client_secret"] == "pi_mock_999_secret_abc"
 
-    # Verify Stripe Connect destination charge parameters
-    assert captured_pi["destination_account_id"] == "acct_seller_1"
-    assert captured_pi["application_fee_cents"] == 400
+    # Verify Razorpay order params
+    assert captured_rzp_order["amount"] == 5000
+    assert captured_rzp_order["currency"] == "INR"
+    assert captured_rzp_order["notes"]["seller_id"] == "seller-corp-1"
+    assert captured_rzp_order["notes"]["platform_fee_cents"] == 400
 
 
 # ============================================================================
-# Prompt 3: Payment Completion Webhook & Entitlement Issuance Tests
+# Section 3: Payment Verification Endpoint (/orders/{id}/verify) Tests
 # ============================================================================
 
-def test_webhook_payment_succeeded_transitions_order_and_creates_entitlement(client, monkeypatch):
-    """payment_intent.succeeded transitions order to 'paid' and creates Entitlement."""
+def test_order_verify_with_valid_signature_transitions_order_and_creates_entitlement(client, buyer_token, monkeypatch):
+    """POST /orders/{id}/verify with valid signature transitions order to paid and creates Entitlement."""
     db = TestingSessionLocal()
     order = Order(
-        id="order-pi-test-1",
+        id="order-vfy-1",
+        listing_id="l-1",
+        listing_version_id="v-1",
+        buyer_id="buyer-user-456",
+        seller_id="seller-1",
+        amount_cents=2500,
+        platform_fee_cents=200,
+        seller_payout_cents=2300,
+        status=OrderStatus.PENDING_PAYMENT.value,
+        razorpay_order_id="order_rzp_vfy_1",
+    )
+    db.add(order)
+    db.commit()
+    db.close()
+
+    # Mock signature verification succeeding
+    monkeypatch.setattr(razorpay_client, "verify_payment_signature", lambda **kwargs: True)
+
+    verify_payload = {
+        "razorpay_order_id": "order_rzp_vfy_1",
+        "razorpay_payment_id": "pay_rzp_12345",
+        "razorpay_signature": "sig_valid_abc",
+    }
+
+    res = client.post(
+        "/orders/order-vfy-1/verify",
+        headers={"Authorization": f"Bearer {buyer_token}"},
+        json=verify_payload,
+    )
+    assert res.status_code == 200
+    assert res.json()["status"] == "paid"
+    assert res.json()["razorpay_payment_id"] == "pay_rzp_12345"
+
+    # Verify DB state
+    db = TestingSessionLocal()
+    updated = db.query(Order).filter(Order.id == "order-vfy-1").first()
+    assert updated is not None
+    assert updated.status == OrderStatus.PAID.value
+    assert updated.razorpay_payment_id == "pay_rzp_12345"
+    assert updated.razorpay_signature == "sig_valid_abc"
+
+    entitlement = db.query(Entitlement).filter(Entitlement.order_id == "order-vfy-1").first()
+    assert entitlement is not None
+    assert entitlement.buyer_id == "buyer-user-456"
+    assert entitlement.status == EntitlementStatus.ACTIVE.value
+    db.close()
+
+
+def test_order_verify_rejects_invalid_signature(client, buyer_token, monkeypatch):
+    """POST /orders/{id}/verify fails closed (400) if signature is forged/invalid."""
+    db = TestingSessionLocal()
+    order = Order(
+        id="order-vfy-bad",
+        listing_id="l-1",
+        listing_version_id="v-1",
+        buyer_id="buyer-user-456",
+        seller_id="seller-1",
+        amount_cents=2500,
+        platform_fee_cents=200,
+        seller_payout_cents=2300,
+        status=OrderStatus.PENDING_PAYMENT.value,
+        razorpay_order_id="order_rzp_vfy_bad",
+    )
+    db.add(order)
+    db.commit()
+    db.close()
+
+    # Mock signature verification failing
+    monkeypatch.setattr(razorpay_client, "verify_payment_signature", lambda **kwargs: False)
+
+    res = client.post(
+        "/orders/order-vfy-bad/verify",
+        headers={"Authorization": f"Bearer {buyer_token}"},
+        json={
+            "razorpay_order_id": "order_rzp_vfy_bad",
+            "razorpay_payment_id": "pay_tampered",
+            "razorpay_signature": "sig_forged",
+        },
+    )
+    assert res.status_code == 400
+    assert "Invalid payment signature" in res.json()["detail"]
+
+
+def test_order_verify_idempotent_duplicate_call(client, buyer_token, monkeypatch):
+    """POST /orders/{id}/verify called repeatedly on already-paid order returns 200 without creating duplicate entitlements."""
+    db = TestingSessionLocal()
+    order = Order(
+        id="order-vfy-idemp",
+        listing_id="l-1",
+        listing_version_id="v-1",
+        buyer_id="buyer-user-456",
+        seller_id="seller-1",
+        amount_cents=3000,
+        platform_fee_cents=240,
+        seller_payout_cents=2760,
+        status=OrderStatus.PAID.value,
+        razorpay_order_id="order_rzp_idemp",
+        razorpay_payment_id="pay_existing_123",
+    )
+    ent = Entitlement(order_id="order-vfy-idemp", buyer_id="buyer-user-456", listing_version_id="v-1")
+    db.add_all([order, ent])
+    db.commit()
+    db.close()
+
+    monkeypatch.setattr(razorpay_client, "verify_payment_signature", lambda o, p, s: True)
+
+    res = client.post(
+        "/orders/order-vfy-idemp/verify",
+        headers={"Authorization": f"Bearer {buyer_token}"},
+        json={
+            "razorpay_order_id": "order_rzp_idemp",
+            "razorpay_payment_id": "pay_existing_123",
+            "razorpay_signature": "sig_whatever",
+        },
+    )
+    assert res.status_code == 200
+    assert res.json()["status"] == "paid"
+
+    # Only 1 entitlement exists
+    db = TestingSessionLocal()
+    ents = db.query(Entitlement).filter(Entitlement.order_id == "order-vfy-idemp").all()
+    assert len(ents) == 1
+    db.close()
+
+
+# ============================================================================
+# Section 4: Razorpay Webhook (order.paid & payment.captured) & Idempotency Tests
+# ============================================================================
+
+def test_razorpay_webhook_order_paid_transitions_order_and_creates_entitlement(client, monkeypatch):
+    """Webhook event order.paid transitions order to 'paid' and creates Entitlement."""
+    db = TestingSessionLocal()
+    order = Order(
+        id="order-rzp-paid-1",
         listing_id="l-1",
         listing_version_id="v-1",
         buyer_id="buyer-user-456",
@@ -366,32 +556,47 @@ def test_webhook_payment_succeeded_transitions_order_and_creates_entitlement(cli
         platform_fee_cents=160,
         seller_payout_cents=1840,
         status=OrderStatus.PENDING_PAYMENT.value,
-        stripe_payment_intent_id="pi_paid_test",
+        razorpay_order_id="order_rzp_wh_1",
     )
     db.add(order)
     db.commit()
     db.close()
 
+    monkeypatch.setattr(razorpay_client, "verify_webhook_signature", lambda b, s, secret=None: True)
+
     mock_event = {
-        "type": "payment_intent.succeeded",
-        "data": {"object": {"id": "pi_paid_test"}}
+        "event": "order.paid",
+        "payload": {
+            "order": {
+                "entity": {
+                    "id": "order_rzp_wh_1",
+                    "amount": 2000,
+                    "status": "paid",
+                }
+            },
+            "payment": {
+                "entity": {
+                    "id": "pay_rzp_wh_payment_1",
+                    "order_id": "order_rzp_wh_1",
+                }
+            }
+        }
     }
-    monkeypatch.setattr(stripe_client, "construct_webhook_event", lambda p, s, secret=None: mock_event)
 
     res = client.post(
-        "/payments/webhooks/stripe",
-        content=b"{}",
-        headers={"Stripe-Signature": "t=123,v1=valid"}
+        "/payments/webhooks/razorpay",
+        content=json.dumps(mock_event).encode("utf-8"),
+        headers={"X-Razorpay-Signature": "valid_sig"}
     )
     assert res.status_code == 200
 
     db = TestingSessionLocal()
-    updated_order = db.query(Order).filter(Order.id == "order-pi-test-1").first()
+    updated_order = db.query(Order).filter(Order.id == "order-rzp-paid-1").first()
     assert updated_order is not None
     assert updated_order.status == OrderStatus.PAID.value
+    assert updated_order.razorpay_payment_id == "pay_rzp_wh_payment_1"
 
-    # Verify Entitlement created
-    entitlement = db.query(Entitlement).filter(Entitlement.order_id == "order-pi-test-1").first()
+    entitlement = db.query(Entitlement).filter(Entitlement.order_id == "order-rzp-paid-1").first()
     assert entitlement is not None
     assert entitlement.buyer_id == "buyer-user-456"
     assert entitlement.listing_version_id == "v-1"
@@ -399,50 +604,89 @@ def test_webhook_payment_succeeded_transitions_order_and_creates_entitlement(cli
     db.close()
 
 
-def test_webhook_payment_succeeded_idempotency(client, monkeypatch):
-    """Idempotency check: Duplicate webhook deliveries for same payment do not duplicate entitlements."""
+def test_razorpay_webhook_cross_event_idempotency_order_paid_and_payment_captured(client, monkeypatch):
+    """
+    CRITICAL IDEMPOTENCY GUARANTEE:
+    When Razorpay sends both order.paid AND payment.captured for the same order,
+    the second event does not duplicate entitlements or fail.
+    """
     db = TestingSessionLocal()
     order = Order(
-        id="order-idemp-1",
+        id="order-cross-idemp",
         listing_id="l-1",
         listing_version_id="v-1",
         buyer_id="buyer-user-456",
         seller_id="seller-1",
-        amount_cents=1500,
-        platform_fee_cents=120,
-        seller_payout_cents=1380,
-        status=OrderStatus.PAID.value,  # Already paid
-        stripe_payment_intent_id="pi_idemp_123",
+        amount_cents=3500,
+        platform_fee_cents=280,
+        seller_payout_cents=3220,
+        status=OrderStatus.PENDING_PAYMENT.value,
+        razorpay_order_id="order_rzp_cross_1",
     )
-    entitlement = Entitlement(
-        order_id="order-idemp-1",
-        buyer_id="buyer-user-456",
-        listing_version_id="v-1",
-    )
-    db.add_all([order, entitlement])
+    db.add(order)
     db.commit()
     db.close()
 
-    mock_event = {
-        "type": "payment_intent.succeeded",
-        "data": {"object": {"id": "pi_idemp_123"}}
+    monkeypatch.setattr(razorpay_client, "verify_webhook_signature", lambda b, s, secret=None: True)
+
+    # 1. order.paid arrives first
+    event_order_paid = {
+        "event": "order.paid",
+        "payload": {
+            "order": {
+                "entity": {
+                    "id": "order_rzp_cross_1",
+                    "amount": 3500,
+                    "status": "paid",
+                }
+            },
+            "payment": {
+                "entity": {
+                    "id": "pay_rzp_cross_payment_1",
+                    "order_id": "order_rzp_cross_1",
+                }
+            }
+        }
     }
-    monkeypatch.setattr(stripe_client, "construct_webhook_event", lambda p, s, secret=None: mock_event)
-
-    res = client.post(
-        "/payments/webhooks/stripe",
-        content=b"{}",
-        headers={"Stripe-Signature": "t=123,v1=valid"}
+    res1 = client.post(
+        "/payments/webhooks/razorpay",
+        content=json.dumps(event_order_paid).encode("utf-8"),
+        headers={"X-Razorpay-Signature": "valid"}
     )
-    assert res.status_code == 200
-    assert res.json()["status"] == "already_processed"
+    assert res1.status_code == 200
 
-    # Verify only 1 entitlement exists
+    # 2. payment.captured arrives next for the same transaction
+    event_payment_captured = {
+        "event": "payment.captured",
+        "payload": {
+            "payment": {
+                "entity": {
+                    "id": "pay_rzp_cross_payment_1",
+                    "order_id": "order_rzp_cross_1",
+                    "amount": 3500,
+                    "status": "captured",
+                }
+            }
+        }
+    }
+    res2 = client.post(
+        "/payments/webhooks/razorpay",
+        content=json.dumps(event_payment_captured).encode("utf-8"),
+        headers={"X-Razorpay-Signature": "valid"}
+    )
+    assert res2.status_code == 200
+    assert res2.json()["status"] == "already_processed"
+
+    # Verify only 1 entitlement exists in DB
     db = TestingSessionLocal()
-    entitlements = db.query(Entitlement).filter(Entitlement.order_id == "order-idemp-1").all()
-    assert len(entitlements) == 1
+    ents = db.query(Entitlement).filter(Entitlement.order_id == "order-cross-idemp").all()
+    assert len(ents) == 1
     db.close()
 
+
+# ============================================================================
+# Section 5: Secure Download Token Tests
+# ============================================================================
 
 def test_download_authorized_buyer_paid_order(client, buyer_token):
     """Paid order generates short-lived signed download URL for authorized buyer."""
@@ -508,7 +752,7 @@ def test_download_rejected_for_unpaid_or_other_buyer(client, buyer_token):
 
 
 # ============================================================================
-# Prompt 4: Fraud Holds & Admin SLA Release/Refund Tests
+# Section 6: Fraud Holds & Admin SLA Release/Refund Tests
 # ============================================================================
 
 def test_fraud_rule_triggers_new_seller_high_amount_hold(client, monkeypatch):
@@ -517,7 +761,6 @@ def test_fraud_rule_triggers_new_seller_high_amount_hold(client, monkeypatch):
     Isolated hold: Does NOT affect seller's other transactions.
     """
     db = TestingSessionLocal()
-    # Order amount is $60.00 (6000 cents >= 5000 threshold) and seller has 0 previous sales
     order = Order(
         id="order-fraud-1",
         listing_id="l-1",
@@ -528,19 +771,23 @@ def test_fraud_rule_triggers_new_seller_high_amount_hold(client, monkeypatch):
         platform_fee_cents=480,
         seller_payout_cents=5520,
         status=OrderStatus.PENDING_PAYMENT.value,
-        stripe_payment_intent_id="pi_fraud_1",
+        razorpay_order_id="order_rzp_fraud_1",
     )
     db.add(order)
     db.commit()
     db.close()
 
-    mock_event = {
-        "type": "payment_intent.succeeded",
-        "data": {"object": {"id": "pi_fraud_1"}}
-    }
-    monkeypatch.setattr(stripe_client, "construct_webhook_event", lambda p, s, secret=None: mock_event)
+    monkeypatch.setattr(razorpay_client, "verify_webhook_signature", lambda b, s, secret=None: True)
 
-    client.post("/payments/webhooks/stripe", content=b"{}", headers={"Stripe-Signature": "t=1,v1=1"})
+    mock_event = {
+        "event": "order.paid",
+        "payload": {
+            "order": {"entity": {"id": "order_rzp_fraud_1", "amount": 6000}},
+            "payment": {"entity": {"id": "pay_fraud_1", "order_id": "order_rzp_fraud_1"}},
+        }
+    }
+
+    client.post("/payments/webhooks/razorpay", content=json.dumps(mock_event).encode("utf-8"), headers={"X-Razorpay-Signature": "valid"})
 
     db = TestingSessionLocal()
     flagged = db.query(Order).filter(Order.id == "order-fraud-1").first()
@@ -592,8 +839,11 @@ def test_admin_list_held_orders_and_release(client, admin_token):
     assert res_rel.json()["hold_status"] == "released"
 
 
-def test_admin_refund_order_revokes_entitlement(client, admin_token, monkeypatch):
-    """Admin refunding an order triggers Stripe refund and revokes buyer entitlement."""
+def test_admin_refund_order_calls_razorpay_and_revokes_entitlement(client, admin_token, monkeypatch):
+    """
+    Admin refunding an order triggers Razorpay refund AND revokes buyer entitlement.
+    Guarantees entitlement-revocation behavior is preserved.
+    """
     db = TestingSessionLocal()
     order = Order(
         id="order-refund-test",
@@ -606,7 +856,7 @@ def test_admin_refund_order_revokes_entitlement(client, admin_token, monkeypatch
         seller_payout_cents=3680,
         status=OrderStatus.PAID.value,
         hold_status=HoldStatus.HELD.value,
-        stripe_payment_intent_id="pi_to_refund",
+        razorpay_payment_id="pay_rzp_to_refund",
     )
     entitlement = Entitlement(
         order_id="order-refund-test",
@@ -618,13 +868,14 @@ def test_admin_refund_order_revokes_entitlement(client, admin_token, monkeypatch
     db.commit()
     db.close()
 
-    # Mock Stripe refund
+    # Mock Razorpay refund
     refund_called = {}
-    def mock_refund(payment_intent_id, reason):
-        refund_called["pi"] = payment_intent_id
-        return {"id": "re_123", "status": "succeeded"}
+    def mock_refund(payment_id=None, amount_minor_units=None, notes=None, **kwargs):
+        refund_called["payment_id"] = payment_id or kwargs.get("razorpay_payment_id")
+        refund_called["amount"] = amount_minor_units
+        return {"id": "rfnd_rzp_123", "status": "processed"}
 
-    monkeypatch.setattr(stripe_client, "refund_payment_intent", mock_refund)
+    monkeypatch.setattr(razorpay_client, "refund_payment", mock_refund)
 
     res = client.post(
         "/payments/orders/order-refund-test/refund",
@@ -633,7 +884,7 @@ def test_admin_refund_order_revokes_entitlement(client, admin_token, monkeypatch
     assert res.status_code == 200
     assert res.json()["status"] == "refunded"
     assert res.json()["hold_status"] == "refunded"
-    assert refund_called["pi"] == "pi_to_refund"
+    assert refund_called["payment_id"] == "pay_rzp_to_refund"
 
     # Verify entitlement is revoked
     db = TestingSessionLocal()
@@ -645,7 +896,7 @@ def test_admin_refund_order_revokes_entitlement(client, admin_token, monkeypatch
 
 
 # ============================================================================
-# Prompt 5: Seller Payout Dashboard Tests
+# Section 7: Seller Dashboard & Connected Route Status Tests
 # ============================================================================
 
 def test_seller_payout_dashboard_metrics_and_honest_messaging(client, seller_token):
@@ -685,7 +936,7 @@ def test_seller_payout_dashboard_metrics_and_honest_messaging(client, seller_tok
 
 def test_get_connect_status_reflects_auth_service_payout_enabled(client, seller_token, monkeypatch):
     """
-    GET /payments/seller/connect/status reflects Stripe Connect onboarding status,
+    GET /payments/seller/connect/status reflects Route linked account status,
     proxying/checking against auth-service's payout_enabled as the single source of truth.
     """
     # 1. Not connected
@@ -700,7 +951,7 @@ def test_get_connect_status_reflects_auth_service_payout_enabled(client, seller_
 
     # Register connected profile in DB
     db = TestingSessionLocal()
-    profile = SellerPaymentProfile(user_id="seller-user-123", stripe_account_id="acct_status_test")
+    profile = SellerPaymentProfile(user_id="seller-user-123", razorpay_account_id="acc_status_test")
     db.add(profile)
     db.commit()
     db.close()
@@ -723,7 +974,7 @@ def test_get_connect_status_reflects_auth_service_payout_enabled(client, seller_
     assert res_pending.status_code == 200
     data_pending = res_pending.json()
     assert data_pending["connected"] is True
-    assert data_pending["stripe_account_id"] == "acct_status_test"
+    assert data_pending["razorpay_account_id"] == "acc_status_test"
     assert data_pending["payout_enabled"] is False
 
     # 3. Connected and KYC verified in auth-service
@@ -840,6 +1091,9 @@ def test_test_confirm_refused_and_fails_closed_in_production(monkeypatch):
     When ENVIRONMENT='production', lifespan fails closed if test-confirm is present.
     """
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_ID", "rzp_live_" + "a" * 20)
+    monkeypatch.setattr(settings, "RAZORPAY_KEY_SECRET", "sec_" + "b" * 32)
+    monkeypatch.setattr(settings, "RAZORPAY_WEBHOOK_SECRET", "whsec_" + "c" * 32)
     from src.main import lifespan
 
     mock_app = MagicMock()
@@ -852,40 +1106,6 @@ def test_test_confirm_refused_and_fails_closed_in_production(monkeypatch):
             async with lifespan(mock_app):
                 pass
         asyncio.run(run_lifespan())
-
-
-def test_send_authenticated_kyc_callback_includes_timestamp_for_replay_defense(monkeypatch):
-    """
-    Verifies that _send_authenticated_kyc_callback computes correct SHA256 HMAC
-    over timestamped payload and transmits X-Service-Timestamp.
-    """
-    from src.routes.webhooks import _send_authenticated_kyc_callback
-    captured = {}
-    def mock_post(url, content, headers):
-        captured["url"] = url
-        captured["content"] = content
-        captured["headers"] = headers
-        class MockResp:
-            status_code = 200
-            text = "ok"
-        return MockResp()
-
-    monkeypatch.setattr(httpx.Client, "post", lambda self, url, content=None, headers=None: mock_post(url, content, headers))
-
-    ok = _send_authenticated_kyc_callback("user-1", "verified", "acct_1")
-    assert ok is True
-    assert "X-Service-Signature" in captured["headers"]
-    assert "X-Service-Timestamp" in captured["headers"]
-
-    ts = captured["headers"]["X-Service-Timestamp"]
-    sig = captured["headers"]["X-Service-Signature"]
-    expected_signed = f"{ts}.".encode("utf-8") + captured["content"]
-    expected_sig = hmac.new(
-        settings.INTERNAL_SERVICE_SECRET.encode("utf-8"),
-        expected_signed,
-        hashlib.sha256
-    ).hexdigest()
-    assert sig == expected_sig
 
 
 def test_check_entitlement_access_control_and_verification(client, buyer_token):
@@ -962,8 +1182,11 @@ def test_check_entitlement_access_control_and_verification(client, buyer_token):
 
 def test_seller_connect_and_payouts_alias_routes(client, seller_token, monkeypatch):
     """Verifies that /seller/connect/* and /seller/payouts alias routes work identically to /payments/seller/*."""
-    monkeypatch.setattr(stripe_client, "create_connect_account", lambda user_id, email: "acct_test_123")
-    monkeypatch.setattr(stripe_client, "create_account_link", lambda account_id, refresh_url, return_url: "https://connect.stripe.com/setup/s/mock123")
+    monkeypatch.setattr(
+        razorpay_client,
+        "create_linked_account",
+        lambda user_id, email, business_name=None: "acc_alias_123"
+    )
 
     headers = {"Authorization": f"Bearer {seller_token}"}
 
@@ -987,6 +1210,3 @@ def test_seller_connect_and_payouts_alias_routes(client, seller_token, monkeypat
     res_payouts = client.get("/seller/payouts", headers=headers)
     assert res_payouts.status_code == 200
     assert res_payouts.json() == data_dash
-
-
-

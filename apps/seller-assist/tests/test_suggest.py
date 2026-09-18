@@ -9,8 +9,8 @@ zero database side effects, authorization, and guardrail protection.
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from src.models.listing import Listing, ListingStatus
-from src.models.embedding import ListingEmbedding
+from src.models.listing import Listing, ListingStatus  # type: ignore # pyrefly: ignore
+from src.models.embedding import ListingEmbedding  # type: ignore # pyrefly: ignore
 from seller_assist.suggest import (
     generate_listing_suggestions,
     CopySuggestionRequest,
@@ -20,12 +20,12 @@ from seller_assist.suggest import (
 def test_suggest_copy_grounded_in_comparables(client: TestClient, seller_token: str, seeded_listings):
     """
     Verifies that suggestions are grounded in real comparable listings,
-    and pricing guidance accurately computes min ($39.00), median ($59.00), max ($89.00).
+    and pricing guidance accurately computes min (₹39.00), median (₹59.00), max (₹89.00).
     """
     res = client.post(
         "/assist/seller/listings/draft-target-001/suggest-copy",
         headers={"Authorization": f"Bearer {seller_token}"},
-        json={"currency": "USD", "region": "US"},
+        json={"currency": "INR", "region": "IN"},
     )
     assert res.status_code == 200, res.text
     data = res.json()
@@ -38,11 +38,11 @@ def test_suggest_copy_grounded_in_comparables(client: TestClient, seller_token: 
     # Price guidance
     guidance = data["price_guidance"]
     assert guidance is not None
-    assert guidance["currency"] == "USD"
+    assert guidance["currency"] == "INR"
     assert guidance["base_min_cents"] == 3900
     assert guidance["base_median_cents"] == 5900
     assert guidance["base_max_cents"] == 8900
-    assert guidance["recommended_range"] == "$39.00 - $89.00"
+    assert guidance["recommended_range"] == "₹39.00 - ₹89.00"
 
     # Comparables
     comps = data["comparable_listings"]
@@ -54,38 +54,23 @@ def test_suggest_copy_grounded_in_comparables(client: TestClient, seller_token: 
     assert "Robust market data based on 3 comparable live listings" in data["confidence_note"]
 
 
-def test_suggest_copy_region_centric_multi_currency(client: TestClient, seller_token: str, seeded_listings):
+def test_suggest_copy_canonical_inr_currency(client: TestClient, seller_token: str, seeded_listings):
     """
-    Verifies region-centric currency localization:
-    - Russia (RU) -> RUB (₽)
-    - India (IN) -> INR (₹)
+    Verifies single canonical INR currency localization across regions:
+    All requests resolve to INR (₹).
     """
-    # 1. Russian Ruble
-    res_ru = client.post(
-        "/assist/seller/listings/draft-target-001/suggest-copy",
-        headers={"Authorization": f"Bearer {seller_token}"},
-        json={"region": "RU"},
-    )
-    assert res_ru.status_code == 200
-    data_ru = res_ru.json()
-    guidance_ru = data_ru["price_guidance"]
-    assert guidance_ru["currency"] == "RUB"
-    assert guidance_ru["currency_symbol"] == "₽"
-    assert "₽" in guidance_ru["recommended_range"]
-    assert data_ru["currency"] == "RUB"
-
-    # 2. Indian Rupee
-    res_in = client.post(
+    res = client.post(
         "/assist/seller/listings/draft-target-001/suggest-copy",
         headers={"Authorization": f"Bearer {seller_token}"},
         json={"region": "IN"},
     )
-    assert res_in.status_code == 200
-    data_in = res_in.json()
-    guidance_in = data_in["price_guidance"]
-    assert guidance_in["currency"] == "INR"
-    assert guidance_in["currency_symbol"] == "₹"
-    assert "₹" in guidance_in["recommended_range"]
+    assert res.status_code == 200
+    data = res.json()
+    guidance = data["price_guidance"]
+    assert guidance["currency"] == "INR"
+    assert guidance["currency_symbol"] == "₹"
+    assert "₹" in guidance["recommended_range"]
+    assert data["currency"] == "INR"
 
 
 def test_suggest_copy_sparse_inventory_degradation(client: TestClient, seller_token: str, db_session: Session):
