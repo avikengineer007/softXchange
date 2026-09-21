@@ -60,12 +60,16 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_origin_regex=r"^https?://.*",
+    allow_origins=[
+        "http://localhost:8000",
+        "https://softxchange-production.up.railway.app",
+        "https://softxchange.pages.dev",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 class IntakeRequest(BaseModel):

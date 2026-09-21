@@ -60,15 +60,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware for web frontend integration
+# CORS: exact allowlist only — no allow_origin_regex.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Include all route controllers
 app.include_router(connect_router)

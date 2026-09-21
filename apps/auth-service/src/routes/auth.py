@@ -284,7 +284,20 @@ def refresh_access_token(
     """
     Validates server-side non-revoked refresh token and issues fresh access token.
     Supports refresh token from request body or httpOnly cookie.
+
+    CSRF defence-in-depth: with SameSite=None cookies required for cross-origin
+    Cloudflare Pages → Railway requests, we explicitly validate the Origin header
+    against the CORS allowlist. CORS middleware already blocks attacker sites from
+    reading the response, but this check rejects the request entirely at the handler.
+    Skipped when no Origin is present (server-to-server, curl, Postman).
     """
+    origin = request.headers.get("origin")
+    if origin and origin not in settings.CORS_ORIGINS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Origin not permitted",
+        )
+
     raw_token = None
     if data and data.refresh_token:
         raw_token = data.refresh_token.strip()
@@ -297,6 +310,7 @@ def refresh_access_token(
             detail="Missing refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
 
     token_h = hash_token(raw_token)
     refresh_record = db.query(RefreshToken).filter(RefreshToken.token_hash == token_h).first()
