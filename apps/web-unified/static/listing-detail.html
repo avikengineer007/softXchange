@@ -423,15 +423,28 @@
             </div>
             ` : ''}
 
-            <button class="buy-btn" id="buy-btn" onclick="initiatePurchase('${escapeHtml(item.id)}')">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M2 2h2l2.5 7h5l2-4H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="7" cy="13" r="1" fill="currentColor"/>
-                <circle cx="12" cy="13" r="1" fill="currentColor"/>
-              </svg>
-              Acquire License
-              <span id="buy-spinner" class="calming-loading" style="display:none;width:16px;height:16px;" aria-label="Processing"></span>
-            </button>
+            ${(window.SoftXchangeAuth && window.SoftXchangeAuth.getUser() && window.SoftXchangeAuth.getUser().id === item.seller_id) ? `
+              <button class="buy-btn" id="buy-btn" disabled style="opacity:0.65;cursor:not-allowed;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:var(--text-secondary);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                You Own This Listing
+              </button>
+              <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:6px;">
+                Self-purchase is disabled for listing authors.
+              </div>
+            ` : `
+              <button class="buy-btn" id="buy-btn" onclick="initiatePurchase('${escapeHtml(item.id)}')">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M2 2h2l2.5 7h5l2-4H5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="7" cy="13" r="1" fill="currentColor"/>
+                  <circle cx="12" cy="13" r="1" fill="currentColor"/>
+                </svg>
+                Acquire License
+                <span id="buy-spinner" class="calming-loading" style="display:none;width:16px;height:16px;" aria-label="Processing"></span>
+              </button>
+            `}
 
             <button class="btn-secondary" id="wishlist-detail-btn" style="width:100%;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;cursor:pointer;border-radius:var(--radius-sm);" type="button">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="wishlist-detail-icon">
@@ -468,7 +481,7 @@
       const btn = document.getElementById('buy-btn');
       const spinner = document.getElementById('buy-spinner');
       const errBox = document.getElementById('purchase-error');
-      btn.disabled = true;
+      if (btn) btn.disabled = true;
       if (spinner) spinner.style.display = 'inline-block';
       if (errBox) errBox.style.display = 'none';
 
@@ -493,11 +506,16 @@
         if (btn) btn.disabled = false;
         if (spinner) spinner.style.display = 'none';
         if (errBox) {
-          // Map internal seller-onboarding error to a friendly buyer-facing message
+          // Map internal errors to user-friendly messages
           const raw = err.message || '';
-          const msg = raw.toLowerCase().includes('payment onboarding')
-            ? 'This listing is temporarily unavailable for purchase. Please try again later or contact support.'
-            : raw;
+          let msg = raw;
+          if (raw.toLowerCase().includes('failed to fetch') || raw.toLowerCase().includes('networkerror')) {
+            msg = 'Unable to connect to the payment service. Please ensure payments-service (port 8004) is running.';
+          } else if (raw.toLowerCase().includes('payment onboarding')) {
+            msg = 'This listing is temporarily unavailable for purchase because the seller has not completed payout onboarding.';
+          } else if (raw.toLowerCase().includes('sellers cannot purchase')) {
+            msg = 'Sellers cannot purchase their own software listings. Please sign in with a buyer account.';
+          }
           errBox.textContent = msg;
           errBox.style.display = 'block';
         }

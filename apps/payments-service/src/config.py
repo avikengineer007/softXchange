@@ -1,10 +1,13 @@
+from pathlib import Path
 from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEFAULT_SQLITE_PATH = (Path(__file__).resolve().parent.parent / "softxchange_payments.db").as_posix()
 
 
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
-    DATABASE_URL: str = "sqlite:///./softxchange_payments.db"
+    DATABASE_URL: str = f"sqlite:///{_DEFAULT_SQLITE_PATH}"
 
     # Razorpay Configuration (payments-service is the sole custodian)
     RAZORPAY_KEY_ID: str = "rzp_test_softxchange_mock_key"
