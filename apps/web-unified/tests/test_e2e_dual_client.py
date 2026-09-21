@@ -174,3 +174,41 @@ def test_checkout_negative_constraint(web_client: TestClient):
 
     # Ambient layer must NOT be loaded on checkout page
     assert "ambient-layer.js" not in html
+
+
+def test_wishlist_and_payment_interface_pages(web_client: TestClient):
+    """
+    Validates that Wishlist and Payment Interface pages are properly routed,
+    styled with obsidian dark glassmorphism design system, and linked from navigation.
+    """
+    # 1. Wishlist page test
+    wishlist_resp = web_client.get("/wishlist.html")
+    assert wishlist_resp.status_code == 200
+    wishlist_html = wishlist_resp.text
+    assert "Software Wishlist" in wishlist_html
+    assert "wishlist-container" in wishlist_html
+    assert "luxury-grid" in wishlist_html
+    assert "data-lucide" in wishlist_html
+
+    # 2. Payment interface page test
+    payment_resp = web_client.get("/payment-interface.html")
+    assert payment_resp.status_code == 200
+    payment_html = payment_resp.text
+    assert "Payment Interface" in payment_html
+    assert "tab-history" in payment_html
+    assert "tab-checkout" in payment_html
+    assert "razorpay" in payment_html.lower()
+
+    # 3. Payments alias test
+    payments_alias_resp = web_client.get("/payments.html")
+    assert payments_alias_resp.status_code == 200
+
+    # 4. Navigation links presence
+    browse_html = web_client.get("/browse-listings.html").text
+    assert 'href="/wishlist.html"' in browse_html
+    assert 'href="/payment-interface.html"' in browse_html
+
+    index_html = web_client.get("/index.html").text
+    assert 'href="/wishlist.html"' in index_html
+    assert 'href="/payment-interface.html"' in index_html
+

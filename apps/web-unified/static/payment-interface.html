@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Interface &amp; Orders Hub — softXchange</title>
+  <link rel="canonical" href="https://softxchange-production.up.railway.app/payment-interface.html">
+  <meta name="description" content="Centralized softXchange payment gateway interface, Razorpay order settlement, transaction ledger, and license entitlement verification.">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Razorpay Checkout.js SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            obsidian: {
+              950: '#030408',
+              900: '#070912',
+              850: '#0c0f1e',
+              800: '#12172d',
+            },
+            prism: {
+              cyan: '#38bdf8',
+              blue: '#2563eb',
+              violet: '#7c3aed',
+              purple: '#c084fc',
+              emerald: '#10b981',
+            }
+          },
+          animation: {
+            'glow-pulse': 'glowPulse 9s ease-in-out infinite alternate',
+          },
+          keyframes: {
+            glowPulse: {
+              '0%': { opacity: '0.18', transform: 'scale(1) translate(0, 0)' },
+              '100%': { opacity: '0.42', transform: 'scale(1.15) translate(15px, -15px)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #030408;
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+
+    .luxury-grid {
+      background-size: 40px 40px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+
+    .glass-panel {
+      background: rgba(12, 15, 30, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-card {
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .shimmer-text {
+      background: linear-gradient(135deg, #ffffff 0%, #38bdf8 30%, #818cf8 65%, #c084fc 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .tab-btn.active {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body class="luxury-grid antialiased min-h-screen selection:bg-blue-600 selection:text-white relative flex flex-col justify-between">
+
+  <!-- Atmospheric Glow Orbs -->
+  <div class="fixed top-[-10%] left-[20%] w-[650px] h-[650px] bg-blue-600/10 rounded-full blur-[180px] pointer-events-none animate-glow-pulse"></div>
+  <div class="fixed top-[45%] right-[-10%] w-[700px] h-[700px] bg-purple-600/10 rounded-full blur-[200px] pointer-events-none animate-glow-pulse" style="animation-delay: -4s;"></div>
+
+  <!-- Header / Navigation -->
+  <header class="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass-panel rounded-2xl px-6 py-3.5 border border-white/10">
+      
+      <!-- Brand & Vector Mark -->
+      <a href="/index.html" class="flex items-center gap-3.5 group" id="brand-home">
+        <img src="/static/images/logo.png" alt="SoftXchange Logo" class="w-8 h-8 object-contain group-hover:scale-105 transition-transform drop-shadow-[0_0_15px_rgba(56,189,248,0.4)]" />
+        <div class="flex flex-col">
+          <span class="text-base font-bold tracking-tight text-white leading-tight font-sans">
+            Soft<span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">Xchange</span>
+          </span>
+          <span class="text-[9px] font-mono tracking-[0.25em] text-slate-400 uppercase -mt-0.5">
+            BUY · SELL · BUILD
+          </span>
+        </div>
+      </a>
+
+      <!-- Navigation Links -->
+      <nav class="hidden md:flex items-center gap-8 text-xs font-mono uppercase tracking-wider text-slate-300">
+        <a href="/browse-listings.html" class="hover:text-cyan-400 transition-colors">Catalog</a>
+        <a href="/wishlist.html" class="hover:text-cyan-400 transition-colors flex items-center gap-1.5">
+          <i data-lucide="bookmark" class="w-3.5 h-3.5"></i>Wishlist
+        </a>
+        <a href="/payment-interface.html" class="text-cyan-400 font-semibold transition-colors flex items-center gap-1.5">
+          <i data-lucide="credit-card" class="w-3.5 h-3.5"></i>Payments
+        </a>
+        <a href="/seller-listings.html" class="hover:text-cyan-400 transition-colors">Seller Portal</a>
+        <a href="/dashboard-customer.html" class="hover:text-cyan-400 transition-colors">My Account</a>
+      </nav>
+
+      <!-- Auth State Indicator -->
+      <div id="auth-actions" class="flex items-center gap-3">
+        <a href="/login-customer.html" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-slate-200 transition-all">
+          Sign In
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-8 pt-32 pb-20 w-full flex-grow">
+    
+    <!-- Hero Section -->
+    <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/10 pb-8">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 mb-3">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>RAZORPAY SECURE GATEWAY · ZERO FRAUD ESCROW</span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight shimmer-text">
+          Payment Interface
+        </h1>
+        <p class="text-sm font-sans text-slate-400 mt-2 max-w-xl">
+          Order fulfillment terminal, instant Razorpay payment processing, and verifiable transaction ledger.
+        </p>
+      </div>
+
+      <!-- Live Payment Security Badges -->
+      <div class="flex items-center gap-3">
+        <div class="glass-panel px-4 py-3 rounded-xl border border-white/10 flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
+            <i data-lucide="lock" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-mono uppercase text-slate-400 block">Encryption</span>
+            <span class="text-xs font-bold font-mono text-emerald-400 block">TLS 1.3 · 256-bit</span>
+          </div>
+        </div>
+
+        <div class="glass-panel px-4 py-3 rounded-xl border border-white/10 flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <span class="text-[10px] font-mono uppercase text-slate-400 block">Settlement</span>
+            <span class="text-xs font-bold font-mono text-cyan-400 block">Razorpay Route</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="flex items-center gap-2 mb-8 border-b border-white/10 pb-4 overflow-x-auto">
+      <button onclick="switchTab('checkout')" id="tab-btn-checkout" class="tab-btn active px-4 py-2.5 rounded-xl border border-white/10 text-xs font-mono transition-all flex items-center gap-2">
+        <i data-lucide="shopping-cart" class="w-3.5 h-3.5"></i>
+        <span>Direct Order Checkout</span>
+      </button>
+      <button onclick="switchTab('history')" id="tab-btn-history" class="tab-btn px-4 py-2.5 rounded-xl border border-white/10 text-xs font-mono text-slate-400 hover:text-white transition-all flex items-center gap-2">
+        <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+        <span>Transaction Ledger</span>
+      </button>
+      <button onclick="switchTab('verify')" id="tab-btn-verify" class="tab-btn px-4 py-2.5 rounded-xl border border-white/10 text-xs font-mono text-slate-400 hover:text-white transition-all flex items-center gap-2">
+        <i data-lucide="fingerprint" class="w-3.5 h-3.5"></i>
+        <span>Verify License Entitlement</span>
+      </button>
+    </div>
+
+    <!-- TAB 1: Direct Order Checkout & Gateway Terminal -->
+    <div id="tab-checkout" class="tab-content">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left: Order Input / Picker -->
+        <div class="lg:col-span-7 space-y-6">
+          <div class="glass-panel rounded-2xl p-6 sm:p-8 border border-white/10">
+            <h2 class="text-lg font-bold text-white font-sans flex items-center gap-2 mb-2">
+              <i data-lucide="sliders" class="w-5 h-5 text-cyan-400"></i>
+              <span>Order Parameters</span>
+            </h2>
+            <p class="text-xs text-slate-400 font-sans mb-6">
+              Enter an existing order ID or pick an active pending checkout to execute settlement.
+            </p>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-mono text-slate-300 uppercase tracking-wider mb-2">Order Identifier (UUID)</label>
+                <div class="flex gap-2">
+                  <input 
+                    type="text" 
+                    id="order-id-input" 
+                    placeholder="e.g. a9926698-db91-4383-b747-0680be03d930" 
+                    class="flex-1 px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 transition-colors"
+                  />
+                  <button 
+                    onclick="fetchOrderDetails()" 
+                    id="btn-fetch-order"
+                    class="px-5 py-3 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-semibold transition-all flex items-center gap-1.5"
+                  >
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    <span>Lookup</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Pending Orders Quick Selector -->
+              <div id="quick-orders-section" class="pt-2">
+                <span class="text-[11px] font-mono text-slate-400 uppercase tracking-wider block mb-2">
+                  Your Recent Unsettled Orders
+                </span>
+                <div id="quick-orders-list" class="space-y-2">
+                  <div class="text-xs font-mono text-slate-500 italic p-3 rounded-xl bg-white/5 border border-white/5">
+                    Loading recent orders…
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Escrow & Security Trust Card -->
+          <div class="glass-panel rounded-2xl p-6 border border-white/10">
+            <h3 class="text-sm font-bold text-white font-sans flex items-center gap-2 mb-3">
+              <i data-lucide="shield-alert" class="w-4 h-4 text-purple-400"></i>
+              <span>Escrow &amp; Anti-Fraud Protection Guarantee</span>
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-sans text-slate-300">
+              <div class="p-3 rounded-xl bg-white/5 border border-white/5">
+                <strong class="text-white block font-mono text-[11px] mb-1">AUTOMATED 24H ESCROW</strong>
+                Payments remain in softXchange platform custody until automated integrity checks clear.
+              </div>
+              <div class="p-3 rounded-xl bg-white/5 border border-white/5">
+                <strong class="text-white block font-mono text-[11px] mb-1">CRYPTOGRAPHIC ENTITLEMENT</strong>
+                Instant Ed25519-signed ephemeral download links delivered directly upon verification.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Checkout Settlement Terminal -->
+        <div class="lg:col-span-5">
+          <div class="glass-panel rounded-2xl p-6 sm:p-8 border border-white/10 sticky top-28">
+            <div class="flex items-center justify-between gap-2 border-b border-white/10 pb-4 mb-6">
+              <div>
+                <h3 class="text-base font-bold text-white font-sans">Payment Terminal</h3>
+                <span class="text-[10px] font-mono text-slate-400 uppercase">Indian Rupee (INR) Accounting</span>
+              </div>
+              <span id="order-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-mono bg-white/5 text-slate-400 border border-white/10">
+                NO ORDER SELECTED
+              </span>
+            </div>
+
+            <!-- Order Detail Summary View -->
+            <div id="terminal-empty-state" class="text-center py-12 text-slate-500 font-mono text-xs">
+              <i data-lucide="credit-card" class="w-8 h-8 mx-auto mb-3 text-slate-600"></i>
+              Enter an Order ID or select from the left to inspect settlement breakdown and pay.
+            </div>
+
+            <div id="terminal-order-content" class="hidden space-y-6">
+              <!-- Item Details -->
+              <div class="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-400 font-mono">Package Version ID</span>
+                  <span id="term-ver-id" class="text-slate-200 font-mono">—</span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-400 font-mono">Platform Fee (8%)</span>
+                  <span id="term-fee" class="text-slate-200 font-mono font-semibold">—</span>
+                </div>
+                <div class="flex justify-between items-center text-xs">
+                  <span class="text-slate-400 font-mono">Seller Net Proceeds</span>
+                  <span id="term-seller-cut" class="text-emerald-400 font-mono font-semibold">—</span>
+                </div>
+                <div class="border-t border-white/10 pt-2 flex justify-between items-baseline">
+                  <span class="text-xs font-mono uppercase text-slate-300">Total Charged</span>
+                  <span id="term-total-amount" class="text-2xl font-bold font-mono text-cyan-400">—</span>
+                </div>
+              </div>
+
+              <!-- Payment Action Gateway -->
+              <div id="term-action-area" class="space-y-3">
+                <button 
+                  id="btn-trigger-razorpay" 
+                  onclick="triggerRazorpayPayment()" 
+                  class="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-mono font-semibold text-xs shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
+                >
+                  <i data-lucide="lock" class="w-4 h-4"></i>
+                  <span>Launch Razorpay Payment Gateway</span>
+                </button>
+
+                <!-- Dev Test Simulator Trigger -->
+                <button 
+                  id="btn-dev-confirm" 
+                  onclick="triggerDevTestConfirm()" 
+                  class="w-full py-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-mono transition-all flex items-center justify-center gap-1.5"
+                >
+                  <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                  <span>Dev Instant Settlement (Simulate Paid)</span>
+                </button>
+              </div>
+
+              <!-- Download Button (for already paid orders) -->
+              <div id="term-download-area" class="hidden">
+                <a 
+                  id="term-download-btn" 
+                  href="#" 
+                  class="w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-semibold text-xs shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
+                >
+                  <i data-lucide="download" class="w-4 h-4"></i>
+                  <span>Download Verified Package Payload</span>
+                </a>
+              </div>
+
+              <!-- Feedback / Status notification message -->
+              <div id="term-feedback" class="text-xs font-mono p-3 rounded-xl hidden"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Transaction Ledger -->
+    <div id="tab-history" class="tab-content hidden">
+      <div class="glass-panel rounded-2xl p-6 sm:p-8 border border-white/10">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-lg font-bold text-white font-sans flex items-center gap-2">
+              <i data-lucide="receipt" class="w-5 h-5 text-cyan-400"></i>
+              <span>Customer Transaction Ledger</span>
+            </h2>
+            <p class="text-xs text-slate-400 font-sans mt-1">
+              Historical purchase logs, Razorpay transaction references, and software license entitlements.
+            </p>
+          </div>
+          <button onclick="loadTransactionLedger()" class="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-slate-300 transition-all flex items-center gap-1.5 self-start">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Refresh Ledger</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-white/10 text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+                <th class="py-3 px-4">Order ID</th>
+                <th class="py-3 px-4">Date</th>
+                <th class="py-3 px-4">Amount</th>
+                <th class="py-3 px-4">Razorpay Reference</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="ledger-tbody" class="text-xs font-mono divide-y divide-white/5">
+              <tr>
+                <td colspan="6" class="py-8 text-center text-slate-500 italic">
+                  Loading transactions…
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Verify License Entitlement -->
+    <div id="tab-verify" class="tab-content hidden">
+      <div class="max-w-2xl mx-auto glass-panel rounded-2xl p-6 sm:p-8 border border-white/10">
+        <h2 class="text-lg font-bold text-white font-sans flex items-center gap-2 mb-2">
+          <i data-lucide="fingerprint" class="w-5 h-5 text-cyan-400"></i>
+          <span>Verify License Entitlement</span>
+        </h2>
+        <p class="text-xs text-slate-400 font-sans mb-6">
+          Query the softXchange license cryptographic verification service to audit buyer ownership status.
+        </p>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-mono text-slate-300 uppercase tracking-wider mb-2">Package / Listing UUID</label>
+            <input 
+              type="text" 
+              id="verify-listing-id" 
+              placeholder="e.g. 49f06ebb-6449-47b1-8eaa-130b81ba12cc" 
+              class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 transition-colors"
+            />
+          </div>
+
+          <button 
+            onclick="checkLicenseEntitlement()" 
+            class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-mono font-semibold text-xs shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
+          >
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>Audit License Entitlement</span>
+          </button>
+
+          <div id="entitlement-result" class="hidden p-4 rounded-xl border text-xs font-mono"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="border-t border-white/10 bg-obsidian-950/80 backdrop-blur-md py-10 px-4 sm:px-8 mt-auto">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs font-mono text-slate-500">
+      <div class="flex items-center gap-3">
+        <img src="/static/images/logo.png" alt="SoftXchange" class="w-5 h-5 opacity-70" />
+        <span>softXchange · Automated Razorpay Settlement Gateway</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a href="/browse-listings.html" class="hover:text-slate-300">Catalog</a>
+        <a href="/wishlist.html" class="hover:text-slate-300">Wishlist</a>
+        <a href="/seller-payouts.html" class="hover:text-slate-300">Seller Payouts</a>
+        <a href="tel:+917047619203" class="hover:text-slate-300">Helpline: +91 70476 19203</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/static/js/config.js"></script>
+  <script src="/static/js/auth.js"></script>
+  <script>
+    const isCloudflare = window.location.hostname.endsWith('pages.dev');
+    const isProd = window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+    const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
+    const origin = isCloudflare ? RAILWAY_BACKEND : (isProd ? window.location.origin : '');
+    const PAYMENTS_API = (window.__CONFIG__ && window.__CONFIG__.paymentsServiceUrl) || (origin || 'http://localhost:8004');
+    const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || (origin || 'http://localhost:8003');
+
+    let currentOrder = null;
+    let currentUser = null;
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const d = document.createElement('div');
+      d.textContent = String(text);
+      return d.innerHTML;
+    }
+
+    function formatInr(amount) {
+      const num = Number(amount || 0);
+      return `₹${num.toFixed(2)}`;
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      const activeContent = document.getElementById(`tab-${tabId}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      if (activeContent) activeContent.classList.remove('hidden');
+
+      if (tabId === 'history') {
+        loadTransactionLedger();
+      }
+    }
+
+    async function checkAuthState() {
+      const authActions = document.getElementById('auth-actions');
+      try {
+        const session = await window.SoftXchangeAuth.silentRefresh();
+        if (session && session.user) {
+          currentUser = session.user;
+          const emailPrefix = (currentUser.email || 'User').split('@')[0];
+          authActions.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="text-xs font-mono text-slate-300 hidden sm:inline">
+                <i data-lucide="user" class="w-3.5 h-3.5 inline text-cyan-400 mr-1"></i>${escapeHtml(emailPrefix)}
+              </span>
+              <a href="/dashboard-customer.html" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-slate-200 transition-all">
+                Dashboard
+              </a>
+            </div>
+          `;
+          if (window.lucide) lucide.createIcons();
+          return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    async function loadRecentOrders() {
+      const list = document.getElementById('quick-orders-list');
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/orders`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const orders = await res.json();
+        if (!Array.isArray(orders) || orders.length === 0) {
+          list.innerHTML = `<div class="text-xs font-mono text-slate-500 italic p-3 rounded-xl bg-white/5 border border-white/5">No active orders found. Create one from the catalog.</div>`;
+          return;
+        }
+
+        list.innerHTML = orders.slice(0, 5).map(o => {
+          const isPending = o.status === 'pending_payment';
+          return `
+            <div onclick="selectOrder('${escapeHtml(o.id)}')" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition-all flex items-center justify-between gap-3">
+              <div>
+                <span class="text-xs font-mono text-white font-semibold">Order ${escapeHtml(o.id.slice(0, 8))}…</span>
+                <span class="text-[11px] font-mono text-slate-400 block">${o.created_at ? new Date(o.created_at).toLocaleDateString() : 'Recent'}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-mono text-cyan-400 font-bold">${formatInr(o.amount_inr ?? (o.amount_cents ? o.amount_cents / 100 : 0))}</span>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded ${isPending ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'}">
+                  ${escapeHtml(o.status)}
+                </span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        list.innerHTML = `<div class="text-xs font-mono text-slate-500 italic p-3">Log in to view your orders.</div>`;
+      }
+    }
+
+    function selectOrder(orderId) {
+      document.getElementById('order-id-input').value = orderId;
+      fetchOrderDetails();
+    }
+
+    async function fetchOrderDetails() {
+      const orderId = document.getElementById('order-id-input').value.trim();
+      if (!orderId) {
+        alert('Please enter a valid order ID');
+        return;
+      }
+
+      const emptyState = document.getElementById('terminal-empty-state');
+      const orderContent = document.getElementById('terminal-order-content');
+      const statusBadge = document.getElementById('order-status-badge');
+      const actionArea = document.getElementById('term-action-area');
+      const downloadArea = document.getElementById('term-download-area');
+      const feedback = document.getElementById('term-feedback');
+      feedback.classList.add('hidden');
+
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/orders/${orderId}`);
+        if (!res.ok) throw new Error(`Order lookup returned HTTP ${res.status}`);
+        const order = await res.json();
+        currentOrder = order;
+
+        emptyState.classList.add('hidden');
+        orderContent.classList.remove('hidden');
+
+        // Status badge
+        statusBadge.textContent = (order.status || 'UNKNOWN').toUpperCase();
+        statusBadge.className = `px-2.5 py-0.5 rounded-full text-[10px] font-mono ${order.status === 'paid' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'}`;
+
+        document.getElementById('term-ver-id').textContent = (order.listing_version_id || 'Pinned Version').slice(0, 8) + '…';
+        const total = order.amount_inr ?? (order.amount_cents ? order.amount_cents / 100 : 0);
+        document.getElementById('term-total-amount').textContent = formatInr(total);
+
+        const feeCents = order.platform_fee_cents || Math.round((order.amount_cents || 0) * 0.08);
+        const sellerCents = order.seller_payout_cents || ((order.amount_cents || 0) - feeCents);
+        document.getElementById('term-fee').textContent = formatInr(feeCents / 100);
+        document.getElementById('term-seller-cut').textContent = formatInr(sellerCents / 100);
+
+        if (order.status === 'paid') {
+          actionArea.classList.add('hidden');
+          downloadArea.classList.remove('hidden');
+          document.getElementById('term-download-btn').href = `/order-confirmation.html?order_id=${encodeURIComponent(order.id)}`;
+        } else {
+          actionArea.classList.remove('hidden');
+          downloadArea.classList.add('hidden');
+        }
+      } catch (err) {
+        alert('Order lookup failed: ' + err.message);
+      }
+    }
+
+    function triggerRazorpayPayment() {
+      if (!currentOrder) {
+        alert('No active order selected.');
+        return;
+      }
+      if (!window.Razorpay) {
+        alert('Razorpay Checkout SDK is still loading. Please try again in a moment.');
+        return;
+      }
+
+      const options = {
+        key: currentOrder.razorpay_key_id || 'rzp_test_placeholder',
+        amount: currentOrder.charged_amount_minor_units || currentOrder.amount_cents,
+        currency: currentOrder.charged_currency || 'INR',
+        name: 'softXchange Software Licensing',
+        description: `Order ${currentOrder.id.slice(0, 8)} Verification`,
+        order_id: currentOrder.razorpay_order_id,
+        handler: async function (response) {
+          await verifyPayment(response);
+        },
+        prefill: {
+          email: currentUser ? currentUser.email : '',
+        },
+        theme: {
+          color: '#2563eb'
+        }
+      };
+
+      const rzp = new Razorpay(options);
+      rzp.open();
+    }
+
+    async function verifyPayment(rzpResponse) {
+      const feedback = document.getElementById('term-feedback');
+      feedback.classList.remove('hidden');
+      feedback.className = 'text-xs font-mono p-3 rounded-xl bg-blue-500/10 text-cyan-300 border border-blue-500/30';
+      feedback.textContent = 'Verifying cryptographic payment signature with softXchange security gateway…';
+
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/orders/${currentOrder.id}/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            razorpay_order_id: rzpResponse.razorpay_order_id,
+            razorpay_payment_id: rzpResponse.razorpay_payment_id,
+            razorpay_signature: rzpResponse.razorpay_signature,
+          }),
+        });
+
+        if (!res.ok) {
+          let err = null;
+          try { err = await res.json(); } catch (_) {}
+          throw new Error((err && err.detail) || `Payment verification failed (HTTP ${res.status})`);
+        }
+
+        feedback.className = 'text-xs font-mono p-3 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/30';
+        feedback.textContent = '✓ Payment verified successfully! Redirecting to your digital delivery license…';
+        setTimeout(() => {
+          window.location.href = `/order-confirmation.html?order_id=${encodeURIComponent(currentOrder.id)}`;
+        }, 1200);
+      } catch (err) {
+        feedback.className = 'text-xs font-mono p-3 rounded-xl bg-red-500/10 text-red-300 border border-red-500/30';
+        feedback.textContent = '✗ ' + err.message;
+      }
+    }
+
+    async function triggerDevTestConfirm() {
+      if (!currentOrder) return;
+      const feedback = document.getElementById('term-feedback');
+      feedback.classList.remove('hidden');
+      feedback.className = 'text-xs font-mono p-3 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/30';
+      feedback.textContent = 'Simulating dev confirmation…';
+
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/orders/${currentOrder.id}/test-confirm`, {
+          method: 'POST',
+        });
+        if (!res.ok) {
+          throw new Error(`Test confirmation rejected (HTTP ${res.status})`);
+        }
+        feedback.className = 'text-xs font-mono p-3 rounded-xl bg-emerald-500/10 text-emerald-300 border border-emerald-500/30';
+        feedback.textContent = '✓ Dev instant settlement completed! License generated.';
+        fetchOrderDetails();
+      } catch (err) {
+        feedback.className = 'text-xs font-mono p-3 rounded-xl bg-red-500/10 text-red-300 border border-red-500/30';
+        feedback.textContent = 'Notice: ' + err.message;
+      }
+    }
+
+    async function loadTransactionLedger() {
+      const tbody = document.getElementById('ledger-tbody');
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/orders`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const orders = await res.json();
+        if (!Array.isArray(orders) || orders.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500 italic">No transactions recorded yet.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = orders.map(o => {
+          const isPaid = o.status === 'paid';
+          const rzpRef = o.razorpay_payment_id || o.razorpay_order_id || '—';
+          return `
+            <tr class="hover:bg-white/[0.02] transition-colors">
+              <td class="py-3 px-4 font-bold text-white">${escapeHtml(o.id.slice(0, 8))}…</td>
+              <td class="py-3 px-4 text-slate-400">${o.created_at ? new Date(o.created_at).toLocaleDateString() : '—'}</td>
+              <td class="py-3 px-4 font-bold text-cyan-300">${formatInr(o.amount_inr ?? (o.amount_cents ? o.amount_cents / 100 : 0))}</td>
+              <td class="py-3 px-4 text-slate-400 text-[11px]">${escapeHtml(rzpRef.slice(0, 16))}…</td>
+              <td class="py-3 px-4">
+                <span class="px-2 py-0.5 rounded text-[10px] ${isPaid ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'}">
+                  ${escapeHtml(o.status)}
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right">
+                ${isPaid ? `
+                  <a href="/order-confirmation.html?order_id=${encodeURIComponent(o.id)}" class="text-cyan-400 hover:text-cyan-300 underline text-xs">
+                    Download →
+                  </a>
+                ` : `
+                  <button onclick="selectOrder('${escapeHtml(o.id)}')" class="text-slate-400 hover:text-white text-xs underline">
+                    Settle Now
+                  </button>
+                `}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-red-400">Failed to load ledger: ${escapeHtml(err.message)}</td></tr>`;
+      }
+    }
+
+    async function checkLicenseEntitlement() {
+      const listingId = document.getElementById('verify-listing-id').value.trim();
+      const resultBox = document.getElementById('entitlement-result');
+      if (!listingId) {
+        alert('Please enter a listing ID');
+        return;
+      }
+      if (!currentUser) {
+        alert('Please sign in first to check your entitlements.');
+        return;
+      }
+
+      resultBox.classList.remove('hidden');
+      resultBox.className = 'p-4 rounded-xl border border-white/10 bg-white/5 text-slate-300 font-mono text-xs';
+      resultBox.textContent = 'Querying zero-trust entitlement engine…';
+
+      try {
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${PAYMENTS_API}/orders/check-entitlement/${currentUser.id}/${listingId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (data.has_entitlement) {
+          resultBox.className = 'p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-mono text-xs space-y-1';
+          resultBox.innerHTML = `
+            <div class="font-bold">✓ ACTIVE LICENSE ENTITLEMENT CONFIRMED</div>
+            <div>Order Reference: ${escapeHtml(data.order_id)}</div>
+            <div>Version Pinned: ${escapeHtml(data.listing_version_id || 'Immutable Hash')}</div>
+            <div>Purchased Date: ${escapeHtml(data.purchased_at || 'Verified')}</div>
+            <div class="pt-2"><a href="/order-confirmation.html?order_id=${encodeURIComponent(data.order_id)}" class="underline font-bold text-white">Access Software Payload →</a></div>
+          `;
+        } else {
+          resultBox.className = 'p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 font-mono text-xs';
+          resultBox.innerHTML = `
+            <div class="font-bold">✗ NO ACTIVE LICENSE RECORD FOUND</div>
+            <p class="mt-1 text-slate-300">Your account does not currently hold a paid license entitlement for package ${escapeHtml(listingId)}.</p>
+          `;
+        }
+      } catch (err) {
+        resultBox.className = 'p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-300 font-mono text-xs';
+        resultBox.textContent = 'Audit query error: ' + err.message;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await checkAuthState();
+      loadRecentOrders();
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlOrderId = urlParams.get('order_id');
+      if (urlOrderId) {
+        document.getElementById('order-id-input').value = urlOrderId;
+        fetchOrderDetails();
+      }
+    });
+  </script>
+</body>
+</html>

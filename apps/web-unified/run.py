@@ -63,6 +63,9 @@ PAGES = [
     "dashboard-seller.html",
     "admin-dashboard.html",
     "reset-password.html",
+    "wishlist.html",
+    "payment-interface.html",
+    "payments.html",
 ]
 
 for page in PAGES:
@@ -77,6 +80,14 @@ for page in PAGES:
     # Support both /page.html and /static/page.html
     app.add_api_route(f"/{page}", make_handler(page), methods=["GET"], include_in_schema=False)
     app.add_api_route(f"/static/{page}", make_handler(page), methods=["GET"], include_in_schema=False)
+
+# Dynamic fallback for any additional HTML files in static directory
+@app.get("/{page_name}.html", include_in_schema=False)
+async def dynamic_html_handler(page_name: str):
+    target = STATIC_DIR / f"{page_name}.html"
+    if target.exists() and target.is_file():
+        return FileResponse(str(target), media_type="text/html")
+    raise HTTPException(status_code=404, detail=f"Page {page_name}.html not found")
 
 
 # Root redirect -> landing page
