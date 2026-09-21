@@ -25,6 +25,7 @@ from ml_shared.guardrails import (
 )
 from ml_shared.context import ListingContextBundle
 
+# pyrefly: ignore [missing-import]
 from src.models.listing import Listing, ListingVersion, ListingStatus, ScanStatus
 
 

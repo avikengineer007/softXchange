@@ -203,9 +203,10 @@
               );
 
               if (!verifyRes.ok) {
-                const err = await verifyRes.json();
+                let err = null;
+                try { err = await verifyRes.json(); } catch (_) {}
                 setProcessing(false);
-                showStatus('Payment verification failed: ' + (err.detail || verifyRes.statusText));
+                showStatus('Payment verification failed: ' + ((err && err.detail) || verifyRes.statusText || 'Unknown error'));
                 return;
               }
 

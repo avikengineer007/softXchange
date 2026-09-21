@@ -24,6 +24,7 @@
 
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="/static/js/config.js"></script>
 
   <script>
     tailwind.config = {
@@ -329,6 +330,13 @@
 
       <!-- Listing Cards -->
       <div id="listings-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+      <div class="mt-12 text-center">
+        <a href="/browse-listings.html" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-cyan-300 hover:text-white font-mono text-xs transition-all shadow-md">
+          <span>Explore All Marketplace Listings</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </a>
+      </div>
 
     </div>
   </section>
@@ -641,40 +649,115 @@
   <script>
     lucide.createIcons();
 
-    // Catalog Rendering Logic
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = String(text);
+      return div.innerHTML;
+    }
+
+    function transformListing(item) {
+      const pricePaise = item.price_cents ?? (item.price ? Math.round(item.price * 100) : 0);
+      const priceStr = pricePaise === 0 ? 'Free' : `₹${(pricePaise / 100).toFixed(2)}`;
+      const isLive = item.status === 'live' || item.vetted === true;
+      const rawVer = item.current_version_label || item.version || (item.current_version && item.current_version.version_label) || '1.0.0';
+      const ver = `v${rawVer.replace(/^v/, '')}`;
+      const category = (item.category || 'software').toUpperCase();
+      const rawAuthor = item.seller_github?.github_username 
+        ? `@${item.seller_github.github_username}` 
+        : (item.seller_id ? (item.seller_id.length > 12 ? `seller-${item.seller_id.slice(0, 6)}` : item.seller_id) : 'verified-seller');
+
+      const desc = item.description 
+        ? (item.description.length > 135 ? item.description.slice(0, 132) + '…' : item.description)
+        : 'Zero-Trust verified software package, cryptographically scanned and cleared for release.';
+
+      return {
+        id: item.id,
+        displayId: (item.id || '').length > 8 ? (item.id || '').slice(0, 8).toUpperCase() : item.id,
+        title: item.title,
+        version: ver,
+        price: priceStr,
+        vetted: isLive,
+        score: isLive ? '100% Passed' : 'Scanning...',
+        scanDetails: desc,
+        author: rawAuthor,
+        tags: [category, isLive ? 'AST-Clean' : 'In-Scan']
+      };
+    }
+
+    // Catalog Rendering Logic — populated with real recently uploaded software
     const catalogData = [
       {
-        id: "LST-904",
-        title: "Enterprise Kafka Event Bus Pipeline",
-        version: "v2.8.4",
-        price: "₹1,250",
+        id: "49f06ebb-6449-47b1-8eaa-130b81ba12cc",
+        displayId: "49F06EBB",
+        title: "Aegis-AI-powered-SOC-Analyst",
+        version: "v1.0.1",
+        price: "₹10.00",
         vetted: true,
-        score: "99.4%",
-        scanDetails: "Passed: Zero CVEs · Merkle Tree Certified",
-        author: "infra-core@mesh",
-        tags: ["Go", "Kafka", "K8s"]
+        score: "100% Passed",
+        scanDetails: "Autonomous network security agent powered by Claude. Senses honeypot threats, AST-scanned, 10s mitigation actions.",
+        author: "Avik Ghosh",
+        tags: ["SECURITY", "CLAUDE-AGENT", "AST-CLEAN"]
       },
       {
-        id: "LST-882",
-        title: "Zero-Knowledge Auth Gateway Microservice",
-        version: "v1.4.0",
-        price: "₹890",
+        id: "d0dc408f-79a6-43bb-9623-0cc75aee490b",
+        displayId: "D0DC408F",
+        title: "TaskMatrix Automation Engine",
+        version: "v1.1.0",
+        price: "₹39.00",
         vetted: true,
-        score: "98.8%",
-        scanDetails: "Passed: Static analysis & sanitization clean",
-        author: "sec-ops@node",
-        tags: ["Rust", "WASM", "OAuth2"]
+        score: "100% Passed",
+        scanDetails: "High-efficiency async distributed task queue with priority scheduling, cron workflows, and instant retry backoffs.",
+        author: "verified-corp-001",
+        tags: ["PRODUCTIVITY", "ASYNC-QUEUE", "AST-CLEAN"]
       },
       {
-        id: "LST-719",
-        title: "Real-time Order Matching Engine",
-        version: "v0.9.2-beta",
-        price: "₹2,100",
-        vetted: false,
-        score: "Scanning...",
-        scanDetails: "In Queue: Async automated security scan executing",
-        author: "fintech-edge@mesh",
-        tags: ["C++20", "gRPC", "Postgres"]
+        id: "715674e2-adbe-4e4b-97e9-9c8a90c686cb",
+        displayId: "715674E2",
+        title: "GitHistory Sanitizer Pro",
+        version: "v3.0.1",
+        price: "₹19.00",
+        vetted: true,
+        score: "100% Passed",
+        scanDetails: "Deep repository forensic analysis and secret stripping tool. Purges leaked credentials without breaking commit history.",
+        author: "verified-corp-001",
+        tags: ["UTILITIES", "SECRET-STRIPPER", "AST-CLEAN"]
+      },
+      {
+        id: "71c3438c-6600-43d2-a8ee-7d0611be1824",
+        displayId: "71C3438C",
+        title: "AuthShield MFA & Passkeys SDK",
+        version: "v1.4.2",
+        price: "₹29.00",
+        vetted: true,
+        score: "100% Passed",
+        scanDetails: "Zero-knowledge FIDO2 / WebAuthn passwordless authentication SDK for Python and Node.js with replay protection.",
+        author: "verified-corp-001",
+        tags: ["SECURITY", "PASSKEYS", "AST-CLEAN"]
+      },
+      {
+        id: "6f9add05-4a16-4d49-838c-00622fa31712",
+        displayId: "6F9ADD05",
+        title: "DataFlow ETL Toolkit",
+        version: "v2.1.0",
+        price: "₹89.00",
+        vetted: true,
+        score: "100% Passed",
+        scanDetails: "High-throughput streaming ETL pipeline connectors for Kafka, Spark, and Parquet lakes with schema drift detection.",
+        author: "verified-corp-001",
+        tags: ["DEVELOPER-TOOLS", "STREAMING-ETL", "AST-CLEAN"]
+      },
+      {
+        id: "451bb051-349a-46d6-8509-d25b59b92c26",
+        displayId: "451BB051",
+        title: "Cloud Sentry CLI",
+        version: "v1.2.0",
+        price: "₹49.00",
+        vetted: true,
+        score: "100% Passed",
+        scanDetails: "Automated AWS and GCP infrastructure security scanner and IAM policy auditor for CI/CD pipelines.",
+        author: "verified-corp-001",
+        tags: ["SECURITY", "CLOUD-AUDIT", "AST-CLEAN"]
       }
     ];
 
@@ -682,6 +765,7 @@
 
     function renderCatalog() {
       const grid = document.getElementById('listings-grid');
+      if (!grid) return;
       grid.innerHTML = '';
 
       const filtered = catalogData.filter(item => {
@@ -696,31 +780,31 @@
         card.innerHTML = `
           <div>
             <div class="flex items-center justify-between gap-2 mb-4">
-              <span class="text-[10px] font-mono text-cyan-300 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">${item.id}</span>
+              <span class="text-[10px] font-mono text-cyan-300 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">${escapeHtml(item.displayId || item.id.slice(0, 8))}</span>
               ${item.vetted ? `
                 <div class="convergence-badge animate-converge inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-500/20">
                   <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
-                  <span>Vetted [${item.score}]</span>
+                  <span>Vetted [${escapeHtml(item.score)}]</span>
                 </div>
               ` : `
                 <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
                   <div class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></div>
-                  <span>${item.score}</span>
+                  <span>${escapeHtml(item.score)}</span>
                 </div>
               `}
             </div>
             
-            <h3 class="text-xl font-bold text-white leading-snug">${item.title}</h3>
-            <p class="text-xs font-mono text-slate-400 mt-1">${item.version} · Author: ${item.author}</p>
-            <p class="text-xs text-slate-300 mt-3 leading-relaxed font-sans">${item.scanDetails}</p>
+            <h3 class="text-xl font-bold text-white leading-snug">${escapeHtml(item.title)}</h3>
+            <p class="text-xs font-mono text-slate-400 mt-1">${escapeHtml(item.version)} · Author: ${escapeHtml(item.author)}</p>
+            <p class="text-xs text-slate-300 mt-3 leading-relaxed font-sans">${escapeHtml(item.scanDetails)}</p>
 
-            <div class="flex items-center gap-1.5 mt-4">
-              ${item.tags.map(tag => `<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-cyan-300 border border-blue-500/20">${tag}</span>`).join('')}
+            <div class="flex items-center gap-1.5 mt-4 flex-wrap">
+              ${item.tags.map(tag => `<span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-cyan-300 border border-blue-500/20">${escapeHtml(tag)}</span>`).join('')}
             </div>
           </div>
 
           <div class="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
-            <span class="text-xl font-bold font-mono text-white">${item.price}</span>
+            <span class="text-xl font-bold font-mono text-white">${escapeHtml(item.price)}</span>
             <a href="/listing-detail.html?id=${encodeURIComponent(item.id)}" class="px-4 py-2 rounded-xl ${item.vetted ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold shadow-md shadow-blue-500/20' : 'bg-white/5 text-slate-400'} text-xs font-mono transition-all inline-block">
               ${item.vetted ? 'Acquire Asset' : 'Awaiting Scan'}
             </a>
@@ -728,7 +812,34 @@
         `;
         grid.appendChild(card);
       });
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function loadLiveCatalog() {
+      try {
+        const isCloudflare = window.location.hostname.endsWith('pages.dev');
+        const isProd = window.location.protocol === 'https:' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1');
+        const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
+        const origin = isCloudflare ? RAILWAY_BACKEND : (isProd ? window.location.origin : '');
+        const LISTINGS_API = (window.__CONFIG__ && window.__CONFIG__.listingsServiceUrl) || (origin || 'http://localhost:8003');
+
+        const res = await fetch(`${LISTINGS_API}/listings`);
+        if (!res.ok) return;
+        const items = await res.json();
+        if (Array.isArray(items) && items.length > 0) {
+          // Sort with most recently created / updated first
+          items.sort((a, b) => {
+            const dateA = new Date(a.created_at || a.updated_at || 0).getTime();
+            const dateB = new Date(b.created_at || b.updated_at || 0).getTime();
+            return dateB - dateA;
+          });
+          catalogData.length = 0;
+          items.forEach(item => catalogData.push(transformListing(item)));
+          renderCatalog();
+        }
+      } catch (err) {
+        console.warn('Live catalog fetch notice:', err);
+      }
     }
 
     function filterCatalog(type) {
@@ -1010,6 +1121,7 @@
 
     requestAnimationFrame(renderLoop);
     renderCatalog();
+    loadLiveCatalog();
   </script>
 </body>
 </html>

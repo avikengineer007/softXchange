@@ -476,8 +476,16 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ listing_id: lid }),
         });
-        const order = await res.json();
-        if (!res.ok) throw new Error(order.detail || 'Order creation failed');
+        let order = null;
+        try {
+          order = await res.json();
+        } catch (_) {
+          // Response body was not JSON (e.g. plaintext error from proxy or server)
+        }
+        if (!res.ok) {
+          const detail = (order && order.detail) || (res.status >= 500 ? 'Payment service is temporarily unavailable. Please try again later.' : `Order creation failed (HTTP ${res.status}).`);
+          throw new Error(detail);
+        }
         window.location.href = `/checkout.html?order_id=${encodeURIComponent(order.id)}`;
       } catch (err) {
         if (btn) btn.disabled = false;
