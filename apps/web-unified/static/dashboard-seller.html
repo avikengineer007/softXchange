@@ -665,7 +665,7 @@
       const listEl = document.getElementById('seller-reviews-list');
       const countEl = document.getElementById('seller-reviews-count');
       try {
-        const res = await window.SoftXchangeAuth.fetchWithAuth(`${LISTINGS_API}/seller/listings`);
+        const res = await window.SoftXchangeAuth.fetchWithAuth(`${LISTINGS_API}/listings/mine`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const listings = await res.json();
         

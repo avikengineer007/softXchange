@@ -306,6 +306,7 @@ class SellerListingItemResponse(BaseModel):
     category: str
     status: str
     status_message: Optional[str] = None
+    version_id: Optional[str] = None
     version_label: Optional[str] = None
     severity_summary: Optional[Dict[str, int]] = None
     next_action: str

@@ -9,6 +9,8 @@ PLACEHOLDER_DENYLIST: Set[str] = {
     "xxx",
     "xxxx",
     "xxxxx",
+    "password",
+    "pass",
     "changeme",
     "change_me",
     "change-me",
@@ -103,6 +105,16 @@ def is_placeholder_value(token: str) -> bool:
         
     if PLACEHOLDER_REGEX.match(normalized):
         return True
+
+    # Check URI connection strings: if embedded password component is a placeholder
+    if "://" in clean_token and "@" in clean_token:
+        import urllib.parse
+        try:
+            parsed = urllib.parse.urlparse(clean_token)
+            if parsed.password and is_placeholder_value(parsed.password):
+                return True
+        except Exception:
+            pass
         
     return False
 

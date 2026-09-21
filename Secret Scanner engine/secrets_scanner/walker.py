@@ -10,7 +10,16 @@ DEFAULT_MAX_FILE_SIZE = 5 * 1024 * 1024       # 5 MB per file
 DEFAULT_MAX_TOTAL_BYTES = 100 * 1024 * 1024   # 100 MB aggregate across all files
 DEFAULT_MAX_TOTAL_FILES = 5000                # 5,000 total files max
 DEFAULT_MAX_DIRECTORY_DEPTH = 20              # Max recursion depth
-DEFAULT_IGNORED_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", ".tox"}
+DEFAULT_IGNORED_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__", ".tox", ".next", "dist", "build", ".turbo"}
+DEFAULT_IGNORED_FILES = {
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "poetry.lock",
+    "Cargo.lock",
+    "composer.lock",
+    "Gemfile.lock",
+}
 BINARY_SAMPLE_SIZE = 8192                     # 8 KB sample for binary detection
 
 
@@ -108,6 +117,7 @@ def walk_directory(
     timeout_seconds: Optional[float] = None,
     start_time: Optional[float] = None,
     ignored_dirs: Optional[Set[str]] = None,
+    ignored_files: Optional[Set[str]] = None,
     follow_symlinks: bool = False
 ) -> Generator[Tuple[str, str], None, List[SkippedFile]]:
     """Recursively walks a directory yielding (file_path, content) for valid text files.
@@ -131,6 +141,8 @@ def walk_directory(
     """
     if ignored_dirs is None:
         ignored_dirs = set(DEFAULT_IGNORED_DIRS)
+    if ignored_files is None:
+        ignored_files = set(DEFAULT_IGNORED_FILES)
         
     if start_time is None:
         start_time = time.monotonic()
@@ -185,6 +197,11 @@ def walk_directory(
                 
             file_path = os.path.join(current_root, f)
             
+            # Check ignored lockfiles / files
+            if f in ignored_files:
+                skipped.append(SkippedFile(file_path=file_path, reason="ignored_lockfile"))
+                continue
+
             # Check symlink
             if not follow_symlinks and os.path.islink(file_path):
                 skipped.append(SkippedFile(file_path=file_path, reason="symlink"))

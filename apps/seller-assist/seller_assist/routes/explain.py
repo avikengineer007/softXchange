@@ -39,6 +39,7 @@ class ExplainFindingsRequest(BaseModel):
 )
 def explain_findings(
     version_id: str,
+    listing_id: Optional[str] = None,
     request: Optional[ExplainFindingsRequest] = None,
     auth_ctx: AuthContext = Depends(require_seller),
     db: Session = Depends(get_db),
@@ -48,9 +49,21 @@ def explain_findings(
     re-stating engine remediation hints without adding new claims.
     Seller-only, owner-only.
     """
-    version = db.query(ListingVersion).filter(
+    query = db.query(ListingVersion).join(Listing, ListingVersion.listing_id == Listing.id)
+    if not auth_ctx.has_role("admin"):
+        query = query.filter(Listing.seller_id == auth_ctx.user_id)
+    if listing_id:
+        query = query.filter(Listing.id == listing_id)
+    version = query.filter(
         or_(ListingVersion.id == version_id, ListingVersion.version_label == version_id)
     ).first()
+
+    if not version:
+        # Fallback to direct query
+        version = db.query(ListingVersion).filter(
+            or_(ListingVersion.id == version_id, ListingVersion.version_label == version_id)
+        ).first()
+
     if not version:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

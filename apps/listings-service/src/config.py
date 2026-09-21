@@ -1,10 +1,13 @@
+from pathlib import Path
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_DEFAULT_SQLITE_PATH = (Path(__file__).resolve().parent.parent / "softxchange_listings.db").as_posix()
 
 
 class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
-    DATABASE_URL: str = "sqlite:///./softxchange_listings.db"
+    DATABASE_URL: str = f"sqlite:///{_DEFAULT_SQLITE_PATH}"
 
     # Upstream Services
     AUTH_SERVICE_URL: str = "http://localhost:8001"

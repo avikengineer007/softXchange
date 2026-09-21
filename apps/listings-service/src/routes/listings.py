@@ -254,6 +254,7 @@ def get_my_listings(
                 category=l.category,
                 status=l.status,
                 status_message=l.status_message,
+                version_id=latest_ver.id if latest_ver else None,
                 version_label=latest_ver.version_label if latest_ver else None,
                 severity_summary=latest_ver.findings_summary if latest_ver else {},
                 average_rating=avg_rating,
