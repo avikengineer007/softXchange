@@ -1,0 +1,20 @@
+# Cloudflare Pages _headers
+# Applies HTTP response headers for all routes on softxchange.pages.dev
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/images/*
+  Cache-Control: public, max-age=31536000, immutable

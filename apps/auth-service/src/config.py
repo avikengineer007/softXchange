@@ -100,9 +100,13 @@ settings = Settings()
 if settings.ENVIRONMENT.lower() == "production":
     if settings.EMAIL_TEST_MODE:
         raise RuntimeError("FATAL: EMAIL_TEST_MODE cannot be enabled in production environment.")
-    if not settings.COOKIE_SECURE:
-        settings.COOKIE_SECURE = True
+    # Force Secure + SameSite=None so cross-origin cookies work when the
+    # Cloudflare Pages frontend (softxchange.pages.dev) calls the Railway backend.
+    # SameSite=lax silently blocks cookies on cross-site requests.
+    settings.COOKIE_SECURE = True
+    settings.COOKIE_SAMESITE = "none"
     if settings.GITHUB_OAUTH_REDIRECT_URI == "http://localhost:8000/dashboard-seller.html":
-        settings.GITHUB_OAUTH_REDIRECT_URI = "https://softxchange-production.up.railway.app/dashboard-seller.html"
+        settings.GITHUB_OAUTH_REDIRECT_URI = "https://softxchange.pages.dev/dashboard-seller.html"
     if settings.FRONTEND_URL == "http://localhost:8000":
-        settings.FRONTEND_URL = "https://softxchange.com"
+        settings.FRONTEND_URL = "https://softxchange.pages.dev"
+

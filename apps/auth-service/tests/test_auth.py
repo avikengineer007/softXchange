@@ -678,9 +678,9 @@ def test_kyc_webhook_replay_protection(client):
 
     payload = {
         "user_id": seller_id,
-        "event": "stripe.connect.verified",
+        "event": "razorpay_route.verified",
         "status": "verified",
-        "details": {"stripe_account_id": "acct_replay_test"},
+        "details": {"razorpay_account_id": "acct_replay_test"},
     }
     raw_json = json.dumps(payload, sort_keys=True).encode("utf-8")
 

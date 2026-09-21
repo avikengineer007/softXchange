@@ -8,8 +8,9 @@ logger = logging.getLogger("auth-service.kyc.provider")
 class KYCProvider(ABC):
     """
     Abstract interface for seller identity verification and KYC onboarding.
-    Can be backed by Stripe Connect Express, Razorpay Route, or an internal compliance service.
+    Backed by Razorpay Route or an internal compliance service.
     """
+
 
     @abstractmethod
     def start_onboarding(self, user_id: str) -> Dict[str, Any]:
