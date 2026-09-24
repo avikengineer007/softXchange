@@ -12,23 +12,31 @@
   const RAILWAY_BACKEND = 'https://softxchange-production.up.railway.app';
   const isRailway = hostname.endsWith('railway.app') || window.location.origin === RAILWAY_BACKEND;
 
-  // In production:
-  // - If directly on Railway (Caddy reverse proxies all services under same host): use relative paths ''
-  // - If on Cloudflare Pages, Vercel, Netlify, custom domain, or any static host: point to live Railway backend
-  let prodBase = '';
-  if (isRailway) {
-    prodBase = '';
-  } else if (!isLocalhost) {
-    prodBase = RAILWAY_BACKEND;
+  /**
+   * Returns the correct base URL for a given service.
+   *
+   * Priority:
+   *   1. Railway (Caddy handles internal routing) → relative path ''
+   *   2. Local dev                               → explicit localhost port
+   *   3. Cloudflare Pages / any other static CDN → absolute Railway backend URL
+   *
+   * NOTE: Do NOT use the pattern `prodBase || fallback` here.
+   * When running on Railway, prodBase is intentionally '' (empty string),
+   * which is falsy in JS and would silently fall through to the wrong branch.
+   */
+  function getBase(localPort) {
+    if (isRailway)    return '';
+    if (isLocalhost)  return `http://localhost:${localPort}`;
+    return RAILWAY_BACKEND;
   }
 
   window.__CONFIG__ = Object.assign({
-    authServiceUrl:     prodBase || (isLocalhost ? 'http://localhost:8001' : RAILWAY_BACKEND),
-    scanServiceUrl:     prodBase || (isLocalhost ? 'http://localhost:8002' : RAILWAY_BACKEND),
-    listingsServiceUrl: prodBase || (isLocalhost ? 'http://localhost:8003' : RAILWAY_BACKEND),
-    paymentsServiceUrl: prodBase || (isLocalhost ? 'http://localhost:8004' : RAILWAY_BACKEND),
-    buyerAssistUrl:     prodBase || (isLocalhost ? 'http://localhost:8005' : RAILWAY_BACKEND),
-    sellerAssistUrl:    prodBase || (isLocalhost ? 'http://localhost:8006' : RAILWAY_BACKEND),
-    brokerUrl:          prodBase || (isLocalhost ? 'http://localhost:8007' : RAILWAY_BACKEND),
+    authServiceUrl:     getBase(8001),
+    scanServiceUrl:     getBase(8002),
+    listingsServiceUrl: getBase(8003),
+    paymentsServiceUrl: getBase(8004),
+    buyerAssistUrl:     getBase(8005),
+    sellerAssistUrl:    getBase(8006),
+    brokerUrl:          getBase(8007),
   }, window.__CONFIG__ || {});
 })();
